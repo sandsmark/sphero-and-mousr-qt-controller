@@ -1,6 +1,9 @@
 TARGET = mousr-qt-controller
 TEMPLATE = app
-QT += quick
+
+CONFIG += sanitizer sanitize_undefined
+
+QT += quick bluetooth
 
 INCLUDEPATH += .
 
@@ -11,3 +14,6 @@ SOURCES += main.cpp \
 
 HEADERS += \
     devicediscoverer.h
+
+RESOURCES += \
+    qml/main.qrc
