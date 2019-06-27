@@ -3,6 +3,9 @@
 
 #include <QObject>
 #include <QBluetoothLocalDevice>
+#include <QPointer>
+
+class DeviceHandler;
 
 class QBluetoothDeviceDiscoveryAgent;
 class QBluetoothDeviceInfo;
@@ -13,10 +16,13 @@ class DeviceDiscoverer : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString statusString READ statusString NOTIFY statusStringChanged)
+    Q_PROPERTY(QObject* device READ device NOTIFY deviceFound)
 
 public:
     explicit DeviceDiscoverer(QObject *parent = nullptr);
     ~DeviceDiscoverer();
+
+    QObject *device();
 
     QString statusString();
 
@@ -37,6 +43,8 @@ private slots:
     void onAdapterStateChanged(const QBluetoothLocalDevice::HostMode mode);
 
 private:
+    QPointer<DeviceHandler> m_device;
+
     QBluetoothDeviceDiscoveryAgent *m_discoveryAgent;
     QBluetoothLocalDevice *m_adapter;
     QBluetoothLocalDevice::Error m_adaperError = QBluetoothLocalDevice::NoError;

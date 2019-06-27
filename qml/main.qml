@@ -46,6 +46,19 @@ Window {
                 visible: DeviceDiscoverer.statusString.length > 0
                 text: DeviceDiscoverer.statusString
                 wrapMode: Text.Wrap
+                onVisibleChanged: console.log(DeviceDiscoverer.device)
+            }
+
+            Text {
+                anchors {
+                    fill: parent
+                    margins: 20
+                }
+                font.bold: true
+                visible: DeviceDiscoverer.device
+                text: visible ? DeviceDiscoverer.device.statusString : ""
+
+                wrapMode: Text.Wrap
             }
         }
     }

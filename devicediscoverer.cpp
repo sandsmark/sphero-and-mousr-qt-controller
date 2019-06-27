@@ -1,4 +1,7 @@
 #include "devicediscoverer.h"
+
+#include "DeviceHandler.h"
+
 #include <QBluetoothDeviceDiscoveryAgent>
 #include <QDebug>
 
@@ -25,6 +28,11 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
 DeviceDiscoverer::~DeviceDiscoverer()
 {
     stopScanning();
+}
+
+QObject *DeviceDiscoverer::device()
+{
+    return m_device.data();
 }
 
 QString DeviceDiscoverer::statusString()
@@ -72,7 +80,6 @@ void DeviceDiscoverer::startScanning()
         m_adapter->powerOn();
     }
 
-
     emit statusStringChanged();
 }
 
@@ -91,6 +98,7 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
 {
     if (device.name() == "Mousr") {
         qDebug() << "Found Mousr";
+        m_device = new DeviceHandler(device, this);
         stopScanning();
         emit deviceFound();
         return;
