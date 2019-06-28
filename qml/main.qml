@@ -35,7 +35,6 @@ Window {
             }
             radius: 10
             border.width: 2
-            border.color: "red"
 
             Text {
                 anchors {
@@ -46,7 +45,7 @@ Window {
                 visible: DeviceDiscoverer.statusString.length > 0
                 text: DeviceDiscoverer.statusString
                 wrapMode: Text.Wrap
-                onVisibleChanged: console.log(DeviceDiscoverer.device)
+//                onVisibleChanged: console.log(DeviceDiscoverer.device)
             }
 
             Text {
