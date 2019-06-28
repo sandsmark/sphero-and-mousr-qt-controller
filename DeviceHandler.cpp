@@ -1,12 +1,14 @@
 #include "DeviceHandler.h"
 
 #include <QLowEnergyController>
+#include <QTimer>
+#include <QDateTime>
 
 template<typename T>
 static inline void setBytes(char **data, const T val)
 {
     memcpy(reinterpret_cast<void*>(*data), reinterpret_cast<const char*>(&val), sizeof(T));
-    data += sizeof(T);
+    *data += sizeof(T);
 }
 
 bool DeviceHandler::sendCommand(const DeviceHandler::Command command, float arg1, float arg2, float arg3)
@@ -35,10 +37,13 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, float arg1
 
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
 
+    m_service->readDescriptor(m_readDescriptor);
+    m_service->readCharacteristic(m_readCharacteristic);
+
     return true;
 }
 
-bool DeviceHandler::sendCommand(const DeviceHandler::Command command, const char arg1, const char arg2, const char arg3, const char arg4)
+bool DeviceHandler::sendCommand(const DeviceHandler::Command command, uint32_t arg1, uint32_t arg2)
 {
     if (!isConnected()) {
         qWarning() << "trying to send when unconnected";
@@ -52,26 +57,35 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, const char
     bytes++;
     setBytes(&bytes, arg1);
     setBytes(&bytes, arg2);
-    setBytes(&bytes, arg3);
-    setBytes(&bytes, arg4);
     setBytes(&bytes, uint16_t(command));
 
+    const size_t dataSize = bytes - buffer.data();
+    const size_t expectedSize = 1 + sizeof(uint16_t) + 2 * sizeof(uint32_t);
+    qDebug() << dataSize << expectedSize;
+    if (dataSize != expectedSize) {
+        qWarning() << "Invalid buffer length" << dataSize  << expectedSize;
+        return false;
+    }
+
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
+
+    m_service->readDescriptor(m_readDescriptor);
+    m_service->readCharacteristic(m_readCharacteristic);
 
     return true;
 }
 
-bool DeviceHandler::sendCommand(const DeviceHandler::Command command, QByteArray data)
+bool DeviceHandler::sendCommand(const DeviceHandler::Command command, std::vector<char> data)
 {
-    if (data.isEmpty()) {
+    if (data.empty()) {
         qWarning() << "trying to send when unconnected";
         return false;
     }
 
-    if (data.length() != 2 && data.length() < 4) {
-        data = data.leftJustified(4, 0);
-    } else if (data.length() != 2) {
-        qWarning() << "invalid data length" << data.length();
+    if (data.size() <= 4) {
+        data.resize(4, 0);
+    } else if (data.size() != 12) {
+        qWarning() << "invalid data length" << data.size();
         return false;
     }
 
@@ -80,19 +94,27 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, QByteArray
 
     bytes[0] = 48;
     bytes++;
+    qDebug() << (uintptr_t(bytes) - uintptr_t(buffer.data()));
     for (const char &byte : data) {
         setBytes(&bytes, byte);
+        qDebug() << (uintptr_t(bytes) - uintptr_t(buffer.data()));
     }
+    qDebug() << (uintptr_t(bytes) - uintptr_t(buffer.data()));
     setBytes(&bytes, uint16_t(command));
+    qDebug() << (uintptr_t(bytes) - uintptr_t(buffer.data()));
 
-    const size_t dataSize = bytes - buffer.data();
+    const uintptr_t dataSize = (uintptr_t(bytes) - uintptr_t(buffer.data()));
     const size_t expectedSize = 1 + data.size() + 2;
     if (dataSize != expectedSize) {
-        qWarning() << "Invalid buffer length" << dataSize << expectedSize;
-        return false;
+        qWarning() << "Invalid buffer length" << dataSize << uintptr_t(bytes) << uintptr_t(buffer.data()) << data.size() << expectedSize;
+//        return false;
     }
 
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
+
+    m_service->readDescriptor(m_readDescriptor);
+    m_service->readCharacteristic(m_readCharacteristic);
+
     return true;
 }
 
@@ -142,9 +164,11 @@ void DeviceHandler::onServiceDiscovered(const QBluetoothUuid &newService)
     }
 
     m_service = m_deviceController->createServiceObject(newService, this);
+    qDebug()  << m_service->serviceName() << m_service->serviceUuid();
 
     connect(m_service, QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error), this, &DeviceHandler::onServiceError);
     connect(m_service, &QLowEnergyService::stateChanged, this, &DeviceHandler::onServiceStateChanged);
+    connect(m_service, &QLowEnergyService::characteristicChanged, this, &DeviceHandler::onCharacteristicChanged);
 
     m_service->discoverDetails();
 }
@@ -166,9 +190,24 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
         qDebug() << "unhandled service state changed:" << newState;
         return;
     }
+    for (const QLowEnergyCharacteristic &c : m_service->characteristics()) {
+        qDebug() << "characteristic:" << c.name() << c.uuid();
+    }
 
     m_readCharacteristic = m_service->characteristic(readUuid);
     m_writeCharacteristic = m_service->characteristic(writeUuid);
+    if (!m_readCharacteristic.descriptors().isEmpty()) {
+        m_readDescriptor = m_readCharacteristic.descriptors().first();
+    }
+
+    qDebug() << m_readCharacteristic.descriptors().count();
+    for (const QLowEnergyDescriptor &desc : m_readCharacteristic.descriptors()) {
+        qDebug() << desc.name() << desc.uuid() << desc.value();
+    }
+    qDebug() << m_writeCharacteristic.descriptors().count();
+    for (const QLowEnergyDescriptor &desc : m_writeCharacteristic.descriptors()) {
+        qDebug() << desc.name() << desc.uuid() << desc.value();
+    }
 
     if (!isConnected()) {
         qDebug() << "Finished scanning, but not valid";
@@ -179,7 +218,20 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
     qDebug() << "Successfully connected";
 
     connect(m_service, &QLowEnergyService::characteristicRead, this, &DeviceHandler::onDataRead);
-    sendCommand(Command::Chirp, 0, 6, 0 ,0);
+    connect(m_service, &QLowEnergyService::descriptorRead, this, &DeviceHandler::onDescriptorRead);
+
+    if (!sendCommand(Command::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
+        qWarning() << "Failed to send init command";
+    }
+
+    QTimer::singleShot(2000, [=]() {
+        if (!sendCommand(Command::Chirp, {0, 6, 0 ,0})) {
+            qWarning() << "Failed to send data bytes";
+        }
+        qDebug() << "Asked for chirp";
+    });
+    m_service->readDescriptor(m_readDescriptor);
+//    m_service->readCharacteristic(m_readCharacteristic);
 
     emit connectedChanged();
 }
@@ -198,9 +250,35 @@ void DeviceHandler::onDataRead(const QLowEnergyCharacteristic &characteristic, c
 {
     if (characteristic != m_readCharacteristic) {
         qWarning() << "Unexpected data from characteristic" << characteristic.uuid() << data;
-        return;
+//        return;
     }
     qDebug() << "data from characteristic" << characteristic.uuid() << data;
+    static int attempt = 0;
+//    if (++attempt < 3) {
+//        m_service->readCharacteristic(m_readCharacteristic);
+//    }
 
     emit dataRead(data);
+}
+
+void DeviceHandler::onDescriptorRead(const QLowEnergyDescriptor &characteristic, const QByteArray &data)
+{
+
+    if (characteristic != m_readDescriptor) {
+        qWarning() << "Unexpected data from descriptor" << characteristic.uuid() << data;
+//        return;
+    }
+    qDebug() << "data from descriptor" << characteristic.uuid() << data;
+    static int attempt = 0;
+//    if (++attempt < 3) {
+//        m_service->readDescriptor(m_readDescriptor);
+//    }
+
+    emit dataRead(data);
+}
+
+void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue)
+{
+    qDebug() << "characteristic" << characteristic.uuid() << "changed" << newValue;
+
 }

@@ -90,10 +90,13 @@ public:
         InitDone,
         Nack = 255
     };
+    const uint32_t mbApiVersion = 3u;
 
     bool sendCommand(const Command command, float arg1, float arg2, float arg3);
-    bool sendCommand(const Command command, const char arg1, const char arg2, const char arg3, const char arg4);
-    bool sendCommand(const Command command, QByteArray data);
+    bool sendCommand(const Command command, uint32_t arg1, uint32_t arg2);
+//    bool sendCommand(const Command command, const char arg1, const char arg2, const char arg3, const char arg4);
+    bool sendCommand(const DeviceHandler::Command command, std::vector<char> data);
+//    bool sendCommand(const Command command, QByteArray data);
 
 //    struct CommandPacket {
 //        CommandPacket(Command command, )
@@ -119,12 +122,15 @@ private slots:
     void onServiceError(QLowEnergyService::ServiceError error);
 
     void onDataRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data);
+    void onDescriptorRead(const QLowEnergyDescriptor &characteristic, const QByteArray &data);
+    void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
 private:
     QPointer<QLowEnergyController> m_deviceController;
 
     QLowEnergyCharacteristic m_readCharacteristic;
     QLowEnergyCharacteristic m_writeCharacteristic;
+    QLowEnergyDescriptor m_readDescriptor;
 
     QPointer<QLowEnergyService> m_service;
 };
