@@ -27,67 +27,89 @@ public:
         ResetHeading = 3,
         GetDebugLog = 4,
         SpinPlan = 5,
+
         EnterDfuMode = 8,
         TurnOff = 9,
         Sleep = 10,
+
         ConfigAutoMode = 15,
+
         Chirp = 18,
         SoundVolume = 19,
+
         FlickSignal = 23,
         ReverseSignal = 24,
         TailCalibSignal = 25,
         SetTailSignal = 26,
+
         InitializeDevice = 28,
+
         FlipRobot = 31,
+
         RequestAnalyticsRecords = 33,
         EraseAnalyticsRecords = 34,
+
         ConfigDriverAssist = 41,
         TutorialStep = 45,
         SetTime = 46,
         SchedulePlay = 47,
+
         Invalid = 100
     };
 
     enum class ResultType : uint16_t {
-        FirmwareVersionReport = 28,
-        DeviceOrientationReport = 48,
-        CrashlogParseFinished = 95,
-        CrashlogAddDebugString = 96,
-        CrashlogAddDebugMem = 97,
-        BatteryInfo = 98,
-        DeviceStopped = 99,
-        DeviceStuck = 100,
-        AutoAckReport = 49,
+        //FirmwareVersionReport = 28,
+        //InitEndReport = 30,
+
+        //DeviceOrientationReport = 48,
         AutoAckSuccess = 48,
-        AutoAckFailed = 255,
-        InitEndReport = 30,
-        ResetTailReport = 50,
+        AutoAckReport = 49,
+
+        //ResetTailReport = 50,
+        //SensorDirty = 64,
+
         DebugNumber = 80,
         DebugCharacter = 81,
         DebugCharacterAlt = 82,
         DebugChecksum = 83,
+
         TofStuck = 83,
-        SensorDirty = 64,
+
+        //CrashlogParseFinished = 95,
+        //CrashlogAddDebugString = 96,
+        //CrashlogAddDebugMem = 97,
+        //BatteryInfo = 98,
+        //DeviceStopped = 99,
+        //DeviceStuck = 100,
+
+        //AutoAckFailed = 255
     };
 
     enum class Response : uint16_t {
         AutoAck = 15,
-        Pose = 48,
-        ResetTailFailInfo = 50,
-        StuckTofInfo = 64,
-        RecordsSummary = 80,
-        RecordsStart,
-        RecordsContinue,
-        RecordsFinished,
-        CrashLogFinished = 95,
-        CrashLogString,
-        DebugInfo,
-        BatteryVoltage,
-        RobotStopped,
-        RcStuck,
+
         FirmwareVersion = 28,
-        HardwareVersion,
-        InitDone,
+        HardwareVersion = 29,
+        InitDone = 30,
+
+        DeviceOrientation = 48,
+        ResetTailFailInfo = 50,
+
+        StuckTOFInfo = 64, // sensor dirty
+
+        RecordsSummary = 80,
+        RecordsStart = 81,
+        RecordsContinue = 82,
+        RecordsFinished = 83,
+
+        CrashLogFinished = 95,
+        CrashLogString = 96,
+        DebugInfo = 97, //CrashlogAddDebugMem = 97,
+
+        BatteryVoltage = 98,
+        RobotStopped = 99,
+        RcStuck = 100,
+
         Nack = 255
     };
     const uint32_t mbApiVersion = 3u;
@@ -103,6 +125,7 @@ public:
 //    };
 
     explicit DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent);
+    ~DeviceHandler();
 
     bool isConnected();
 
@@ -121,7 +144,7 @@ private slots:
     void onServiceStateChanged(QLowEnergyService::ServiceState newState);
     void onServiceError(QLowEnergyService::ServiceError error);
 
-    void onDataRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data);
+    void onCharacteristicRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data);
     void onDescriptorRead(const QLowEnergyDescriptor &characteristic, const QByteArray &data);
     void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 

@@ -60,7 +60,7 @@ QString DeviceDiscoverer::statusString()
     }
 
     if (m_attemptingScan) {
-        return tr("Scanning for devices");
+        return tr("Looking for device...");
     }
 
     return QString();
