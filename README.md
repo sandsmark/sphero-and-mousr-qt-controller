@@ -12,3 +12,10 @@ up my phone.
 So far it shows the Mousr orientation and other basic state (battery, if it is
 charging, if the sensor is dirty, etc.), and allows you to request it to chirp
 so you can find it.
+
+TODO
+====
+
+ * Configuring autoplay.
+ * Manual control.
+ * Connecting to and controlling sphero droids, because my cat also plays with those.
