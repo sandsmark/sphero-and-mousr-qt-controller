@@ -65,14 +65,14 @@ Window {
                 wrapMode: Text.Wrap
             }
         }
+    }
 
-        Loader {
-            id: robotLoader
-            active: DeviceDiscoverer.device && DeviceDiscoverer.device.isConnected
-            anchors.fill: parent
-            sourceComponent: Lol.RobotView {
-                device: DeviceDiscoverer.device
-            }
+    Loader {
+        id: robotLoader
+        active: DeviceDiscoverer.device && DeviceDiscoverer.device.isConnected
+        anchors.fill: parent
+        sourceComponent: Lol.RobotView {
+            device: DeviceDiscoverer.device
         }
     }
 }

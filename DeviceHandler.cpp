@@ -330,15 +330,19 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
         qWarning() << "Failed to send init command";
     }
 
-    QTimer::singleShot(2000, [=]() {
-        if (!sendCommand(Command::Chirp, {0, 6, 0 ,0})) {
-            qWarning() << "Failed to send data bytes";
-        }
-        qDebug() << "Asked for chirp";
-    });
+    QTimer::singleShot(2000, this, &DeviceHandler::chirp);
 
     emit connectedChanged();
 }
+
+void DeviceHandler::chirp()
+{
+    if (!sendCommand(Command::Chirp, {0, 6, 0 ,0})) {
+        qWarning() << "Failed to send data bytes";
+    }
+    qDebug() << "Asked for chirp";
+}
+
 
 void DeviceHandler::onServiceError(QLowEnergyService::ServiceError error)
 {
@@ -415,6 +419,7 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         break;
     }
     case BatteryVoltage:{
+        // Voltage seems to be percent? wtf
         m_voltage = parseBytes<uint8_t>(&bytes);
         m_batteryLow = parseBytes<bool>(&bytes);
 

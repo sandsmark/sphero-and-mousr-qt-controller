@@ -209,6 +209,7 @@ signals:
     void orientationChanged();
 
 public slots:
+    void chirp();
 
 private slots:
     void onServiceDiscovered(const QBluetoothUuid &newService);

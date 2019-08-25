@@ -6,5 +6,6 @@
         <file>images/side.png</file>
         <file>images/tail.png</file>
         <file>images/top.png</file>
+        <file>images/front.png</file>
     </qresource>
 </RCC>
