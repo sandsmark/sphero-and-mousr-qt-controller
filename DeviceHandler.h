@@ -11,6 +11,18 @@
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
 
+struct AutoplayConfig
+{
+    uint8_t surface = 0;
+    uint8_t tail = 0;
+    uint8_t speed = 0;
+    uint8_t gameMode = 0;
+    uint8_t playMode = 0;
+    uint8_t pause = 0;
+    uint8_t confined = 0;
+    uint8_t allDay = 0;
+} __attribute__((packed));
+
 class DeviceHandler : public QObject
 {
     Q_OBJECT
@@ -122,7 +134,7 @@ public:
         //AutoAckFailed = 255
     };
     enum Response : uint16_t {
-        AutoAck = 15,
+        AutoModeChanged = 15,
 
         FirmwareVersion = 28,
         HardwareVersion = 29,
@@ -194,6 +206,7 @@ private slots:
     void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
 private:
+
     QPointer<QLowEnergyController> m_deviceController;
 
     QLowEnergyCharacteristic m_readCharacteristic;
@@ -212,6 +225,8 @@ private:
     bool m_sensorDirty = false;
 
     QString m_name;
+
+    AutoplayConfig m_autoplay;
 };
 
 #endif // DEVICEHANDLER_H

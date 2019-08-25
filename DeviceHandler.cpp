@@ -460,6 +460,13 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         emit sensorDirtyChanged();
         break;
     }
+    case AutoModeChanged: {
+        // TODO: parse automode
+        qDebug() << type;
+        qDebug() << data.toHex();
+        m_autoplay = parseBytes<AutoplayConfig>(&bytes);
+        break;
+    }
     case AnalyticsData: // TODO: debug log data I think
     case AnalyticsEntry: // TODO: debug log text I think
     case AnalyticsEnd:
