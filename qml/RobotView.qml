@@ -100,6 +100,27 @@ Rectangle {
             text: qsTr("Charging")
         }
 
+        Rectangle {
+            width: parent.width
+            height: errorText.height + robotView.margins
+
+            visible: device.sensorDirty
+            color: "red"
+
+            SequentialAnimation on color {
+                loops: Animation.Infinite
+                ColorAnimation { to: "red"; duration: 1000 }
+                ColorAnimation { to: "white"; duration: 100 }
+            }
+
+            Text {
+                id: errorText
+                anchors.centerIn: parent
+                text: qsTr("Sensor is dirty\nPlease clean sensor")
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
+
         Text {
             width: statusColumn.width
             horizontalAlignment: Text.AlignHCenter

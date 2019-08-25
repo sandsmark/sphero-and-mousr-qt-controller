@@ -11,47 +11,6 @@
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
 
-struct ResponsePacket
-{
-    Q_GADGET
-
-public:
-    ResponsePacket(const QByteArray &data);
-
-    enum Type : uint16_t {
-        Invalid = 0,
-
-        AutoAck = 15,
-
-        FirmwareVersion = 28,
-        HardwareVersion = 29,
-        InitDone = 30,
-
-        DeviceOrientation = 48,
-        ResetTailFailInfo = 50,
-
-        StuckTOFInfo = 64, // sensor dirty
-
-        RecordsSummary = 80,
-        RecordsStart = 81,
-        RecordsContinue = 82,
-        RecordsFinished = 83,
-
-        CrashLogFinished = 95,
-        CrashLogString = 96,
-        DebugInfo = 97, //CrashlogAddDebugMem = 97,
-
-        BatteryVoltage = 98,
-        RobotStopped = 99,
-        RcStuck = 100,
-
-        Nack = 255
-    };
-    Q_ENUM(Type)
-
-    Type type = Invalid;
-};
-
 class DeviceHandler : public QObject
 {
     Q_OBJECT
@@ -75,6 +34,8 @@ class DeviceHandler : public QObject
     Q_PROPERTY(float zRotation READ zRotation NOTIFY orientationChanged)
     Q_PROPERTY(bool isFlipped READ isFlipped NOTIFY orientationChanged)
 
+    Q_PROPERTY(bool sensorDirty READ sensorDirty NOTIFY sensorDirtyChanged)
+
     static constexpr QUuid serviceUuid = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
     static constexpr QUuid writeUuid   = {0x6e400002, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
     static constexpr QUuid readUuid    = {0x6e400003, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
@@ -93,6 +54,8 @@ public:
     float yRotation() const { return m_rotY; }
     float zRotation() const { return m_rotZ; }
     bool isFlipped() const { return m_isFlipped; }
+
+    bool sensorDirty() const { return m_sensorDirty; }
 
     enum class Command : uint16_t {
         Stop = 0,
@@ -168,7 +131,7 @@ public:
         DeviceOrientation = 48,
         ResetTailFailInfo = 50,
 
-        StuckTOFInfo = 64, // sensor dirty
+        SensorDirty = 64, // sensor dirty
 
         AnalyticsBegin = 80,
         AnalyticsEntry = 81,
@@ -214,6 +177,7 @@ signals:
     void powerChanged();
     void autoRunningChanged();
     void orientationChanged();
+    void sensorDirtyChanged();
 
 public slots:
     void chirp();
@@ -244,6 +208,8 @@ private:
 
     float m_rotX = 0.f, m_rotY = 0.f, m_rotZ = 0.f;
     bool m_isFlipped = false;
+
+    bool m_sensorDirty = false;
 
     QString m_name;
 };

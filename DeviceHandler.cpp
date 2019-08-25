@@ -205,9 +205,7 @@ DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     connect(m_deviceController, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error), this,
       [=](QLowEnergyController::Error newError){ qWarning() << "controller error:" << newError; });
 
-    connect(m_deviceController, &QLowEnergyController::stateChanged, this, [](QLowEnergyController::ControllerState state) {
-            qDebug() << "controller state changed" << state;
-            });
+    connect(m_deviceController, &QLowEnergyController::stateChanged, this, &DeviceHandler::onControllerStateChanged);
 
     m_deviceController->connectToDevice();
 
@@ -343,9 +341,8 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
 void DeviceHandler::chirp()
 {
     if (!sendCommand(Command::Chirp, {0, 6, 0 ,0})) {
-        qWarning() << "Failed to send data bytes";
+        qWarning() << "Failed to request chirp";
     }
-    qDebug() << "Asked for chirp";
 }
 
 void DeviceHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
@@ -455,7 +452,12 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         break;
     case AnalyticsBegin: {
         int numberOfEntries = parseBytes<uint8_t>(&bytes);
-//        qDebug() << "Number of analytics entries:" << numberOfEntries;
+        qDebug() << "Number of analytics entries:" << numberOfEntries;
+        break;
+    }
+    case SensorDirty: {
+        m_sensorDirty = parseBytes<bool>(&bytes);
+        emit sensorDirtyChanged();
         break;
     }
     case AnalyticsData: // TODO: debug log data I think
@@ -464,25 +466,6 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     case InitDone:
         break;
     default:
-        qWarning() << "Unhandled response" << type;
+        qWarning() << "Unhandled response" << type << data;
     }
-}
-
-//float bytesToFloat(const QByteArray &data, const int offset)
-//{
-//    if (Q_UNLIKELY(data.length() - offset < 4)) {
-//        qWarning() << "Not enought data for a float";
-//        return -1;
-//    }
-//    quint32 localEndian = qFromBigEndian<quint32>(data.constData() + offset);
-//    return *reinterpret_cast<float *>(&localEndian);
-//}
-
-ResponsePacket::ResponsePacket(const QByteArray &data)
-{
-    if (data.isEmpty()) {
-        qWarning() << "Empty response";
-        return;
-    }
-
 }
