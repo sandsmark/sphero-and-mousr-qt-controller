@@ -9,7 +9,6 @@ Rectangle {
     property DeviceHandler device
     readonly property int margins: 10
     anchors.fill: parent
-//    visible: device.isConnected // TODO separate component so we don't need to check all the time
 
     Column {
         id: orientationView
@@ -19,28 +18,44 @@ Rectangle {
         width: parent.width / 3 - margins * 2
 
         Image {
+            id: topImage
             source: "qrc:images/top.png"
-            rotation: device.zRotation
             width: height
             height: robotView.height / 3
             fillMode: Image.PreserveAspectFit
+
+            RotationAnimation on rotation {
+                running: topImage.rotation != device.zRotation
+                to: device.zRotation
+            }
         }
 
         Image {
+            id: frontImage
             source: "qrc:images/front.png"
-            rotation: device.xRotation
+
             width: height
             height: robotView.height / 3
             fillMode: Image.PreserveAspectFit
+
+            RotationAnimation on rotation {
+                running: frontImage.rotation != device.xRotation
+                to: device.xRotation
+            }
         }
 
 
         Image {
+            id: sideImage
             source: "qrc:images/side.png"
-            rotation: device.yRotation
             width: height
             height: robotView.height / 3
             fillMode: Image.PreserveAspectFit
+
+            RotationAnimation on rotation {
+                running: sideImage.rotation != device.xRotation
+                to: device.xRotation
+            }
         }
     }
 
@@ -80,10 +95,12 @@ Rectangle {
 
             Rectangle {
                 id: percentageRect
+                x: 1
+                y: 1
                 opacity: device.voltage / 100
                 color: "green"
-                width: parent.width * device.voltage / 100
-                height: parent.height
+                width: parent.width * device.voltage / 100 - 2
+                height: parent.height - 2
             }
 
             // voltage????
