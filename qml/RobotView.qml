@@ -15,10 +15,12 @@ Rectangle {
         id: orientationView
         x: robotView.margins
         y: robotView.margins
+        visible: !device.isCharging
+        width: parent.width / 3 - margins * 2
 
         Image {
             source: "qrc:images/top.png"
-            rotation: device ? device.zRotation : 0
+            rotation: device.zRotation
             width: height
             height: robotView.height / 3
             fillMode: Image.PreserveAspectFit
@@ -26,7 +28,7 @@ Rectangle {
 
         Image {
             source: "qrc:images/front.png"
-            rotation: device ? device.xRotation : 0
+            rotation: device.xRotation
             width: height
             height: robotView.height / 3
             fillMode: Image.PreserveAspectFit
@@ -35,22 +37,35 @@ Rectangle {
 
         Image {
             source: "qrc:images/side.png"
-            rotation: device ? device.yRotation : 0
+            rotation: device.yRotation
             width: height
             height: robotView.height / 3
             fillMode: Image.PreserveAspectFit
         }
     }
 
-    Column {
-        id: statusColumn
-        y: robotView.margins
+
+    Image {
+        visible: device.isCharging
 
         anchors {
-            left: orientationView.right
-            right: controls.left
-            margins: robotView.margins
+            verticalCenter: parent.verticalCenter
         }
+
+        x: robotView.margins
+        width: parent.width / 3 - margins * 2
+        height: parent.width / 3 - margins * 2
+
+        fillMode: Image.PreserveAspectFit
+        source: "qrc:images/charging.png"
+    }
+
+
+    Column {
+        id: statusColumn
+        x: parent.width / 3
+        y: robotView.margins
+        width: parent.width / 3 - margins * 2
 
         Rectangle {
             id: chargeRect
@@ -74,7 +89,7 @@ Rectangle {
             // voltage????
             Text {
                 anchors.centerIn: parent
-                text: device.voltage  + "%"
+                text: device.isFullyCharged ? qsTr("Fully charged") : device.voltage  + "%"
             }
         }
 
@@ -85,20 +100,12 @@ Rectangle {
             text: qsTr("Charging")
         }
 
-        Item {
-            visible: device.isCharging
-            width: parent.width
-            height: robotView.height / 3
-
-            Image {
-                anchors.centerIn: parent
-                width: parent.height
-                height: parent.height
-                fillMode: Image.PreserveAspectFit
-                source: "qrc:images/charging.png"
-            }
+        Text {
+            width: statusColumn.width
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("Memory usage: ") + device.memory
+            opacity: 0.25
         }
-
     }
 
 
@@ -107,6 +114,7 @@ Rectangle {
         id: controls
         y: robotView.margins
         spacing: robotView.margins
+        width: parent.width / 3 - margins * 2
 
         anchors {
             margins: robotView.margins

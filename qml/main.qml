@@ -50,7 +50,37 @@ Window {
                 visible: DeviceDiscoverer.statusString.length > 0
                 text: DeviceDiscoverer.statusString
                 wrapMode: Text.Wrap
-//                onVisibleChanged: console.log(DeviceDiscoverer.device)
+            }
+
+            Item {
+                width: 100
+                height: width
+                anchors.centerIn: parent
+
+                RotationAnimation on rotation {
+                          loops: Animation.Infinite
+                          from: 0
+                          to: 360
+                          duration: 500
+                      }
+
+                SequentialAnimation on opacity {
+                        loops: Animation.Infinite
+                        PropertyAnimation { to: 1; duration: 500 }
+                        PropertyAnimation { to: 0.1; duration: 500 }
+                    }
+
+                Rectangle {
+                    width: parent.width
+                    height: width
+                    radius: parent.width / 2
+                    border.width: 2
+                }
+
+                Rectangle {
+                    width: parent.width / 2
+                    height: width
+                }
             }
 
             Text {

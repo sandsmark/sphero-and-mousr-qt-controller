@@ -6,6 +6,7 @@
 #include <QBluetoothUuid>
 #include <QLowEnergyService>
 #include <QLowEnergyCharacteristic>
+#include <QLowEnergyController>
 
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
@@ -54,9 +55,13 @@ public:
 class DeviceHandler : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QString name MEMBER m_name CONSTANT)
+
     Q_PROPERTY(QString statusString READ statusString NOTIFY connectedChanged)
 
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectedChanged)
+
+    Q_PROPERTY(int memory READ memory NOTIFY powerChanged)
 
     Q_PROPERTY(int voltage READ voltage NOTIFY powerChanged)
     Q_PROPERTY(bool isCharging READ isCharging NOTIFY powerChanged)
@@ -74,6 +79,8 @@ class DeviceHandler : public QObject
     static constexpr QUuid writeUuid   = {0x6e400002, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
     static constexpr QUuid readUuid    = {0x6e400003, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
 public:
+    int memory() const { return m_memory; }
+
     // Power stuff
     int voltage() const { return m_voltage; }
     bool isCharging() const { return m_charging; }
@@ -212,6 +219,8 @@ public slots:
     void chirp();
 
 private slots:
+    void onControllerStateChanged(QLowEnergyController::ControllerState state);
+
     void onServiceDiscovered(const QBluetoothUuid &newService);
     void onServiceStateChanged(QLowEnergyService::ServiceState newState);
     void onServiceError(QLowEnergyService::ServiceError error);
@@ -229,12 +238,14 @@ private:
 
     QPointer<QLowEnergyService> m_service;
 
-    int m_voltage = 0;
+    int m_voltage = 0, m_memory = 0;
     bool m_batteryLow = false, m_charging = false, m_fullyCharged = false;
     bool m_autoRunning = false;
 
     float m_rotX = 0.f, m_rotY = 0.f, m_rotZ = 0.f;
     bool m_isFlipped = false;
+
+    QString m_name;
 };
 
 #endif // DEVICEHANDLER_H

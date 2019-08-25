@@ -181,7 +181,8 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, std::vecto
 }
 
 DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent) :
-    QObject(parent)
+    QObject(parent),
+    m_name(deviceInfo.name())
 {
     qDebug() << "device name:" << deviceInfo.name() << "device uuid" << deviceInfo.deviceUuid();
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
@@ -223,16 +224,20 @@ DeviceHandler::~DeviceHandler()
 
 bool DeviceHandler::isConnected()
 {
-    return m_service && m_writeCharacteristic.isValid() && m_readCharacteristic.isValid();
+    return m_deviceController && m_deviceController->state() != QLowEnergyController::UnconnectedState &&
+            m_service && m_writeCharacteristic.isValid() && m_readCharacteristic.isValid();
 
 }
 
 QString DeviceHandler::statusString()
 {
+    const QString name = m_name.isEmpty() ? "device" : m_name;
     if (isConnected()) {
-        return tr("Connected to device");
+        return tr("Connected to %1").arg(name);
+    } else if ( m_deviceController && m_deviceController->state() == QLowEnergyController::UnconnectedState) {
+        return tr("Disconnected from %1").arg(name);
     } else {
-        return tr("Connecting to device...");
+        return tr("Connecting to %1...").arg(name);
     }
 }
 
@@ -343,6 +348,15 @@ void DeviceHandler::chirp()
     qDebug() << "Asked for chirp";
 }
 
+void DeviceHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
+{
+    if (state == QLowEnergyController::UnconnectedState) {
+        qWarning() << "Disconnected";
+    }
+
+    emit connectedChanged();
+}
+
 
 void DeviceHandler::onServiceError(QLowEnergyService::ServiceError error)
 {
@@ -398,8 +412,7 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     if (resp.isEmpty()) {
         qDebug() << "Unknown command";
-        qDebug() << command
-            << data.right(data.length() - 1);
+        qDebug() << command << data;
         return;
     }
 
@@ -428,14 +441,7 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
         m_autoRunning = parseBytes<bool>(&bytes);
 
-        int memory = parseBytes<uint16_t>(&bytes);
-
-        qDebug() << "Voltage" << m_voltage;
-        qDebug() << "Battery low" << m_batteryLow;
-        qDebug() << "Charging" << m_charging;
-        qDebug() << "Fully charged" << m_fullyCharged;
-        qDebug() << "Auto running" << m_autoRunning;
-        qDebug() << "MEmory" << memory;
+        m_memory = parseBytes<uint16_t>(&bytes);
 
         emit powerChanged();
 
@@ -452,8 +458,10 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 //        qDebug() << "Number of analytics entries:" << numberOfEntries;
         break;
     }
-    case AnalyticsData: // TODO: don't care
+    case AnalyticsData: // TODO: debug log data I think
+    case AnalyticsEntry: // TODO: debug log text I think
     case AnalyticsEnd:
+    case InitDone:
         break;
     default:
         qWarning() << "Unhandled response" << type;
