@@ -18,4 +18,6 @@ HEADERS += \
     devicediscoverer.h
 
 RESOURCES += \
-    qml/main.qrc
+    main.qrc
+
+DISTFILES +=

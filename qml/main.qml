@@ -2,6 +2,9 @@ import QtQuick 2.0
 import QtQuick.Window 2.12
 import com.iskrembilen 1.0
 
+// I don't understand qml anymore...
+import "." as Lol
+
 Window {
     flags: "Dialog"
     visible: true
@@ -13,6 +16,8 @@ Window {
         id: deviceDiscovery
         anchors.fill: parent
         color: "gray"
+
+        visible: !robotLoader.active
 
         onVisibleChanged: {
             console.log("Visible changed: " + visible)
@@ -58,6 +63,15 @@ Window {
                 text: visible ? DeviceDiscoverer.device.statusString : ""
 
                 wrapMode: Text.Wrap
+            }
+        }
+
+        Loader {
+            id: robotLoader
+            active: DeviceDiscoverer.device && DeviceDiscoverer.device.isConnected
+            anchors.fill: parent
+            sourceComponent: Lol.RobotView {
+                device: DeviceDiscoverer.device
             }
         }
     }

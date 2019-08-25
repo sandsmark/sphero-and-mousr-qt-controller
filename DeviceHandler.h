@@ -10,16 +10,83 @@
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
 
+struct ResponsePacket
+{
+    Q_GADGET
+
+public:
+    ResponsePacket(const QByteArray &data);
+
+    enum Type : uint16_t {
+        Invalid = 0,
+
+        AutoAck = 15,
+
+        FirmwareVersion = 28,
+        HardwareVersion = 29,
+        InitDone = 30,
+
+        DeviceOrientation = 48,
+        ResetTailFailInfo = 50,
+
+        StuckTOFInfo = 64, // sensor dirty
+
+        RecordsSummary = 80,
+        RecordsStart = 81,
+        RecordsContinue = 82,
+        RecordsFinished = 83,
+
+        CrashLogFinished = 95,
+        CrashLogString = 96,
+        DebugInfo = 97, //CrashlogAddDebugMem = 97,
+
+        BatteryVoltage = 98,
+        RobotStopped = 99,
+        RcStuck = 100,
+
+        Nack = 255
+    };
+    Q_ENUM(Type)
+
+    Type type = Invalid;
+};
+
 class DeviceHandler : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString statusString READ statusString NOTIFY connectedChanged)
 
+    Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectedChanged)
+
+    Q_PROPERTY(int voltage READ voltage NOTIFY powerChanged)
+    Q_PROPERTY(bool isCharging READ isCharging NOTIFY powerChanged)
+    Q_PROPERTY(bool isBatteryLow READ isBatteryLow NOTIFY powerChanged)
+    Q_PROPERTY(bool isFullyCharged READ isFullyCharged NOTIFY powerChanged)
+
+    Q_PROPERTY(bool isAutoRunning READ isAutoRunning NOTIFY autoRunningChanged)
+
+    Q_PROPERTY(float xRotation READ xRotation NOTIFY orientationChanged)
+    Q_PROPERTY(float yRotation READ yRotation NOTIFY orientationChanged)
+    Q_PROPERTY(float zRotation READ zRotation NOTIFY orientationChanged)
+    Q_PROPERTY(bool isFlipped READ isFlipped NOTIFY orientationChanged)
+
     static constexpr QUuid serviceUuid = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
     static constexpr QUuid writeUuid   = {0x6e400002, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
     static constexpr QUuid readUuid    = {0x6e400003, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
-
 public:
+    // Power stuff
+    int voltage() const { return m_voltage; }
+    bool isCharging() const { return m_charging; }
+    bool isBatteryLow() const { return m_batteryLow; }
+    bool isFullyCharged() const { return m_fullyCharged; }
+
+    bool isAutoRunning() const { return m_autoRunning; }
+
+    float xRotation() const { return m_rotX; }
+    float yRotation() const { return m_rotY; }
+    float zRotation() const { return m_rotZ; }
+    bool isFlipped() const { return m_isFlipped; }
+
     enum class Command : uint16_t {
         Stop = 0,
         Spin = 1,
@@ -84,8 +151,7 @@ public:
 
         //AutoAckFailed = 255
     };
-
-    enum class Response : uint16_t {
+    enum Response : uint16_t {
         AutoAck = 15,
 
         FirmwareVersion = 28,
@@ -97,10 +163,10 @@ public:
 
         StuckTOFInfo = 64, // sensor dirty
 
-        RecordsSummary = 80,
-        RecordsStart = 81,
-        RecordsContinue = 82,
-        RecordsFinished = 83,
+        AnalyticsBegin = 80,
+        AnalyticsEntry = 81,
+        AnalyticsData = 82,
+        AnalyticsEnd = 83,
 
         CrashLogFinished = 95,
         CrashLogString = 96,
@@ -112,6 +178,8 @@ public:
 
         Nack = 255
     };
+    Q_ENUM(Response)
+
     const uint32_t mbApiVersion = 3u;
 
     bool sendCommand(const Command command, float arg1, float arg2, float arg3);
@@ -136,6 +204,9 @@ signals:
     void connectedChanged();
     void dataRead(const QByteArray &data);
     void disconnected(); // TODO
+    void powerChanged();
+    void autoRunningChanged();
+    void orientationChanged();
 
 public slots:
 
@@ -156,6 +227,13 @@ private:
     QLowEnergyDescriptor m_readDescriptor;
 
     QPointer<QLowEnergyService> m_service;
+
+    int m_voltage = 0;
+    bool m_batteryLow = false, m_charging = false, m_fullyCharged = false;
+    bool m_autoRunning = false;
+
+    float m_rotX = 0.f, m_rotY = 0.f, m_rotZ = 0.f;
+    bool m_isFlipped = false;
 };
 
 #endif // DEVICEHANDLER_H

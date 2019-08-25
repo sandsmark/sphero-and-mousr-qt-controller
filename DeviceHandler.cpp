@@ -1,3 +1,31 @@
+#include <QMetaEnum>
+#include <QDebug>
+
+namespace EnumHelper {
+
+template <typename T> static const char *toKey(const T val) {
+    const QMetaEnum metaEnum = QMetaEnum::fromType<T>();
+    return metaEnum.valueToKey(val);
+}
+//template <typename T> static T fromKey(const char *key) {
+//    const QMetaEnum metaEnum = QMetaEnum::fromType<T>();
+//    bool ok;
+//    T ret = T(metaEnum.keyToValue(key, &ok));
+//    if (!ok) {
+//        qWarning() << "Invalid enum value" << key << "for" << QString(metaEnum.name());
+//        ret = T(metaEnum.value(0));
+//    }
+//    return ret;
+//}
+template <typename T> static QString toString(const T val) {
+    return QString::fromUtf8(EnumHelper::toKey(val));
+}
+//template <typename T> static T fromString(const QString &string) {
+//    return EnumHelper::fromKey<T>(string.toLocal8Bit().constData());
+//}
+
+}
+
 #include "DeviceHandler.h"
 
 #include <QLowEnergyController>
@@ -6,13 +34,22 @@
 #include <QDateTime>
 #include <QtEndian>
 
+// Fuck endiannes
+
+template<typename T>
+static inline T parseBytes(const char **data)
+{
+    T ret;
+    memcpy(reinterpret_cast<char*>(&ret), reinterpret_cast<const void*>(*data), sizeof(T));
+    *data += sizeof(T);
+
+    return ret;
+}
+
 template<typename T>
 static inline void setBytes(char **data, const T val)
 {
-    //qToBigEndian<T>(reinterpret_cast<const T*>(&val), 1, reinterpret_cast<T*>(*data));
-    //qToBigEndian<T>(reinterpret_cast<void*>(*data), 1, reinterpret_cast<const char*>(&val));
     memcpy(reinterpret_cast<void*>(*data), reinterpret_cast<const char*>(&val), sizeof(T));
-    //qToBigEndian(data,
     *data += sizeof(T);
 }
 
@@ -122,8 +159,8 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, std::vecto
     setBytes(&bytes, uint16_t(command));
     //qDebug() << "size after" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
 
-    const uintptr_t dataSize = (uintptr_t(bytes) - uintptr_t(buffer.data()));
-    const size_t expectedSize = 1 + data.size() + 2;
+    //const uintptr_t dataSize = (uintptr_t(bytes) - uintptr_t(buffer.data()));
+    //const size_t expectedSize = 1 + data.size() + 2;
     //if (dataSize != expectedSize) {
         //qWarning() << "Invalid buffer length" << dataSize << uintptr_t(bytes) << uintptr_t(buffer.data()) << data.size() << expectedSize;
 //        return false;
@@ -259,7 +296,9 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
     }
 
     m_readCharacteristic = m_service->characteristic(readUuid);
+    qDebug() << "read characteristic" << m_readCharacteristic.name() << m_readCharacteristic.uuid() << m_readCharacteristic.properties();
     m_writeCharacteristic = m_service->characteristic(writeUuid);
+    qDebug() << "write characteristic" << m_writeCharacteristic.name() << m_writeCharacteristic.uuid() << m_writeCharacteristic.properties();
     if (!m_readCharacteristic.descriptors().isEmpty()) {
         m_readDescriptor = m_readCharacteristic.descriptors().first();
     }
@@ -281,7 +320,12 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
 
     qDebug() << "Successfully connected";
 
-    //if (!sendCommand(Command::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
+    // Who the _fuck_ designed this API, requiring me to write magic bytes to a
+    // fucking read descriptor to get characteristicChanged to work?
+    m_service->writeDescriptor(m_readDescriptor, QByteArray::fromHex("0100"));
+
+    qDebug() << "Requested notifications on values changes";
+
     if (!sendCommand(Command::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
         qWarning() << "Failed to send init command";
     }
@@ -292,8 +336,6 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
         }
         qDebug() << "Asked for chirp";
     });
-    //m_service->readDescriptor(m_readDescriptor);
-//    m_service->readCharacteristic(m_readCharacteristic);
 
     emit connectedChanged();
 }
@@ -337,11 +379,97 @@ void DeviceHandler::onDescriptorRead(const QLowEnergyDescriptor &descriptor, con
     emit dataRead(data);
 }
 
-void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue)
+void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
 {
     if (characteristic != m_readCharacteristic) {
-        qWarning() << "changed from unexpected characteristic" << characteristic.uuid() << newValue;
+        qWarning() << "changed from unexpected characteristic" << characteristic.uuid() << data;
         return;
     }
-    qDebug() << "read characteristic changed" << newValue;
+    if (data.isEmpty()) {
+        qWarning() << "Empty characteristic?";
+    }
+
+    int command = data[0];
+    QString resp = EnumHelper::toString(Response(command));
+
+    if (resp.isEmpty()) {
+        qDebug() << "Unknown command";
+        qDebug() << command
+            << data.right(data.length() - 1);
+        return;
+    }
+
+    const char *bytes = data.constData();
+    Response type = Response(*bytes++);
+
+    switch(type){
+    case DeviceOrientation: {
+        // I just assume the order here, haven't bothered testing
+        m_rotX = parseBytes<float>(&bytes);
+        m_rotY = parseBytes<float>(&bytes);
+        m_rotZ = parseBytes<float>(&bytes);
+        m_isFlipped = parseBytes<bool>(&bytes);
+
+        emit orientationChanged();
+
+        break;
+    }
+    case BatteryVoltage:{
+        m_voltage = parseBytes<uint8_t>(&bytes);
+        m_batteryLow = parseBytes<bool>(&bytes);
+
+        m_charging = parseBytes<bool>(&bytes);
+        m_fullyCharged = parseBytes<bool>(&bytes);
+
+        m_autoRunning = parseBytes<bool>(&bytes);
+
+        int memory = parseBytes<uint16_t>(&bytes);
+
+        qDebug() << "Voltage" << m_voltage;
+        qDebug() << "Battery low" << m_batteryLow;
+        qDebug() << "Charging" << m_charging;
+        qDebug() << "Fully charged" << m_fullyCharged;
+        qDebug() << "Auto running" << m_autoRunning;
+        qDebug() << "MEmory" << memory;
+
+        emit powerChanged();
+
+        break;
+    }
+    case CrashLogString:
+        qDebug() << "Crash log string:" << QString::fromUtf8(data.right(data.length() - 1));
+        break;
+    case CrashLogFinished:
+//        qDebug() << type;
+        break;
+    case AnalyticsBegin: {
+        int numberOfEntries = parseBytes<uint8_t>(&bytes);
+//        qDebug() << "Number of analytics entries:" << numberOfEntries;
+        break;
+    }
+    case AnalyticsData: // TODO: don't care
+    case AnalyticsEnd:
+        break;
+    default:
+        qWarning() << "Unhandled response" << type;
+    }
+}
+
+//float bytesToFloat(const QByteArray &data, const int offset)
+//{
+//    if (Q_UNLIKELY(data.length() - offset < 4)) {
+//        qWarning() << "Not enought data for a float";
+//        return -1;
+//    }
+//    quint32 localEndian = qFromBigEndian<quint32>(data.constData() + offset);
+//    return *reinterpret_cast<float *>(&localEndian);
+//}
+
+ResponsePacket::ResponsePacket(const QByteArray &data)
+{
+    if (data.isEmpty()) {
+        qWarning() << "Empty response";
+        return;
+    }
+
 }
