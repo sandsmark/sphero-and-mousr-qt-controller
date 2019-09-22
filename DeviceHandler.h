@@ -13,15 +13,53 @@ class QBluetoothDeviceInfo;
 
 struct AutoplayConfig
 {
-    uint8_t surface = 0;
-    uint8_t tail = 0;
-    uint8_t speed = 0;
-    uint8_t gameMode = 0;
-    uint8_t playMode = 0;
-    uint8_t pause = 0;
-    uint8_t confined = 0;
-    uint8_t allDay = 0;
+    enum Surface : uint8_t {
+        Carpet = 0,
+        BareFloor = 1,
+    };
+
+    enum TailType : uint8_t {
+        BounceTail = 0,
+        FlickTail = 1,
+        ChaseTail = 2
+    };
+    enum PresetMode : uint8_t {
+        CalmPreset = 0,
+        AggressivePreset = 1,
+        CustomMode = 2
+    };
+    enum PlayMode {
+        DriveStraight = 0,
+        Snaking = 1
+    };
+    enum GameMode : uint8_t {
+        OffMode = 255,
+        Wander = 0,
+        CornerFinder = 1,
+        BackAndForth = 2,
+        Stationary = 3
+    };
+
+
+    uint8_t enabled = 0; // 0
+    uint8_t surface = 0; // 1
+    uint8_t tail = 0; // 2
+    uint8_t speed = 0; // 3
+    uint8_t gameMode = 0; // 4
+    uint8_t playMode = 0; // 5
+    uint8_t pauseFrequency = 0; // 6          // 0, 5, 10, 20, 30, 60, 255
+    uint8_t confined = 0; // 7
+    uint8_t pauseLength = 0; // 8       // pause time; 3, 6, 10, 15, 20, 0 (all day mode)
+
+    uint8_t allDay = 0; // 9
+
+    uint8_t unknown1 = 0; // 10
+    uint8_t unknown2 = 0; // 11
+    uint8_t unknown3 = 0; // 12
+    uint8_t unknown4 = 0; // 13
+    uint8_t unknown5 = 0; // 14
 } __attribute__((packed));
+
 
 class DeviceHandler : public QObject
 {
@@ -48,9 +86,10 @@ class DeviceHandler : public QObject
 
     Q_PROPERTY(bool sensorDirty READ sensorDirty NOTIFY sensorDirtyChanged)
 
-    static constexpr QUuid serviceUuid = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
-    static constexpr QUuid writeUuid   = {0x6e400002, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
-    static constexpr QUuid readUuid    = {0x6e400003, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+    static constexpr QUuid dfuServiceUuid = {0x0000fe59, 0x0000, 0x1000, 0x80, 0x00, 0x00, 0x80, 0x5f, 0x9b, 0x34, 0xfb};
+    static constexpr QUuid serviceUuid    = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+    static constexpr QUuid writeUuid      = {0x6e400002, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+    static constexpr QUuid readUuid       = {0x6e400003, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
 public:
     int memory() const { return m_memory; }
 
@@ -193,6 +232,8 @@ signals:
 
 public slots:
     void chirp();
+    void pause();
+    void resume();
 
 private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);
@@ -219,6 +260,8 @@ private:
     bool m_batteryLow = false, m_charging = false, m_fullyCharged = false;
     bool m_autoRunning = false;
 
+    float m_speed = 0.f, m_held = 0.f, m_angle = 0.f;
+
     float m_rotX = 0.f, m_rotY = 0.f, m_rotZ = 0.f;
     bool m_isFlipped = false;
 
@@ -227,6 +270,9 @@ private:
     QString m_name;
 
     AutoplayConfig m_autoplay;
+
+    AutoplayConfig::Surface m_surface = AutoplayConfig::BareFloor;
+    AutoplayConfig::TailType m_tailMode = AutoplayConfig::BounceTail;
 };
 
 #endif // DEVICEHANDLER_H

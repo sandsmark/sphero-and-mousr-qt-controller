@@ -8,5 +8,6 @@
         <file>images/top.png</file>
         <file>images/front.png</file>
         <file>images/shadow.png</file>
+        <file>images/bg.png</file>
     </qresource>
 </RCC>

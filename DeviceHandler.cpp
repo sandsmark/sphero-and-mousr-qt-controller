@@ -173,6 +173,7 @@ DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     m_name(deviceInfo.name())
 {
     qDebug() << "device name:" << deviceInfo.name() << "device uuid" << deviceInfo.deviceUuid();
+    qDebug() << deviceInfo.rssi();
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
 
     connect(m_deviceController, &QLowEnergyController::connected, m_deviceController, &QLowEnergyController::discoverServices);
@@ -231,8 +232,12 @@ QString DeviceHandler::statusString()
 
 void DeviceHandler::onServiceDiscovered(const QBluetoothUuid &newService)
 {
+    // 0000fe59-0000-1000-8000-00805f9b34fb
+    if (newService == dfuServiceUuid) {
+        qDebug() << "TODO: firmware update mode";
+        return;
+    }
     if (newService != serviceUuid) {
-        // TODO: device firmware upgrade
         // Service UUID: 0000fe59-0000-1000-8000-00805f9b34fb
         // Read:         8ec90001-f315-4f60-9fb8-838830daea50
         // Write:        8ec90002-f315-4f60-9fb8-838830daea50
@@ -284,26 +289,26 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
         return;
     }
 
-    for (const QLowEnergyCharacteristic &c : m_service->characteristics()) {
-        qDebug() << "characteristic available:" << c.name() << c.uuid() << c.properties();
-    }
+//    for (const QLowEnergyCharacteristic &c : m_service->characteristics()) {
+//        qDebug() << "characteristic available:" << c.name() << c.uuid() << c.properties();
+//    }
 
     m_readCharacteristic = m_service->characteristic(readUuid);
-    qDebug() << "read characteristic" << m_readCharacteristic.name() << m_readCharacteristic.uuid() << m_readCharacteristic.properties();
+//    qDebug() << "read characteristic" << m_readCharacteristic.name() << m_readCharacteristic.uuid() << m_readCharacteristic.properties();
     m_writeCharacteristic = m_service->characteristic(writeUuid);
-    qDebug() << "write characteristic" << m_writeCharacteristic.name() << m_writeCharacteristic.uuid() << m_writeCharacteristic.properties();
+//    qDebug() << "write characteristic" << m_writeCharacteristic.name() << m_writeCharacteristic.uuid() << m_writeCharacteristic.properties();
     if (!m_readCharacteristic.descriptors().isEmpty()) {
         m_readDescriptor = m_readCharacteristic.descriptors().first();
     }
 
-    qDebug() << "read descriptors descriptor count:" << m_readCharacteristic.descriptors().count();
-    for (const QLowEnergyDescriptor &desc : m_readCharacteristic.descriptors()) {
-        qDebug() << "read descriptor name:" << desc.name() << desc.uuid() << desc.value();
-    }
-    qDebug() << "write characteristic descriptor count:" << m_writeCharacteristic.descriptors().count();
-    for (const QLowEnergyDescriptor &desc : m_writeCharacteristic.descriptors()) {
-        qDebug() << "write descripto namer:" << desc.name() << desc.uuid() << desc.value();
-    }
+//    qDebug() << "read descriptors descriptor count:" << m_readCharacteristic.descriptors().count();
+//    for (const QLowEnergyDescriptor &desc : m_readCharacteristic.descriptors()) {
+//        qDebug() << "read descriptor name:" << desc.name() << desc.uuid() << desc.value();
+//    }
+//    qDebug() << "write characteristic descriptor count:" << m_writeCharacteristic.descriptors().count();
+//    for (const QLowEnergyDescriptor &desc : m_writeCharacteristic.descriptors()) {
+//        qDebug() << "write descripto namer:" << desc.name() << desc.uuid() << desc.value();
+//    }
 
     if (!isConnected()) {
         qDebug() << "Finished scanning, but not valid";
@@ -317,7 +322,7 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
     // fucking read descriptor to get characteristicChanged to work?
     m_service->writeDescriptor(m_readDescriptor, QByteArray::fromHex("0100"));
 
-    qDebug() << "Requested notifications on values changes";
+//    qDebug() << "Requested notifications on values changes";
 
     if (!sendCommand(Command::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
         qWarning() << "Failed to send init command";
@@ -333,6 +338,18 @@ void DeviceHandler::chirp()
     if (!sendCommand(Command::Chirp, {0, 6, 0 ,0})) {
         qWarning() << "Failed to request chirp";
     }
+}
+
+void DeviceHandler::pause()
+{
+    if (!sendCommand(Command::Stop, {0, 0, 0 ,0})) {
+        qWarning() << "Failed to request stop";
+    }
+}
+
+void DeviceHandler::resume()
+{
+    sendCommand(Command::Stop, m_speed, m_held, m_angle);
 }
 
 void DeviceHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
@@ -394,7 +411,7 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         qWarning() << "Empty characteristic?";
     }
 
-    int command = data[0];
+    int command = uint8_t(data[0]);
     QString resp = EnumHelper::toString(Response(command));
 
     if (resp.isEmpty()) {
@@ -405,6 +422,8 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     const char *bytes = data.constData();
     Response type = Response(*bytes++);
+
+    qDebug() << type << data.length();
 
     switch(type){
     case DeviceOrientation: {
@@ -438,7 +457,7 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         qDebug() << "Crash log string:" << QString::fromUtf8(data.right(data.length() - 1));
         break;
     case CrashLogFinished:
-//        qDebug() << type;
+        qDebug() << type;
         break;
     case AnalyticsBegin: {
         int numberOfEntries = parseBytes<uint8_t>(&bytes);
@@ -452,9 +471,11 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     }
     case AutoModeChanged: {
         // TODO: parse automode
+        qDebug() << "auto mode changed";
         qDebug() << type;
         qDebug() << data.toHex();
         m_autoplay = parseBytes<AutoplayConfig>(&bytes);
+        qDebug () << m_autoplay.enabled << m_autoplay.tail << m_autoplay.gameMode << m_autoplay.playMode;
         break;
     }
     case AnalyticsData: // TODO: debug log data I think

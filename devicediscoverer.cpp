@@ -19,6 +19,9 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     // I hate these overload things..
     connect(m_discoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error), this, &DeviceDiscoverer::onAgentError);
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered);
+    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [](const QBluetoothDeviceInfo &info, QBluetoothDeviceInfo::Fields updatedFields){
+        qDebug() << "updated:" << info.name() << info.rssi() << updatedFields;
+    });
     connect(this, &DeviceDiscoverer::deviceFound, this, &DeviceDiscoverer::stopScanning);
 
     QMetaObject::invokeMethod(this, &DeviceDiscoverer::startScanning);
@@ -96,10 +99,8 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
 
     qDebug() << "Found Mousr";
     m_device = new DeviceHandler(device, this);
-    QQmlEngine::setObjectOwnership(m_device, QQmlEngine::CppOwnership);
     emit deviceFound();
     connect(m_device, &QObject::destroyed, this, &DeviceDiscoverer::startScanning);
-    connect(m_device, &QObject::destroyed, this, &DeviceDiscoverer::deviceFound);
     return;
 }
 

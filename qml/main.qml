@@ -19,6 +19,12 @@ Window {
 
         visible: !robotLoader.active
 
+        Image {
+            anchors.fill: parent
+            source: "qrc:images/bg.png"
+            fillMode: Image.Tile
+        }
+
         BorderImage {
             anchors.fill: statusBox
             anchors.margins: -8
