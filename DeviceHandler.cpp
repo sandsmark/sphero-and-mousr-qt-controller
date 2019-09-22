@@ -7,22 +7,10 @@ template <typename T> static const char *toKey(const T val) {
     const QMetaEnum metaEnum = QMetaEnum::fromType<T>();
     return metaEnum.valueToKey(val);
 }
-//template <typename T> static T fromKey(const char *key) {
-//    const QMetaEnum metaEnum = QMetaEnum::fromType<T>();
-//    bool ok;
-//    T ret = T(metaEnum.keyToValue(key, &ok));
-//    if (!ok) {
-//        qWarning() << "Invalid enum value" << key << "for" << QString(metaEnum.name());
-//        ret = T(metaEnum.value(0));
-//    }
-//    return ret;
-//}
+
 template <typename T> static QString toString(const T val) {
     return QString::fromUtf8(EnumHelper::toKey(val));
 }
-//template <typename T> static T fromString(const QString &string) {
-//    return EnumHelper::fromKey<T>(string.toLocal8Bit().constData());
-//}
 
 }
 
@@ -209,6 +197,7 @@ DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
 
     m_deviceController->connectToDevice();
 
+    qDebug() << m_deviceController->error() << m_deviceController->errorString() << m_deviceController->services() << m_deviceController->state() << m_deviceController->role();
 }
 
 DeviceHandler::~DeviceHandler()
@@ -232,8 +221,9 @@ QString DeviceHandler::statusString()
     const QString name = m_name.isEmpty() ? "device" : m_name;
     if (isConnected()) {
         return tr("Connected to %1").arg(name);
-    } else if ( m_deviceController && m_deviceController->state() == QLowEnergyController::UnconnectedState) {
-        return tr("Disconnected from %1").arg(name);
+    } else if (m_deviceController && m_deviceController->state() == QLowEnergyController::UnconnectedState) {
+        QTimer::singleShot(1000, this, &QObject::deleteLater);
+        return tr("Failed to connect to %1").arg(name);
     } else {
         return tr("Connecting to %1...").arg(name);
     }

@@ -15,21 +15,15 @@ Window {
     Rectangle {
         id: deviceDiscovery
         anchors.fill: parent
-        color: "gray"
+        color: "white"
 
         visible: !robotLoader.active
 
-        onVisibleChanged: {
-            console.log("Visible changed: " + visible)
-            if (visible) {
-                DeviceDiscoverer.startScanning()
-            } else {
-                DeviceDiscoverer.stopScanning()
-            }
-        }
-        Component.onCompleted: {
-            console.log("Created");
-            DeviceDiscoverer.startScanning()
+        BorderImage {
+            anchors.fill: statusBox
+            anchors.margins: -8
+            border { left: 10; top: 10; right: 10; bottom: 10 }
+            source: "qrc:images/shadow.png"
         }
 
         Rectangle {
@@ -38,8 +32,8 @@ Window {
                 fill: parent
                 margins: 50
             }
-            radius: 10
             border.width: 2
+            color: DeviceDiscoverer.isError ? "lightGray" : "white"
 
             Text {
                 anchors {
@@ -49,26 +43,31 @@ Window {
                 font.bold: true
                 visible: DeviceDiscoverer.statusString.length > 0
                 text: DeviceDiscoverer.statusString
+                color: DeviceDiscoverer.isError ? "#a00" : "black"
                 wrapMode: Text.Wrap
             }
 
             Item {
+                id: spinner
                 width: 100
                 height: width
                 anchors.centerIn: parent
+                visible: !DeviceDiscoverer.isError
 
                 RotationAnimation on rotation {
-                          loops: Animation.Infinite
-                          from: 0
-                          to: 360
-                          duration: 500
-                      }
+                    running: spinner.visible
+                    loops: Animation.Infinite
+                    from: 0
+                    to: 360
+                    duration: 500
+                }
 
                 SequentialAnimation on opacity {
-                        loops: Animation.Infinite
-                        PropertyAnimation { to: 1; duration: 500 }
-                        PropertyAnimation { to: 0.1; duration: 500 }
-                    }
+                    running: spinner.visible
+                    loops: Animation.Infinite
+                    PropertyAnimation { to: 1; duration: 500 }
+                    PropertyAnimation { to: 0.1; duration: 500 }
+                }
 
                 Rectangle {
                     width: parent.width

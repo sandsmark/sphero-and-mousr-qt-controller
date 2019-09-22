@@ -7,5 +7,6 @@
         <file>images/tail.png</file>
         <file>images/top.png</file>
         <file>images/front.png</file>
+        <file>images/shadow.png</file>
     </qresource>
 </RCC>

@@ -17,6 +17,8 @@ class DeviceDiscoverer : public QObject
     Q_OBJECT
     Q_PROPERTY(QString statusString READ statusString NOTIFY statusStringChanged)
     Q_PROPERTY(QObject* device READ device NOTIFY deviceFound)
+    Q_PROPERTY(bool isError READ isError NOTIFY statusStringChanged) // yeye
+
 
 public:
     explicit DeviceDiscoverer(QObject *parent = nullptr);
@@ -25,6 +27,8 @@ public:
     QObject *device();
 
     QString statusString();
+
+    bool isError() const { return m_adapterError != QBluetoothLocalDevice::NoError || QBluetoothLocalDevice::allDevices().isEmpty(); }
 
 public slots:
     void startScanning();
@@ -36,18 +40,16 @@ signals:
 
 private slots:
     void onDeviceDiscovered(const QBluetoothDeviceInfo &device);
-    void onDeviceUpdated(const QBluetoothDeviceInfo &device);
 
     void onAgentError();
     void onAdapterError(const QBluetoothLocalDevice::Error error);
-    void onAdapterStateChanged(const QBluetoothLocalDevice::HostMode mode);
 
 private:
     QPointer<DeviceHandler> m_device;
 
-    QBluetoothDeviceDiscoveryAgent *m_discoveryAgent;
-    QBluetoothLocalDevice *m_adapter;
-    QBluetoothLocalDevice::Error m_adaperError = QBluetoothLocalDevice::NoError;
+    QPointer<QBluetoothDeviceDiscoveryAgent> m_discoveryAgent;
+    QPointer<QBluetoothLocalDevice> m_adapter;
+    QBluetoothLocalDevice::Error m_adapterError = QBluetoothLocalDevice::NoError;
     bool m_adapterPoweredOn = false;
     bool m_attemptingScan = false;
 };
