@@ -232,6 +232,9 @@ QString DeviceHandler::statusString()
 
 void DeviceHandler::onServiceDiscovered(const QBluetoothUuid &newService)
 {
+    static constexpr QUuid dfuServiceUuid = {0x0000fe59, 0x0000, 0x1000, 0x80, 0x00, 0x00, 0x80, 0x5f, 0x9b, 0x34, 0xfb};
+    static constexpr QUuid serviceUuid    = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+
     // 0000fe59-0000-1000-8000-00805f9b34fb
     if (newService == dfuServiceUuid) {
         qDebug() << "TODO: firmware update mode";
@@ -273,6 +276,9 @@ void DeviceHandler::onServiceDiscovered(const QBluetoothUuid &newService)
 
 void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newState)
 {
+    static constexpr QUuid writeUuid      = {0x6e400002, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+    static constexpr QUuid readUuid       = {0x6e400003, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+
     if (newState == QLowEnergyService::InvalidService) {
         qWarning() << "Got invalid service";
         emit disconnected();
