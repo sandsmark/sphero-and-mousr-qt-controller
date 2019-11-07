@@ -20,9 +20,11 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     // I hate these overload things..
     connect(m_discoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error), this, &DeviceDiscoverer::onAgentError);
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [](const QBluetoothDeviceInfo &info, QBluetoothDeviceInfo::Fields updatedFields){
         qDebug() << "updated:" << info.name() << info.rssi() << updatedFields;
     });
+#endif
     connect(this, &DeviceDiscoverer::deviceFound, this, &DeviceDiscoverer::stopScanning);
 
     QMetaObject::invokeMethod(this, &DeviceDiscoverer::startScanning);
