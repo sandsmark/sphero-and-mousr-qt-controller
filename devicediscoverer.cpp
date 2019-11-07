@@ -3,6 +3,7 @@
 #include "DeviceHandler.h"
 
 #include <QBluetoothDeviceDiscoveryAgent>
+#include <QBluetoothDeviceInfo>
 #include <QDebug>
 #include <QQmlEngine>
 
