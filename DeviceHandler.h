@@ -43,21 +43,28 @@ public:
         Carpet = 0,
         BareFloor = 1,
     };
+    Q_ENUM(Surface)
 
     enum TailType : uint8_t {
         BounceTail = 0,
         FlickTail = 1,
         ChaseTail = 2
     };
+    Q_ENUM(TailType)
+
     enum PresetMode : uint8_t {
         CalmPreset = 0,
         AggressivePreset = 1,
         CustomMode = 2
     };
+    Q_ENUM(PresetMode)
+
     enum PlayMode : uint8_t {
         DriveStraight = 0,
         Snaking = 1
     };
+    Q_ENUM(PlayMode)
+
     enum GameMode : uint8_t {
         OffMode = 255,
         Wander = 0,

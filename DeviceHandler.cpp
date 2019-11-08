@@ -342,7 +342,8 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
 
 //    qDebug() << "Requested notifications on values changes";
 
-    if (!sendCommand(Command::InitializeDevice, QDateTime::currentSecsSinceEpoch(), mbApiVersion)) {
+    //if (!sendCommand(Command::InitializeDevice, QDateTime::currentSecsSinceEpoch(), mbApiVersion)) {
+    if (!sendCommand(Command::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
         qWarning() << "Failed to send init command";
     }
 
