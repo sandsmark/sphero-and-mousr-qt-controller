@@ -11,55 +11,6 @@
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
 
-struct AutoplayConfig
-{
-    enum Surface : uint8_t {
-        Carpet = 0,
-        BareFloor = 1,
-    };
-
-    enum TailType : uint8_t {
-        BounceTail = 0,
-        FlickTail = 1,
-        ChaseTail = 2
-    };
-    enum PresetMode : uint8_t {
-        CalmPreset = 0,
-        AggressivePreset = 1,
-        CustomMode = 2
-    };
-    enum PlayMode {
-        DriveStraight = 0,
-        Snaking = 1
-    };
-    enum GameMode : uint8_t {
-        OffMode = 255,
-        Wander = 0,
-        CornerFinder = 1,
-        BackAndForth = 2,
-        Stationary = 3
-    };
-
-
-    uint8_t enabled = 0; // 0
-    uint8_t surface = 0; // 1
-    uint8_t tail = 0; // 2
-    uint8_t speed = 0; // 3
-    uint8_t gameMode = 0; // 4
-    uint8_t playMode = 0; // 5
-    uint8_t pauseFrequency = 0; // 6          // 0, 5, 10, 20, 30, 60, 255
-    uint8_t confined = 0; // 7
-    uint8_t pauseLength = 0; // 8       // pause time; 3, 6, 10, 15, 20, 0 (all day mode)
-
-    uint8_t allDay = 0; // 9
-
-    uint8_t unknown1 = 0; // 10
-    uint8_t unknown2 = 0; // 11
-    uint8_t unknown3 = 0; // 12
-    uint8_t unknown4 = 0; // 13
-    uint8_t unknown5 = 0; // 14
-} __attribute__((packed));
-
 
 class DeviceHandler : public QObject
 {
@@ -86,7 +37,36 @@ class DeviceHandler : public QObject
 
     Q_PROPERTY(bool sensorDirty READ sensorDirty NOTIFY sensorDirtyChanged)
 
+
 public:
+    enum Surface : uint8_t {
+        Carpet = 0,
+        BareFloor = 1,
+    };
+
+    enum TailType : uint8_t {
+        BounceTail = 0,
+        FlickTail = 1,
+        ChaseTail = 2
+    };
+    enum PresetMode : uint8_t {
+        CalmPreset = 0,
+        AggressivePreset = 1,
+        CustomMode = 2
+    };
+    enum PlayMode : uint8_t {
+        DriveStraight = 0,
+        Snaking = 1
+    };
+    enum GameMode : uint8_t {
+        OffMode = 255,
+        Wander = 0,
+        CornerFinder = 1,
+        BackAndForth = 2,
+        Stationary = 3
+    };
+    Q_ENUM(GameMode)
+
     int memory() const { return m_memory; }
 
     // Power stuff
@@ -140,6 +120,7 @@ public:
 
         Invalid = 100
     };
+    Q_ENUM(Command)
 
     enum class ResultType : uint16_t {
         //FirmwareVersionReport = 28,
@@ -168,7 +149,7 @@ public:
 
         //AutoAckFailed = 255
     };
-    enum Response : uint16_t {
+    enum Response : uint8_t {
         AutoModeChanged = 15,
 
         FirmwareVersion = 28,
@@ -196,6 +177,13 @@ public:
         Nack = 255
     };
     Q_ENUM(Response)
+
+    enum FirmwareType : uint8_t {
+        DebugFirmware = 0,
+        BetaFirmware = 1,
+        StableFirmware = 2
+    };
+    Q_ENUM(FirmwareType)
 
     const uint32_t mbApiVersion = 3u;
 
@@ -265,10 +253,90 @@ private:
 
     QString m_name;
 
+    struct AutoplayConfig
+    {
+        uint8_t enabled = 0; // 0
+        Surface surface = BareFloor; // 1
+        TailType tail = BounceTail; // 2
+        uint8_t speed = 0; // 3
+        GameMode gameMode = OffMode; // 4 --- also PresetMode?
+        PlayMode playMode = DriveStraight; // 5
+        uint8_t pauseFrequency = 0; // 6          // 0, 5, 10, 20, 30, 60, 255
+        uint8_t confinedOrPauseTime = 0; // 7
+        uint8_t pauseLengthOrBackUp = 0; // 8       // pause time; 3, 6, 10, 15, 20, 0 (all day mode)
+
+        uint8_t allDay = 0; // 9
+
+        uint8_t unknown1 = 0; // 10
+        uint8_t unknown2 = 0; // 11
+        uint8_t unknown3 = 0; // 12
+        Response response = Response::Nack; // 13
+        uint8_t unknown4 = 0; // 14
+
+        uint8_t pauseTime() {
+            switch(gameMode) {
+            case CornerFinder:
+                return pauseFrequency;
+            case Wander:
+            case BackAndForth:
+            case Stationary:
+                return confinedOrPauseTime;
+            default:
+                qWarning() << "unhandled game mode" << gameMode;
+                return confinedOrPauseTime;
+            }
+        }
+
+        void setConfineArea(bool isConfined) {
+            switch(gameMode) {
+            case CornerFinder:
+                confinedOrPauseTime = isConfined;
+                break;
+            default:
+                qWarning() << "can't set confined in game mode" << gameMode;
+                break;
+            }
+        }
+        void setBackUp(bool isBackUp) {
+            switch(gameMode) {
+            case Stationary:
+                pauseLengthOrBackUp = isBackUp;
+                break;
+            default:
+                qWarning() << "can't set back up in game mode" << gameMode;
+                break;
+            }
+        }
+        void setDrivingMode(uint8_t mode) {
+            switch(gameMode) {
+            case BackAndForth:
+                playMode = PlayMode(mode);
+                break;
+            default:
+                qWarning() << "can't set driving mode in game mode" << gameMode;
+                break;
+            }
+        }
+    } __attribute__((packed));
     AutoplayConfig m_autoplay;
 
-    AutoplayConfig::Surface m_surface = AutoplayConfig::BareFloor;
-    AutoplayConfig::TailType m_tailMode = AutoplayConfig::BounceTail;
+    struct Version {
+        FirmwareType firmwareType = StableFirmware;
+        uint8_t major = 0;
+        uint16_t minor = 0;
+        uint16_t commitNumber = 0;
+        char commitHash[4] {"   "};
+
+        uint8_t mousrVersion = 0;
+        uint32_t hardwareVersion = 0;
+        uint32_t bootloaderVersion;
+    } __attribute__((packed));
+    Version m_version;
+
+
+
+    Surface m_surface = BareFloor;
+    TailType m_tailMode = BounceTail;
 };
 
 #endif // DEVICEHANDLER_H

@@ -43,6 +43,7 @@ static inline void setBytes(char **data, const T val)
 
 bool DeviceHandler::sendCommand(const DeviceHandler::Command command, float arg1, float arg2, float arg3)
 {
+    qDebug() << " + Sending" << command;
     if (!isConnected()) {
         qWarning() << "trying to send when unconnected";
         return false;
@@ -77,6 +78,7 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, float arg1
 
 bool DeviceHandler::sendCommand(const DeviceHandler::Command command, uint32_t arg1, uint32_t arg2)
 {
+    qDebug() << " + Sending" << command;
     if (!isConnected()) {
         qWarning() << "trying to send when unconnected";
         return false;
@@ -103,10 +105,10 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, uint32_t a
         return false;
     }
     //qDebug() << "writing" << buffer.toHex();
-    qDebug() << "sending with two ints" << buffer.toHex() << buffer.size();
-    qDebug() << uint8_t(command) << arg1 << arg2;
-    qDebug() << uint8_t(buffer[0]) << buffer.mid(0,1).toHex() << buffer.mid(1,4).toHex() << buffer.mid(5,4).toHex();
-    qDebug() << "command:" << buffer.mid(13, 2).toHex();
+    //qDebug() << "sending with two ints" << buffer.toHex() << buffer.size();
+    //qDebug() << uint8_t(command) << arg1 << arg2;
+    //qDebug() << uint8_t(buffer[0]) << buffer.mid(0,1).toHex() << buffer.mid(1,4).toHex() << buffer.mid(5,4).toHex();
+    //qDebug() << "command:" << buffer.mid(13, 2).toHex();
 
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
     //m_service->writeCharacteristic(m_writeCharacteristic, buffer, QLowEnergyService::WriteWithoutResponse);
@@ -119,6 +121,7 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, uint32_t a
 
 bool DeviceHandler::sendCommand(const DeviceHandler::Command command, std::vector<char> data)
 {
+    qDebug() << " + Sending" << command;
     if (data.empty()) {
         qWarning() << "trying to send when unconnected";
         return false;
@@ -139,11 +142,11 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, std::vecto
     //qDebug() << "data size:" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
     for (const char &byte : data) {
         setBytes(&bytes, byte);
-        qDebug() << "after adding byte:" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
+        //qDebug() << "after adding byte:" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
     }
     bytes = buffer.data();
     bytes += 13;
-    qDebug() << "size before" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
+    //qDebug() << "size before" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
     setBytes(&bytes, uint16_t(command));
     //qDebug() << "size after" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
 
@@ -154,10 +157,10 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, std::vecto
 //        return false;
     //}
 
-    qDebug() << "sending bytes" << buffer.toHex() << buffer.size();
-    qDebug() << uint8_t(command);
-    qDebug() << uint8_t(buffer[0]) << buffer.mid(0,1).toHex() << buffer.mid(1,4).toHex() << buffer.mid(5,4).toHex();
-    qDebug() << "command:" << buffer.mid(13, 2).toHex();
+    //qDebug() << "sending bytes" << buffer.toHex() << buffer.size();
+    //qDebug() << uint8_t(command);
+    //qDebug() << uint8_t(buffer[0]) << buffer.mid(0,1).toHex() << buffer.mid(1,4).toHex() << buffer.mid(5,4).toHex();
+    //qDebug() << "command:" << buffer.mid(13, 2).toHex();
 
     m_service->writeCharacteristic(m_writeCharacteristic, buffer, QLowEnergyService::WriteWithoutResponse);
     //m_service->writeCharacteristic(m_writeCharacteristic, buffer);
@@ -172,8 +175,9 @@ DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     QObject(parent),
     m_name(deviceInfo.name())
 {
-    qDebug() << "device name:" << deviceInfo.name() << "device uuid" << deviceInfo.deviceUuid();
-    qDebug() << deviceInfo.rssi();
+    static_assert(sizeof(AutoplayConfig) == 15);
+    static_assert(sizeof(Version) == 19);
+
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
 
     connect(m_deviceController, &QLowEnergyController::connected, m_deviceController, &QLowEnergyController::discoverServices);
@@ -198,7 +202,9 @@ DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
 
     m_deviceController->connectToDevice();
 
-    qDebug() << m_deviceController->error() << m_deviceController->errorString() << m_deviceController->services() << m_deviceController->state() << m_deviceController->role();
+    if (m_deviceController->error() != QLowEnergyController::NoError) {
+        qDebug() << "controller error:" << m_deviceController->error() << m_deviceController->errorString();
+    }
 }
 
 DeviceHandler::~DeviceHandler()
@@ -232,19 +238,25 @@ QString DeviceHandler::statusString()
 
 void DeviceHandler::onServiceDiscovered(const QBluetoothUuid &newService)
 {
-    static constexpr QUuid dfuServiceUuid = {0x0000fe59, 0x0000, 0x1000, 0x80, 0x00, 0x00, 0x80, 0x5f, 0x9b, 0x34, 0xfb};
-    static constexpr QUuid serviceUuid    = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+    // 00001801-0000-1000-8000-00805f9b34fb
+    static constexpr QUuid genericServiceUuid = {0x00001801, 0x0000, 0x1000, 0x80, 0x00, 0x00, 0x80, 0x5f, 0x9b, 0x34, 0xfb};
+    if (newService == genericServiceUuid) {
+        qDebug() << "Got generic service uuid, not sure what this is for" << newService;
+        return;
+    }
 
     // 0000fe59-0000-1000-8000-00805f9b34fb
+    static constexpr QUuid dfuServiceUuid = {0x0000fe59, 0x0000, 0x1000, 0x80, 0x00, 0x00, 0x80, 0x5f, 0x9b, 0x34, 0xfb};
     if (newService == dfuServiceUuid) {
+        // Read:         8ec90001-f315-4f60-9fb8-838830daea50
+        // Write:        8ec90002-f315-4f60-9fb8-838830daea50
         qDebug() << "TODO: firmware update mode";
         return;
     }
-    if (newService != serviceUuid) {
-        // Service UUID: 0000fe59-0000-1000-8000-00805f9b34fb
-        // Read:         8ec90001-f315-4f60-9fb8-838830daea50
-        // Write:        8ec90002-f315-4f60-9fb8-838830daea50
 
+    // Service UUID: 6e400001-b5a3-f393-e0a9-e50e24dcca9e
+    static constexpr QUuid serviceUuid    = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+    if (newService != serviceUuid) {
         qWarning() << "discovered unhandled service" << newService << "expected" << serviceUuid;
         return;
     }
@@ -259,14 +271,14 @@ void DeviceHandler::onServiceDiscovered(const QBluetoothUuid &newService)
 
     connect(m_service, &QLowEnergyService::characteristicChanged, this, &DeviceHandler::onCharacteristicChanged);
     connect(m_service, &QLowEnergyService::characteristicRead, this, &DeviceHandler::onCharacteristicRead);
-    connect(m_service, &QLowEnergyService::characteristicWritten, this, [](const QLowEnergyCharacteristic &descriptor, const QByteArray &newValue) {
-            qDebug() << "Characteristic" << descriptor.uuid() << "wrote" << newValue;
-            });;
+    //connect(m_service, &QLowEnergyService::characteristicWritten, this, [](const QLowEnergyCharacteristic &descriptor, const QByteArray &newValue) {
+    //        qDebug() << "Characteristic" << descriptor.uuid() << "wrote" << newValue;
+    //        });;
 
     connect(m_service, &QLowEnergyService::descriptorRead, this, &DeviceHandler::onDescriptorRead);
-    connect(m_service, &QLowEnergyService::descriptorWritten, this, [](const QLowEnergyDescriptor &descriptor, const QByteArray &newValue) {
-            qDebug() << "Descriptor" << descriptor.uuid() << "wrote" << newValue;
-            });;
+    //connect(m_service, &QLowEnergyService::descriptorWritten, this, [](const QLowEnergyDescriptor &descriptor, const QByteArray &newValue) {
+    //        qDebug() << "Descriptor" << descriptor.uuid() << "wrote" << newValue;
+    //        });;
 
     connect(m_service, QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error), this, &DeviceHandler::onServiceError);
     connect(m_service, &QLowEnergyService::stateChanged, this, &DeviceHandler::onServiceStateChanged);
@@ -286,7 +298,7 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
     }
 
     if (newState == QLowEnergyService::DiscoveringServices) {
-        qDebug() << "Requesting services";
+        return;
     }
 
 
@@ -330,7 +342,7 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
 
 //    qDebug() << "Requested notifications on values changes";
 
-    if (!sendCommand(Command::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
+    if (!sendCommand(Command::InitializeDevice, QDateTime::currentSecsSinceEpoch(), mbApiVersion)) {
         qWarning() << "Failed to send init command";
     }
 
@@ -417,7 +429,11 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         qWarning() << "Empty characteristic?";
     }
 
-    int command = uint8_t(data[0]);
+    if (data.size() != 20) {
+        qWarning() << "invalid packet size" << data.size() << "expected 20";
+        return;
+    }
+    uint8_t command = uint8_t(data[0]);
     QString resp = EnumHelper::toString(Response(command));
 
     if (resp.isEmpty()) {
@@ -428,8 +444,7 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     const char *bytes = data.constData();
     Response type = Response(*bytes++);
-
-    qDebug() << type << data.length();
+    //qDebug() << " - " << type;
 
     switch(type){
     case DeviceOrientation: {
@@ -459,9 +474,13 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
         break;
     }
-    case CrashLogString:
-        qDebug() << "Crash log string:" << QString::fromUtf8(data.right(data.length() - 1));
+    case CrashLogString: {
+        const QString crashLog = QString::fromUtf8(data.right(data.length() - 1));
+        if (crashLog != "No crash log.") {
+            qDebug() << " Crash log string:" << crashLog;
+        }
         break;
+    }
     case CrashLogFinished:
         qDebug() << type;
         break;
@@ -476,19 +495,57 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         break;
     }
     case AutoModeChanged: {
-        // TODO: parse automode
         qDebug() << "auto mode changed";
-        qDebug() << type;
-        qDebug() << data.toHex();
+        static const int requiredSize = 1 + sizeof(AutoplayConfig);
+        if (data.size() < requiredSize) {
+            qWarning() << "Not enough data in packet, require" << requiredSize << "got" << data.size();
+            break;
+        }
         m_autoplay = parseBytes<AutoplayConfig>(&bytes);
-        qDebug () << m_autoplay.enabled << m_autoplay.tail << m_autoplay.gameMode << m_autoplay.playMode;
+        qDebug() << "autoplay, enabled:" << m_autoplay.enabled << "tail:" << m_autoplay.tail << "gamemode:" << m_autoplay.gameMode << "playmode" << m_autoplay.playMode;
+        qDebug() << "unknown1" << m_autoplay.unknown1;
+        qDebug() << "unknown2" << m_autoplay.unknown2;
+        qDebug() << "response type" << m_autoplay.response;
         break;
     }
-    case AnalyticsData: // TODO: debug log data I think
+
+        ///////////////// ANALYTICS: Who Gives A Shit™ ///////////////////////
+        // Analytics: fragmented packages, single byte header in each, and CRC at the end of all I think
+        // That's how it looks at least, and a readable ascii string for what it is
+    case AnalyticsData:
     case AnalyticsEntry: // TODO: debug log text I think
     case AnalyticsEnd:
-    case InitDone:
         break;
+
+    case InitDone:
+        qDebug() << "Init complete" << type << data.toHex();
+        break;
+
+    case FirmwareVersion: {
+        static const int requiredSize = 1 + sizeof(Version);
+        if (data.size() < requiredSize) {
+            qWarning() << "Not enough data in packet for version, require" << requiredSize << "got" << data.size();
+            break;
+        }
+
+        m_version = parseBytes<Version>(&bytes);
+
+        qDebug() << "Firmware mode:" << m_version.firmwareType;
+        qDebug().noquote() << "Version" << (QByteArray::number(m_version.major) + "." + QByteArray::number(m_version.minor) + "." + QByteArray::number(m_version.commitNumber) + "-" + QByteArray(m_version.commitHash, 4).toHex());
+        qDebug() << "Mousr version" << m_version.mousrVersion << "hardware version" << m_version.hardwareVersion << "bootloader version" << m_version.bootloaderVersion;
+        break;
+    }
+    case Nack: {
+        Command command = parseBytes<Command>(&bytes);
+        uint32_t unknown = parseBytes<uint8_t>(&bytes);
+        uint32_t currentApiVer = parseBytes<uint32_t>(&bytes);
+        uint32_t minApiVer = parseBytes<uint32_t>(&bytes);
+        uint32_t maxApiVer = parseBytes<uint32_t>(&bytes);
+        qWarning() << "!! Got NACK for command" << command;
+        qDebug() << "unknown num:" << unknown;
+        qDebug() << "Api version current:" << currentApiVer << "min:" << minApiVer << "max:" << maxApiVer;
+        break;
+    }
     default:
         qWarning() << "Unhandled response" << type << data;
     }

@@ -22,6 +22,9 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered);
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [](const QBluetoothDeviceInfo &info, QBluetoothDeviceInfo::Fields updatedFields){
+        if (info.name() != "Mousr") {
+            return;
+        }
         qDebug() << "updated:" << info.name() << info.rssi() << updatedFields;
     });
 #endif
@@ -73,8 +76,6 @@ QString DeviceDiscoverer::statusString()
 
 void DeviceDiscoverer::startScanning()
 {
-    qDebug() << "Starting scan requested";
-
     if (m_adapter->hostMode() == QBluetoothLocalDevice::HostPoweredOff) {
         qDebug() << "Powering on adapter";
         m_adapter->powerOn();
