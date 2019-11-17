@@ -10,7 +10,9 @@
 #include <QDateTime>
 #include <QtEndian>
 
-QDebug operator<<(QDebug debug, const MousrHandler::AutoplayConfig &c) {
+namespace mousr {
+
+QDebug operator<<(QDebug debug, const Autoplay::Config &c) {
     QDebugStateSaver saver(debug);
     debug.nospace() << "AutoPlayConfig ("
                     << "Enabled " << c.enabled << ", "
@@ -28,10 +30,10 @@ QDebug operator<<(QDebug debug, const MousrHandler::AutoplayConfig &c) {
     }
 
     switch (c.gameMode) {
-    case MousrHandler::GameMode::CornerFinder:
+    case Autoplay::GameMode::CornerFinder:
         debug.nospace() << "Confined " << c.pauseTime() << ", ";
         break;
-    case MousrHandler::GameMode::BackAndForth:
+    case Autoplay::GameMode::BackAndForth:
         debug.nospace() << "Driving " << c.drivingMode() << ", ";
         break;
     default:
@@ -182,7 +184,7 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     QObject(parent),
     m_name(deviceInfo.name())
 {
-    static_assert(sizeof(AutoplayConfig) == 15);
+    static_assert(sizeof(Autoplay::Config) == 15);
     static_assert(sizeof(Version) == 19);
 
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
@@ -504,12 +506,12 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
     }
     case AutoModeChanged: {
         qDebug() << "auto mode changed";
-        static const int requiredSize = 1 + sizeof(AutoplayConfig);
+        static const int requiredSize = 1 + sizeof(Autoplay::Config);
         if (data.size() < requiredSize) {
             qWarning() << "Not enough data in packet, require" << requiredSize << "got" << data.size();
             break;
         }
-        m_autoplay = parseBytes<AutoplayConfig>(&bytes);
+        m_autoplay = parseBytes<Autoplay::Config>(&bytes);
         //qDebug() << "autoplay, enabled:" << m_autoplay.enabled << "surface" << m_autoplay.surface << "tail:" << m_autoplay.tail << "gamemode:" << m_autoplay.gameMode << "playmode" << m_autoplay.playMode;
         qDebug() << "enabled" << m_autoplay.enabled;
         qDebug() << "surface" << m_autoplay.m_surface;
@@ -572,3 +574,5 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         qWarning() << "Unhandled response" << type << data;
     }
 }
+
+} // namespace mousr

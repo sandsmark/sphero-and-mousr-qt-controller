@@ -5,7 +5,9 @@
 #include <QBluetoothLocalDevice>
 #include <QPointer>
 
+namespace mousr {
 class MousrHandler;
+}
 
 class QBluetoothDeviceDiscoveryAgent;
 class QBluetoothDeviceInfo;
@@ -45,7 +47,7 @@ private slots:
     void onAdapterError(const QBluetoothLocalDevice::Error error);
 
 private:
-    QPointer<MousrHandler> m_device;
+    QPointer<mousr::MousrHandler> m_device;
 
     QPointer<QBluetoothDeviceDiscoveryAgent> m_discoveryAgent;
     QPointer<QBluetoothLocalDevice> m_adapter;
