@@ -160,6 +160,30 @@ public:
     };
     Q_ENUM(FirmwareType)
 
+    enum AnalyticsEvent {
+        TailHeld,
+        StuckOnCable,
+        StationaryModeNoSpace, // stationary mode, no free locations to move to
+        WallHuggerNoSpace,
+        OpenWanderNoSpace,
+        StruggleModeTailCaughtTimeout, // tail stuck for more than 30 seconds
+        TailFailedToReset, // tries 5 times
+        FailedToFlipBack, // failed to flip back after trying for one minutte
+        FailedToGetAwayFromCable,
+        FailedToFindFreeSpace,
+        SensorPermanentlyDirty,
+        WallHuggerMultipleBadSensorReadings,
+        InitState,
+        FullJuiceInPlaySession,
+        HighAlertInPlaySession,
+        LowEnergyInPlaySession,
+        HighAlertInWaitForSession,
+        LowEnergyInWaitForSession,
+        EnticeAfterWaitForSession,
+        HighAlertAfterEnticeBeforeNewPlaySession
+    };
+    Q_ENUM(AnalyticsEvent)
+
     const uint32_t mbApiVersion = 3u;
 
     bool sendCommand(const Command command, float arg1, float arg2, float arg3);
