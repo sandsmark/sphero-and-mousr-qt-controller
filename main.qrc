@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
-        <file>qml/RobotView.qml</file>
+        <file>qml/MousrView.qml</file>
         <file>images/charging.png</file>
         <file>images/side.png</file>
         <file>images/tail.png</file>

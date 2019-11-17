@@ -10,11 +10,21 @@ Rectangle {
     readonly property int margins: 10
     anchors.fill: parent
 
+    Text {
+        id: statusString
+        anchors.centerIn: parent
+
+        font.bold: true
+        visible: !device.isConnected
+        text: DeviceDiscoverer.device.statusString
+    }
+
     Column {
         id: orientationView
+        visible: device.isConnected && !device.isCharging
+
         x: robotView.margins
         y: robotView.margins
-        visible: !device.isCharging
         width: parent.width / 3 - margins * 2
 
         Image {
@@ -61,7 +71,7 @@ Rectangle {
 
 
     Image {
-        visible: device.isCharging
+        visible: device.isConnected && device.isCharging
 
         anchors {
             verticalCenter: parent.verticalCenter
@@ -80,6 +90,7 @@ Rectangle {
         id: statusColumn
         x: parent.width / 3
         y: robotView.margins
+        visible: device.isConnected
         width: parent.width / 3 - margins * 2
 
         Rectangle {
@@ -153,6 +164,7 @@ Rectangle {
         y: robotView.margins
         spacing: robotView.margins
         width: parent.width / 3 - margins * 2
+        visible: device.isConnected
 
         anchors {
             margins: robotView.margins

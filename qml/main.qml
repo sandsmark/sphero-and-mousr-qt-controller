@@ -6,11 +6,28 @@ import com.iskrembilen 1.0
 import "." as Lol
 
 Window {
-    flags: "Dialog"
+    id: window
+    flags: Qt.FramelessWindowHint | Qt.Dialog
     visible: true
 
     width: 750
     height: 500
+
+    MouseArea {
+        anchors.fill: parent
+
+        property point startPos: Qt.point(1, 1)
+
+        onPressed: {
+            startPos  = Qt.point(mouse.x,mouse.y)
+        }
+
+        onPositionChanged: {
+            var delta = Qt.point(mouse.x-startPos.x, mouse.y-startPos.y)
+            window.x += delta.x;
+            window.y += delta.y;
+        }
+    }
 
     Rectangle {
         id: deviceDiscovery
@@ -88,25 +105,25 @@ Window {
                 }
             }
 
-            Text {
-                anchors {
-                    fill: parent
-                    margins: 20
-                }
-                font.bold: true
-                visible: DeviceDiscoverer.device
-                text: visible ? DeviceDiscoverer.device.statusString : ""
+//            Text {
+//                anchors {
+//                    fill: parent
+//                    margins: 20
+//                }
+//                font.bold: true
+//                visible: DeviceDiscoverer.device
+//                text: visible ? DeviceDiscoverer.device.statusString : ""
 
-                wrapMode: Text.Wrap
-            }
+//                wrapMode: Text.Wrap
+//            }
         }
     }
 
     Loader {
         id: robotLoader
-        active: DeviceDiscoverer.device && DeviceDiscoverer.device.isConnected
+        active: DeviceDiscoverer.device// && DeviceDiscoverer.device.isConnected
         anchors.fill: parent
-        sourceComponent: Lol.RobotView {
+        sourceComponent: Lol.MousrView {
             device: DeviceDiscoverer.device
         }
     }

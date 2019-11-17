@@ -15,7 +15,8 @@ SOURCES += main.cpp \
 
 HEADERS += \
     MousrHandler.h \
-    devicediscoverer.h
+    devicediscoverer.h \
+    utils.h
 
 RESOURCES += \
     main.qrc

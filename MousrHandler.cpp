@@ -1,20 +1,8 @@
 #include <QMetaEnum>
 #include <QDebug>
 
-namespace EnumHelper {
-
-template <typename T> static const char *toKey(const T val) {
-    const QMetaEnum metaEnum = QMetaEnum::fromType<T>();
-    return metaEnum.valueToKey(val);
-}
-
-template <typename T> static QString toString(const T val) {
-    return QString::fromUtf8(EnumHelper::toKey(val));
-}
-
-}
-
 #include "MousrHandler.h"
+#include "utils.h"
 
 #include <QLowEnergyController>
 #include <QLowEnergyConnectionParameters>
@@ -22,23 +10,42 @@ template <typename T> static QString toString(const T val) {
 #include <QDateTime>
 #include <QtEndian>
 
-// Fuck endiannes
+QDebug operator<<(QDebug debug, const MousrHandler::AutoplayConfig &c) {
+    QDebugStateSaver saver(debug);
+    debug.nospace() << "AutoPlayConfig ("
+                    << "Enabled " << c.enabled << ", "
+                    << "Surface " << c.surface() << ", "
+                    << "Tail " << c.tail << ", "
+                    << "Speed " << c.speed << ", "
+                    << "Game " << c.modeName() << ", "
+                    << "PauseFrequency " << c.pauseFrequency << ", "
+                    << "PauseTime ";
 
-template<typename T>
-static inline T parseBytes(const char **data)
-{
-    T ret;
-    memcpy(reinterpret_cast<char*>(&ret), reinterpret_cast<const void*>(*data), sizeof(T));
-    *data += sizeof(T);
+    if (c.pauseTime() == 0) {
+        debug.nospace() << "AllDay, ";
+    } else {
+        debug.nospace() << c.pauseTime() << ", ";
+    }
 
-    return ret;
-}
+    switch (c.gameMode) {
+    case MousrHandler::GameMode::CornerFinder:
+        debug.nospace() << "Confined " << c.pauseTime() << ", ";
+        break;
+    case MousrHandler::GameMode::BackAndForth:
+        debug.nospace() << "Driving " << c.drivingMode() << ", ";
+        break;
+    default:
+        break;
+    }
+    debug.nospace() << "AllDay2 " << c.allDay << ", "
+                    << "Unknown1 " << c.unknown1 << ", "
+                    << "Unknown2 " << c.unknown2 << ", "
+                    << "Unknown3 " << c.unknown3 << ", "
+                    << "ResponseTo " << c.m_responseTo << ", "
+                    << "Unknown4 " << c.unknown4 << ", "
+                    << ")";
 
-template<typename T>
-static inline void setBytes(char **data, const T val)
-{
-    memcpy(reinterpret_cast<void*>(*data), reinterpret_cast<const char*>(&val), sizeof(T));
-    *data += sizeof(T);
+    return debug.maybeSpace();
 }
 
 bool MousrHandler::sendCommand(const MousrHandler::Command command, float arg1, float arg2, float arg3)
@@ -71,7 +78,6 @@ bool MousrHandler::sendCommand(const MousrHandler::Command command, float arg1, 
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
 
     //m_service->readDescriptor(m_readDescriptor);
-    //m_service->readCharacteristic(m_readCharacteristic);
 
     return true;
 }
@@ -87,8 +93,9 @@ bool MousrHandler::sendCommand(const MousrHandler::Command command, uint32_t arg
     QByteArray buffer(15, 0);
     char *bytes = buffer.data();
 
-    bytes[0] = 48;
-    bytes++;
+//    bytes[0] = 48;
+//    bytes++;
+    setBytes(&bytes, ' ');
     setBytes(&bytes, arg1);
     setBytes(&bytes, arg2);
 
@@ -137,7 +144,7 @@ bool MousrHandler::sendCommand(const MousrHandler::Command command, std::vector<
     QByteArray buffer(15, 0);
     char *bytes = buffer.data();
 
-    bytes[0] = 48;
+    bytes[0] = ' '; // always starts with this?
     bytes++;
     //qDebug() << "data size:" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
     for (const char &byte : data) {
@@ -200,6 +207,14 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
 
     connect(m_deviceController, &QLowEnergyController::stateChanged, this, &MousrHandler::onControllerStateChanged);
 
+    static constexpr QUuid serviceUuid    = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+    m_service = m_deviceController->createServiceObject(serviceUuid, this);
+    if (m_service) {
+        qDebug() << "got service:"  << m_service->serviceName() << m_service->serviceUuid();
+    } else {
+        qWarning() << "No service";
+    }
+
     m_deviceController->connectToDevice();
 
     if (m_deviceController->error() != QLowEnergyController::NoError) {
@@ -232,7 +247,7 @@ QString MousrHandler::statusString()
         QTimer::singleShot(1000, this, &QObject::deleteLater);
         return tr("Failed to connect to %1").arg(name);
     } else {
-        return tr("Connecting to %1...").arg(name);
+        return tr("Found %1, trying to establish connection...").arg(name);
     }
 }
 
@@ -312,21 +327,12 @@ void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newStat
 //    }
 
     m_readCharacteristic = m_service->characteristic(readUuid);
-//    qDebug() << "read characteristic" << m_readCharacteristic.name() << m_readCharacteristic.uuid() << m_readCharacteristic.properties();
     m_writeCharacteristic = m_service->characteristic(writeUuid);
-//    qDebug() << "write characteristic" << m_writeCharacteristic.name() << m_writeCharacteristic.uuid() << m_writeCharacteristic.properties();
     if (!m_readCharacteristic.descriptors().isEmpty()) {
         m_readDescriptor = m_readCharacteristic.descriptors().first();
+    } else {
+        qWarning() << "No read characteristic";
     }
-
-//    qDebug() << "read descriptors descriptor count:" << m_readCharacteristic.descriptors().count();
-//    for (const QLowEnergyDescriptor &desc : m_readCharacteristic.descriptors()) {
-//        qDebug() << "read descriptor name:" << desc.name() << desc.uuid() << desc.value();
-//    }
-//    qDebug() << "write characteristic descriptor count:" << m_writeCharacteristic.descriptors().count();
-//    for (const QLowEnergyDescriptor &desc : m_writeCharacteristic.descriptors()) {
-//        qDebug() << "write descripto namer:" << desc.name() << desc.uuid() << desc.value();
-//    }
 
     if (!isConnected()) {
         qDebug() << "Finished scanning, but not valid";
@@ -347,14 +353,14 @@ void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newStat
         qWarning() << "Failed to send init command";
     }
 
-    QTimer::singleShot(2000, this, &MousrHandler::chirp);
-
+    m_service->readCharacteristic(m_readCharacteristic);
     emit connectedChanged();
 }
 
 void MousrHandler::chirp()
 {
-    if (!sendCommand(Command::Chirp, {0, 6, 0 ,0})) {
+    const int soundClip = 6; // todo: discover if there are more clips stored
+    if (!sendCommand(Command::Chirp, {0, soundClip, 0 ,0})) {
         qWarning() << "Failed to request chirp";
     }
 }
@@ -400,7 +406,7 @@ void MousrHandler::onCharacteristicRead(const QLowEnergyCharacteristic &characte
     qDebug() << "data from read characteristic" << data.toHex();
     qDebug() << "data type:" << data[0];
 
-    emit dataRead(data);
+//    emit dataRead(data);
 }
 
 void MousrHandler::onDescriptorRead(const QLowEnergyDescriptor &descriptor, const QByteArray &data)
@@ -417,7 +423,7 @@ void MousrHandler::onDescriptorRead(const QLowEnergyDescriptor &descriptor, cons
     qDebug() << "data from read descriptor" << data;
     qDebug() << "data type:" << int(data[0]);
 
-    emit dataRead(data);
+//    emit dataRead(data);
 }
 
 void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
@@ -506,21 +512,22 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         m_autoplay = parseBytes<AutoplayConfig>(&bytes);
         //qDebug() << "autoplay, enabled:" << m_autoplay.enabled << "surface" << m_autoplay.surface << "tail:" << m_autoplay.tail << "gamemode:" << m_autoplay.gameMode << "playmode" << m_autoplay.playMode;
         qDebug() << "enabled" << m_autoplay.enabled;
-        qDebug() << "surface" << m_autoplay.surface;
+        qDebug() << "surface" << m_autoplay.m_surface;
         qDebug() << "tail" << m_autoplay.tail;
         qDebug() << "speed" << m_autoplay.speed;
         qDebug() << "gameMode" << m_autoplay.gameMode;
-        qDebug() << "playMode" << m_autoplay.playMode;
+        qDebug() << "playMode" << m_autoplay.m_drivingMode;
         qDebug() << "pauseFrequency" << m_autoplay.pauseFrequency;
-        qDebug() << "confinedOrPauseTime" << m_autoplay.confinedOrPauseTime;
+        qDebug() << "confinedOrPauseTime" << m_autoplay.pauseTimeOrConfined;
         qDebug() << "pauseLengthOrBackup" << m_autoplay.pauseLengthOrBackUp;
         qDebug() << "allDay" << m_autoplay.allDay;
 
         qDebug() << "unknown1" << m_autoplay.unknown1;
         qDebug() << "unknown2" << m_autoplay.unknown2;
         qDebug() << "unknown3" << m_autoplay.unknown3;
-        qDebug() << "response type" << m_autoplay.response;
+        qDebug() << "response type" << m_autoplay.m_responseTo;
         qDebug() << "unknown4" << m_autoplay.unknown4;
+        qDebug() << m_autoplay;
         break;
     }
 
