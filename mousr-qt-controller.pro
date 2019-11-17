@@ -10,11 +10,11 @@ INCLUDEPATH += .
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp \
-    DeviceHandler.cpp \
+    MousrHandler.cpp \
     devicediscoverer.cpp
 
 HEADERS += \
-    DeviceHandler.h \
+    MousrHandler.h \
     devicediscoverer.h
 
 RESOURCES += \

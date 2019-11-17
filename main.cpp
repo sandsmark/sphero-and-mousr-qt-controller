@@ -1,5 +1,5 @@
 #include "devicediscoverer.h"
-#include "DeviceHandler.h"
+#include "MousrHandler.h"
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    qmlRegisterUncreatableType<DeviceHandler>("com.iskrembilen", 1, 0, "DeviceHandler", "Only valid when discovered");
+    qmlRegisterUncreatableType<MousrHandler>("com.iskrembilen", 1, 0, "DeviceHandler", "Only valid when discovered");
 
     qmlRegisterSingletonType<DeviceDiscoverer>("com.iskrembilen", 1, 0, "DeviceDiscoverer", [](QQmlEngine *, QJSEngine*) -> QObject* {
         return new DeviceDiscoverer;

@@ -1,5 +1,4 @@
-#ifndef DEVICEHANDLER_H
-#define DEVICEHANDLER_H
+#pragma once
 
 #include <QObject>
 #include <QPointer>
@@ -12,7 +11,7 @@ class QLowEnergyController;
 class QBluetoothDeviceInfo;
 
 
-class DeviceHandler : public QObject
+class MousrHandler : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString name MEMBER m_name CONSTANT)
@@ -197,15 +196,15 @@ public:
     bool sendCommand(const Command command, float arg1, float arg2, float arg3);
     bool sendCommand(const Command command, uint32_t arg1, uint32_t arg2);
 //    bool sendCommand(const Command command, const char arg1, const char arg2, const char arg3, const char arg4);
-    bool sendCommand(const DeviceHandler::Command command, std::vector<char> data);
+    bool sendCommand(const MousrHandler::Command command, std::vector<char> data);
 //    bool sendCommand(const Command command, QByteArray data);
 
 //    struct CommandPacket {
 //        CommandPacket(Command command, )
 //    };
 
-    explicit DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent);
-    ~DeviceHandler();
+    explicit MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent);
+    ~MousrHandler();
 
     bool isConnected();
 
@@ -357,5 +356,3 @@ private:
     Surface m_surface = BareFloor;
     TailType m_tailMode = BounceTail;
 };
-
-#endif // DEVICEHANDLER_H

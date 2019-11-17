@@ -14,7 +14,7 @@ template <typename T> static QString toString(const T val) {
 
 }
 
-#include "DeviceHandler.h"
+#include "MousrHandler.h"
 
 #include <QLowEnergyController>
 #include <QLowEnergyConnectionParameters>
@@ -41,7 +41,7 @@ static inline void setBytes(char **data, const T val)
     *data += sizeof(T);
 }
 
-bool DeviceHandler::sendCommand(const DeviceHandler::Command command, float arg1, float arg2, float arg3)
+bool MousrHandler::sendCommand(const MousrHandler::Command command, float arg1, float arg2, float arg3)
 {
     qDebug() << " + Sending" << command;
     if (!isConnected()) {
@@ -76,7 +76,7 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, float arg1
     return true;
 }
 
-bool DeviceHandler::sendCommand(const DeviceHandler::Command command, uint32_t arg1, uint32_t arg2)
+bool MousrHandler::sendCommand(const MousrHandler::Command command, uint32_t arg1, uint32_t arg2)
 {
     qDebug() << " + Sending" << command;
     if (!isConnected()) {
@@ -119,7 +119,7 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, uint32_t a
     return true;
 }
 
-bool DeviceHandler::sendCommand(const DeviceHandler::Command command, std::vector<char> data)
+bool MousrHandler::sendCommand(const MousrHandler::Command command, std::vector<char> data)
 {
     qDebug() << " + Sending" << command;
     if (data.empty()) {
@@ -171,7 +171,7 @@ bool DeviceHandler::sendCommand(const DeviceHandler::Command command, std::vecto
     return true;
 }
 
-DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent) :
+MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent) :
     QObject(parent),
     m_name(deviceInfo.name())
 {
@@ -181,7 +181,7 @@ DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
 
     connect(m_deviceController, &QLowEnergyController::connected, m_deviceController, &QLowEnergyController::discoverServices);
-    connect(m_deviceController, &QLowEnergyController::serviceDiscovered, this, &DeviceHandler::onServiceDiscovered);
+    connect(m_deviceController, &QLowEnergyController::serviceDiscovered, this, &MousrHandler::onServiceDiscovered);
 
     connect(m_deviceController, &QLowEnergyController::connectionUpdated, this, [](const QLowEnergyConnectionParameters &parms) {
             qDebug() << "controller connection updated, latency" << parms.latency() << "maxinterval:" << parms.maximumInterval() << "mininterval:" << parms.minimumInterval() << "supervision timeout" << parms.supervisionTimeout();
@@ -198,7 +198,7 @@ DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     connect(m_deviceController, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error), this,
       [=](QLowEnergyController::Error newError){ qWarning() << "controller error:" << newError; });
 
-    connect(m_deviceController, &QLowEnergyController::stateChanged, this, &DeviceHandler::onControllerStateChanged);
+    connect(m_deviceController, &QLowEnergyController::stateChanged, this, &MousrHandler::onControllerStateChanged);
 
     m_deviceController->connectToDevice();
 
@@ -207,7 +207,7 @@ DeviceHandler::DeviceHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     }
 }
 
-DeviceHandler::~DeviceHandler()
+MousrHandler::~MousrHandler()
 {
     if (m_deviceController) {
         m_deviceController->disconnectFromDevice();
@@ -216,14 +216,14 @@ DeviceHandler::~DeviceHandler()
     }
 }
 
-bool DeviceHandler::isConnected()
+bool MousrHandler::isConnected()
 {
     return m_deviceController && m_deviceController->state() != QLowEnergyController::UnconnectedState &&
             m_service && m_writeCharacteristic.isValid() && m_readCharacteristic.isValid();
 
 }
 
-QString DeviceHandler::statusString()
+QString MousrHandler::statusString()
 {
     const QString name = m_name.isEmpty() ? "device" : m_name;
     if (isConnected()) {
@@ -236,7 +236,7 @@ QString DeviceHandler::statusString()
     }
 }
 
-void DeviceHandler::onServiceDiscovered(const QBluetoothUuid &newService)
+void MousrHandler::onServiceDiscovered(const QBluetoothUuid &newService)
 {
     // 00001801-0000-1000-8000-00805f9b34fb
     static constexpr QUuid genericServiceUuid = {0x00001801, 0x0000, 0x1000, 0x80, 0x00, 0x00, 0x80, 0x5f, 0x9b, 0x34, 0xfb};
@@ -269,24 +269,24 @@ void DeviceHandler::onServiceDiscovered(const QBluetoothUuid &newService)
     m_service = m_deviceController->createServiceObject(newService, this);
     //qDebug() << "got service:"  << m_service->serviceName() << m_service->serviceUuid();
 
-    connect(m_service, &QLowEnergyService::characteristicChanged, this, &DeviceHandler::onCharacteristicChanged);
-    connect(m_service, &QLowEnergyService::characteristicRead, this, &DeviceHandler::onCharacteristicRead);
+    connect(m_service, &QLowEnergyService::characteristicChanged, this, &MousrHandler::onCharacteristicChanged);
+    connect(m_service, &QLowEnergyService::characteristicRead, this, &MousrHandler::onCharacteristicRead);
     //connect(m_service, &QLowEnergyService::characteristicWritten, this, [](const QLowEnergyCharacteristic &descriptor, const QByteArray &newValue) {
     //        qDebug() << "Characteristic" << descriptor.uuid() << "wrote" << newValue;
     //        });;
 
-    connect(m_service, &QLowEnergyService::descriptorRead, this, &DeviceHandler::onDescriptorRead);
+    connect(m_service, &QLowEnergyService::descriptorRead, this, &MousrHandler::onDescriptorRead);
     //connect(m_service, &QLowEnergyService::descriptorWritten, this, [](const QLowEnergyDescriptor &descriptor, const QByteArray &newValue) {
     //        qDebug() << "Descriptor" << descriptor.uuid() << "wrote" << newValue;
     //        });;
 
-    connect(m_service, QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error), this, &DeviceHandler::onServiceError);
-    connect(m_service, &QLowEnergyService::stateChanged, this, &DeviceHandler::onServiceStateChanged);
+    connect(m_service, QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error), this, &MousrHandler::onServiceError);
+    connect(m_service, &QLowEnergyService::stateChanged, this, &MousrHandler::onServiceStateChanged);
 
     m_service->discoverDetails();
 }
 
-void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newState)
+void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newState)
 {
     static constexpr QUuid writeUuid      = {0x6e400002, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
     static constexpr QUuid readUuid       = {0x6e400003, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
@@ -347,31 +347,31 @@ void DeviceHandler::onServiceStateChanged(QLowEnergyService::ServiceState newSta
         qWarning() << "Failed to send init command";
     }
 
-    QTimer::singleShot(2000, this, &DeviceHandler::chirp);
+    QTimer::singleShot(2000, this, &MousrHandler::chirp);
 
     emit connectedChanged();
 }
 
-void DeviceHandler::chirp()
+void MousrHandler::chirp()
 {
     if (!sendCommand(Command::Chirp, {0, 6, 0 ,0})) {
         qWarning() << "Failed to request chirp";
     }
 }
 
-void DeviceHandler::pause()
+void MousrHandler::pause()
 {
     if (!sendCommand(Command::Stop, {0, 0, 0 ,0})) {
         qWarning() << "Failed to request stop";
     }
 }
 
-void DeviceHandler::resume()
+void MousrHandler::resume()
 {
     sendCommand(Command::Stop, m_speed, m_held, m_angle);
 }
 
-void DeviceHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
+void MousrHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
 {
     if (state == QLowEnergyController::UnconnectedState) {
         qWarning() << "Disconnected";
@@ -381,7 +381,7 @@ void DeviceHandler::onControllerStateChanged(QLowEnergyController::ControllerSta
 }
 
 
-void DeviceHandler::onServiceError(QLowEnergyService::ServiceError error)
+void MousrHandler::onServiceError(QLowEnergyService::ServiceError error)
 {
     qWarning() << "Service error:" << error;
     if (error == QLowEnergyService::NoError) {
@@ -391,7 +391,7 @@ void DeviceHandler::onServiceError(QLowEnergyService::ServiceError error)
     emit disconnected();
 }
 
-void DeviceHandler::onCharacteristicRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
+void MousrHandler::onCharacteristicRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
 {
     if (characteristic != m_readCharacteristic) {
         qWarning() << "data from unexpected characteristic" << characteristic.uuid() << data;
@@ -403,7 +403,7 @@ void DeviceHandler::onCharacteristicRead(const QLowEnergyCharacteristic &charact
     emit dataRead(data);
 }
 
-void DeviceHandler::onDescriptorRead(const QLowEnergyDescriptor &descriptor, const QByteArray &data)
+void MousrHandler::onDescriptorRead(const QLowEnergyDescriptor &descriptor, const QByteArray &data)
 {
 
     if (descriptor != m_readDescriptor) {
@@ -420,7 +420,7 @@ void DeviceHandler::onDescriptorRead(const QLowEnergyDescriptor &descriptor, con
     emit dataRead(data);
 }
 
-void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
+void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
 {
     if (characteristic != m_readCharacteristic) {
         qWarning() << "changed from unexpected characteristic" << characteristic.uuid() << data;

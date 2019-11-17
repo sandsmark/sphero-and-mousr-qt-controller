@@ -1,6 +1,6 @@
 #include "devicediscoverer.h"
 
-#include "DeviceHandler.h"
+#include "MousrHandler.h"
 
 #include <QBluetoothDeviceDiscoveryAgent>
 #include <QBluetoothDeviceInfo>
@@ -102,7 +102,7 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
     }
 
     qDebug() << "Found Mousr";
-    m_device = new DeviceHandler(device, this);
+    m_device = new MousrHandler(device, this);
     emit deviceFound();
     connect(m_device, &QObject::destroyed, this, &DeviceDiscoverer::startScanning);
     return;
