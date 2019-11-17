@@ -1,5 +1,5 @@
 #include "devicediscoverer.h"
-#include "MousrHandler.h"
+#include "mousr/MousrHandler.h"
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>

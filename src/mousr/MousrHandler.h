@@ -195,6 +195,7 @@ public slots:
 
 private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);
+    void onControllerError(QLowEnergyController::Error newError);
 
     void onServiceDiscovered(const QBluetoothUuid &newService);
     void onServiceStateChanged(QLowEnergyService::ServiceState newState);

@@ -193,39 +193,31 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     connect(m_deviceController, &QLowEnergyController::serviceDiscovered, this, &MousrHandler::onServiceDiscovered);
 
     connect(m_deviceController, &QLowEnergyController::connectionUpdated, this, [](const QLowEnergyConnectionParameters &parms) {
-            qDebug() << "controller connection updated, latency" << parms.latency() << "maxinterval:" << parms.maximumInterval() << "mininterval:" << parms.minimumInterval() << "supervision timeout" << parms.supervisionTimeout();
+            qDebug() << " - controller connection updated, latency" << parms.latency() << "maxinterval:" << parms.maximumInterval() << "mininterval:" << parms.minimumInterval() << "supervision timeout" << parms.supervisionTimeout();
             });
     connect(m_deviceController, &QLowEnergyController::connected, this, []() {
-            qDebug() << "controller connected";
+            qDebug() << " - controller connected";
             });
     connect(m_deviceController, &QLowEnergyController::disconnected, this, []() {
-            qDebug() << "controller disconnected";
+            qDebug() << " - controller disconnected";
             });
     connect(m_deviceController, &QLowEnergyController::discoveryFinished, this, []() {
-            qDebug() << "controller discovery finished";
+            qDebug() << " - controller discovery finished";
             });
-    connect(m_deviceController, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error), this,
-      [=](QLowEnergyController::Error newError){ qWarning() << "controller error:" << newError; });
+    connect(m_deviceController, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error), this, &MousrHandler::onControllerError);
 
     connect(m_deviceController, &QLowEnergyController::stateChanged, this, &MousrHandler::onControllerStateChanged);
-
-    static constexpr QUuid serviceUuid    = {0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
-    m_service = m_deviceController->createServiceObject(serviceUuid, this);
-    if (m_service) {
-        qDebug() << "got service:"  << m_service->serviceName() << m_service->serviceUuid();
-    } else {
-        qWarning() << "No service";
-    }
 
     m_deviceController->connectToDevice();
 
     if (m_deviceController->error() != QLowEnergyController::NoError) {
-        qDebug() << "controller error:" << m_deviceController->error() << m_deviceController->errorString();
+        qDebug() << "controller error when starting:" << m_deviceController->error() << m_deviceController->errorString();
     }
 }
 
 MousrHandler::~MousrHandler()
 {
+    qDebug() << "mousr handler dead";
     if (m_deviceController) {
         m_deviceController->disconnectFromDevice();
     } else {
@@ -246,7 +238,7 @@ QString MousrHandler::statusString()
     if (isConnected()) {
         return tr("Connected to %1").arg(name);
     } else if (m_deviceController && m_deviceController->state() == QLowEnergyController::UnconnectedState) {
-        QTimer::singleShot(1000, this, &QObject::deleteLater);
+//        QTimer::singleShot(1000, this, &QObject::deleteLater);
         return tr("Failed to connect to %1").arg(name);
     } else {
         return tr("Found %1, trying to establish connection...").arg(name);
@@ -383,9 +375,17 @@ void MousrHandler::onControllerStateChanged(QLowEnergyController::ControllerStat
 {
     if (state == QLowEnergyController::UnconnectedState) {
         qWarning() << "Disconnected";
+        emit disconnected();
     }
 
+    qWarning() << " ! controller state changed" << state;
     emit connectedChanged();
+}
+
+void MousrHandler::onControllerError(QLowEnergyController::Error newError)
+{
+    qWarning() << " - controller error:" << newError << m_deviceController->errorString();
+    connect(m_deviceController, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error), this, &MousrHandler::onControllerError);
 }
 
 

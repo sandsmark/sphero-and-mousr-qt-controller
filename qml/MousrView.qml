@@ -4,15 +4,30 @@ import com.iskrembilen 1.0
 
 import QtQuick.Controls 1.4
 
+// I don't understand qml anymore...
+import "." as Lol
+
 Rectangle {
     id: robotView
     property DeviceHandler device
     readonly property int margins: 10
     anchors.fill: parent
 
+    Lol.Spinner {
+        id: spinner
+        anchors.centerIn: parent
+
+        visible: !device.isConnected
+    }
+
     Text {
         id: statusString
-        anchors.centerIn: parent
+
+        anchors {
+            horizontalCenter: parent.horizontalCenter
+            top: spinner.bottom
+            topMargin: 20
+        }
 
         font.bold: true
         visible: !device.isConnected

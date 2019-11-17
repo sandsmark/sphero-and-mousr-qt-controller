@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QBluetoothLocalDevice>
 #include <QPointer>
+#include <QTimer>
 
 namespace mousr {
 class MousrHandler;
@@ -42,6 +43,7 @@ signals:
 
 private slots:
     void onDeviceDiscovered(const QBluetoothDeviceInfo &device);
+    void onDeviceDisconnected();
 
     void onAgentError();
     void onAdapterError(const QBluetoothLocalDevice::Error error);
@@ -49,11 +51,14 @@ private slots:
 private:
     QPointer<mousr::MousrHandler> m_device;
 
+    QTimer m_restartScanTimer;
     QPointer<QBluetoothDeviceDiscoveryAgent> m_discoveryAgent;
     QPointer<QBluetoothLocalDevice> m_adapter;
     QBluetoothLocalDevice::Error m_adapterError = QBluetoothLocalDevice::NoError;
     bool m_adapterPoweredOn = false;
     bool m_attemptingScan = false;
+    bool m_hasDevices = false;
+    bool m_scanning = true;
 };
 
 #endif // DEVICEDISCOVERER_H

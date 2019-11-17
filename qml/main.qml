@@ -70,58 +70,17 @@ Window {
                 wrapMode: Text.Wrap
             }
 
-            Item {
+            Lol.Spinner {
                 id: spinner
-                width: 100
-                height: width
+                visible: !DeviceDiscoverer.isError && !robotLoader.isActive
                 anchors.centerIn: parent
-                visible: !DeviceDiscoverer.isError
-
-                RotationAnimation on rotation {
-                    running: spinner.visible
-                    loops: Animation.Infinite
-                    from: 0
-                    to: 360
-                    duration: 500
-                }
-
-                SequentialAnimation on opacity {
-                    running: spinner.visible
-                    loops: Animation.Infinite
-                    PropertyAnimation { to: 1; duration: 500 }
-                    PropertyAnimation { to: 0.1; duration: 500 }
-                }
-
-                Rectangle {
-                    width: parent.width
-                    height: width
-                    radius: parent.width / 2
-                    border.width: 2
-                }
-
-                Rectangle {
-                    width: parent.width / 2
-                    height: width
-                }
             }
-
-//            Text {
-//                anchors {
-//                    fill: parent
-//                    margins: 20
-//                }
-//                font.bold: true
-//                visible: DeviceDiscoverer.device
-//                text: visible ? DeviceDiscoverer.device.statusString : ""
-
-//                wrapMode: Text.Wrap
-//            }
         }
     }
 
     Loader {
         id: robotLoader
-        active: DeviceDiscoverer.device// && DeviceDiscoverer.device.isConnected
+        active: DeviceDiscoverer.device
         anchors.fill: parent
         sourceComponent: Lol.MousrView {
             device: DeviceDiscoverer.device
