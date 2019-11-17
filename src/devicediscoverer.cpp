@@ -16,11 +16,10 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     m_adapter = new QBluetoothLocalDevice(this);
 
     connect(m_adapter, &QBluetoothLocalDevice::error, this, &DeviceDiscoverer::onAdapterError);
-    connect(m_adapter, &QBluetoothLocalDevice::hostModeStateChanged, this, &DeviceDiscoverer::startScanning);
 
     // I hate these overload things..
     connect(m_discoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error), this, &DeviceDiscoverer::onAgentError);
-    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered);
+    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered, Qt::QueuedConnection);
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [=](const QBluetoothDeviceInfo &, QBluetoothDeviceInfo::Fields ){
         if (m_restartScanTimer.isActive()) {
@@ -48,7 +47,12 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
 
     m_discoveryAgent->setLowEnergyDiscoveryTimeout(100);
 
-    QMetaObject::invokeMethod(this, &DeviceDiscoverer::startScanning);
+    if (m_adapter->hostMode() == QBluetoothLocalDevice::HostPoweredOff) {
+        connect(m_adapter, &QBluetoothLocalDevice::hostModeStateChanged, this, &DeviceDiscoverer::startScanning);
+        m_adapter->powerOn();
+    } else {
+        QMetaObject::invokeMethod(this, &DeviceDiscoverer::startScanning);
+    }
 }
 
 DeviceDiscoverer::~DeviceDiscoverer()
@@ -94,17 +98,17 @@ QString DeviceDiscoverer::statusString()
 
 void DeviceDiscoverer::startScanning()
 {
-    if (m_adapter->hostMode() == QBluetoothLocalDevice::HostPoweredOff) {
-        qDebug() << "Powering on adapter";
-        m_adapter->powerOn();
-    } else if (m_scanning) {
+    if (m_scanning) {
         qDebug() << "Already scanning";
         return;
     }
 
-    qDebug() << "Starting scan";
-    m_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
     m_scanning = true;
+    disconnect(m_adapter, &QBluetoothLocalDevice::hostModeStateChanged, this, &DeviceDiscoverer::startScanning);
+
+    qDebug() << "Starting scan";
+    // This might immediately lead to the other things getting called, just fyi
+    m_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
 
     emit statusStringChanged();
 }
@@ -149,7 +153,9 @@ void DeviceDiscoverer::onDeviceDisconnected()
         qWarning() << "device disconnected, but is not set?";
     }
 
-    startScanning();
+    m_scanning = true;
+    m_restartScanTimer.start(); // otherwise we might loop, because qbluetooth-crap caches
+//    startScanning();
 }
 
 void DeviceDiscoverer::onAgentError()

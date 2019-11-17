@@ -33,15 +33,14 @@ public:
 
     bool isError() const { return m_adapterError != QBluetoothLocalDevice::NoError || QBluetoothLocalDevice::allDevices().isEmpty(); }
 
-public slots:
-    void startScanning();
-    void stopScanning();
-
 signals:
     void statusStringChanged();
     void deviceChanged();
 
 private slots:
+    void startScanning();
+    void stopScanning();
+
     void onDeviceDiscovered(const QBluetoothDeviceInfo &device);
     void onDeviceDisconnected();
 
@@ -58,7 +57,7 @@ private:
     bool m_adapterPoweredOn = false;
     bool m_attemptingScan = false;
     bool m_hasDevices = false;
-    bool m_scanning = true;
+    bool m_scanning = false;
 };
 
 #endif // DEVICEDISCOVERER_H

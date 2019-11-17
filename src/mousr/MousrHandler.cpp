@@ -385,6 +385,9 @@ void MousrHandler::onControllerStateChanged(QLowEnergyController::ControllerStat
 void MousrHandler::onControllerError(QLowEnergyController::Error newError)
 {
     qWarning() << " - controller error:" << newError << m_deviceController->errorString();
+    if (newError == QLowEnergyController::UnknownError) {
+        qWarning() << "Probably 'Operation already in progress' because qtbluetooth doesn't understand why it can't get answers over dbus when a connection attempt hangs";
+    }
     connect(m_deviceController, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error), this, &MousrHandler::onControllerError);
 }
 

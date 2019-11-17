@@ -16,6 +16,7 @@ so you can find it.
 TODO
 ====
 
+ * Port to BluezQt, qtbluetooth is utterly broken on Linux: https://api.kde.org/frameworks/bluez-qt/html/index.html
  * Configuring autoplay.
  * Manual control.
  * Connecting to and controlling sphero droids, because my cat also plays with those.
