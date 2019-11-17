@@ -46,7 +46,6 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
 
     });
 
-    connect(this, &DeviceDiscoverer::deviceFound, this, &DeviceDiscoverer::stopScanning);
     m_discoveryAgent->setLowEnergyDiscoveryTimeout(100);
 
     QMetaObject::invokeMethod(this, &DeviceDiscoverer::startScanning);
@@ -86,7 +85,7 @@ QString DeviceDiscoverer::statusString()
         return tr("Searching error: %1").arg(m_discoveryAgent->errorString());
     }
 
-    if (m_discoveryAgent->isActive()) {
+    if (m_scanning) {
         return tr("Looking for device...");
     }
 
@@ -126,21 +125,26 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
         return;
     }
 
+    qDebug() << "Found Mousr";
+
     stopScanning();
 
-    qDebug() << "Found Mousr";
     m_device = new mousr::MousrHandler(device, this);
-    emit deviceFound();
-    connect(m_device, &mousr::MousrHandler::disconnected, this, &DeviceDiscoverer::startScanning);
+    QQmlEngine::setObjectOwnership(m_device, QQmlEngine::CppOwnership);
+    emit deviceChanged();
+    connect(m_device, &mousr::MousrHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
     return;
 }
 
 void DeviceDiscoverer::onDeviceDisconnected()
 {
+    qDebug() << "device disconnected";
+
     if (m_device) {
         m_device->deleteLater();
         disconnect(m_device, nullptr, this, nullptr);
         m_device = nullptr;
+        emit deviceChanged();
     } else {
         qWarning() << "device disconnected, but is not set?";
     }

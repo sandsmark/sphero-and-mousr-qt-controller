@@ -19,7 +19,7 @@ class DeviceDiscoverer : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString statusString READ statusString NOTIFY statusStringChanged)
-    Q_PROPERTY(QObject* device READ device NOTIFY deviceFound)
+    Q_PROPERTY(QObject* device READ device NOTIFY deviceChanged)
     Q_PROPERTY(bool isError READ isError NOTIFY statusStringChanged) // yeye
 
 
@@ -39,7 +39,7 @@ public slots:
 
 signals:
     void statusStringChanged();
-    void deviceFound();
+    void deviceChanged();
 
 private slots:
     void onDeviceDiscovered(const QBluetoothDeviceInfo &device);
