@@ -126,6 +126,8 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
         return;
     }
 
+    stopScanning();
+
     qDebug() << "Found Mousr";
     m_device = new mousr::MousrHandler(device, this);
     emit deviceFound();
@@ -142,6 +144,7 @@ void DeviceDiscoverer::onDeviceDisconnected()
     } else {
         qWarning() << "device disconnected, but is not set?";
     }
+
     startScanning();
 }
 
