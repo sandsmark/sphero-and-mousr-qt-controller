@@ -472,6 +472,7 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         m_memory = parseBytes<uint16_t>(&bytes);
 
         emit powerChanged();
+        emit autoRunningChanged();
 
         break;
     }
@@ -503,10 +504,23 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
             break;
         }
         m_autoplay = parseBytes<AutoplayConfig>(&bytes);
-        qDebug() << "autoplay, enabled:" << m_autoplay.enabled << "tail:" << m_autoplay.tail << "gamemode:" << m_autoplay.gameMode << "playmode" << m_autoplay.playMode;
+        //qDebug() << "autoplay, enabled:" << m_autoplay.enabled << "surface" << m_autoplay.surface << "tail:" << m_autoplay.tail << "gamemode:" << m_autoplay.gameMode << "playmode" << m_autoplay.playMode;
+        qDebug() << "enabled" << m_autoplay.enabled;
+        qDebug() << "surface" << m_autoplay.surface;
+        qDebug() << "tail" << m_autoplay.tail;
+        qDebug() << "speed" << m_autoplay.speed;
+        qDebug() << "gameMode" << m_autoplay.gameMode;
+        qDebug() << "playMode" << m_autoplay.playMode;
+        qDebug() << "pauseFrequency" << m_autoplay.pauseFrequency;
+        qDebug() << "confinedOrPauseTime" << m_autoplay.confinedOrPauseTime;
+        qDebug() << "pauseLengthOrBackup" << m_autoplay.pauseLengthOrBackUp;
+        qDebug() << "allDay" << m_autoplay.allDay;
+
         qDebug() << "unknown1" << m_autoplay.unknown1;
         qDebug() << "unknown2" << m_autoplay.unknown2;
+        qDebug() << "unknown3" << m_autoplay.unknown3;
         qDebug() << "response type" << m_autoplay.response;
+        qDebug() << "unknown4" << m_autoplay.unknown4;
         break;
     }
 
@@ -519,7 +533,7 @@ void DeviceHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         break;
 
     case InitDone:
-        qDebug() << "Init complete" << type << data.toHex();
+        qDebug() << "Init complete";
         break;
 
     case FirmwareVersion: {

@@ -263,11 +263,20 @@ private:
     struct AutoplayConfig
     {
         uint8_t enabled = 0; // 0
-        Surface surface = BareFloor; // 1
-        TailType tail = BounceTail; // 2
+
+        uint8_t surface = 0;
+        uint8_t tail = 0;
+
+        //Surface surface = BareFloor; // 1
+        //TailType tail = BounceTail; // 2
         uint8_t speed = 0; // 3
-        GameMode gameMode = OffMode; // 4 --- also PresetMode?
-        PlayMode playMode = DriveStraight; // 5
+
+        uint8_t gameMode = 0;
+        uint8_t playMode = 0;
+
+        //GameMode gameMode = OffMode; // 4 --- also PresetMode?
+        //PlayMode playMode = DriveStraight; // 5
+
         uint8_t pauseFrequency = 0; // 6          // 0, 5, 10, 20, 30, 60, 255
         uint8_t confinedOrPauseTime = 0; // 7
         uint8_t pauseLengthOrBackUp = 0; // 8       // pause time; 3, 6, 10, 15, 20, 0 (all day mode)
@@ -277,7 +286,10 @@ private:
         uint8_t unknown1 = 0; // 10
         uint8_t unknown2 = 0; // 11
         uint8_t unknown3 = 0; // 12
-        Response response = Response::Nack; // 13
+
+        uint8_t response = 0;
+
+        //Response response = Response::Nack; // 13
         uint8_t unknown4 = 0; // 14
 
         uint8_t pauseTime() {
