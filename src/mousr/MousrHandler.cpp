@@ -265,6 +265,19 @@ void MousrHandler::resume()
     sendCommand(CommandType::Stop, m_speed, m_held, m_angle);
 }
 
+void MousrHandler::setSoundVolume(const int volumePercent)
+{
+    if (volumePercent < 0 || volumePercent > 100) {
+        qWarning() << "Invalid volume";
+        return;
+    }
+
+    if (sendCommand(CommandType::SoundVolume, volumePercent)) {
+        m_volume = volumePercent;
+    }
+    emit soundVolumeChanged();
+}
+
 void MousrHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
 {
     if (state == QLowEnergyController::UnconnectedState) {

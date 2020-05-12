@@ -52,26 +52,10 @@ class MousrHandler : public QObject
 
     Q_PROPERTY(bool sensorDirty READ sensorDirty NOTIFY sensorDirtyChanged)
 
+    Q_PROPERTY(bool soundVolume READ soundVolume NOTIFY soundVolumeChanged)
 
-public:
 
-    int memory() const { return m_memory; }
-
-    // Power stuff
-    int voltage() const { return m_voltage; }
-    bool isCharging() const { return m_charging; }
-    bool isBatteryLow() const { return m_batteryLow; }
-    bool isFullyCharged() const { return m_fullyCharged; }
-
-    bool isAutoRunning() const { return m_autoRunning; }
-
-    float xRotation() const { return m_rotX; }
-    float yRotation() const { return m_rotY; }
-    float zRotation() const { return m_rotZ; }
-    bool isFlipped() const { return m_isFlipped; }
-
-    bool sensorDirty() const { return m_sensorDirty; }
-
+public: // enums
     enum class CommandType : uint16_t {
         Stop = 0,
         Spin = 1,
@@ -175,11 +159,25 @@ public:
     };
     Q_ENUM(AnalyticsEvent)
 
-    const uint32_t mbApiVersion = 3u;
+public:
+    int memory() const { return m_memory; }
 
-    bool sendCommand(const CommandType command, float arg1, const float arg2, const float arg3);
-    bool sendCommand(const CommandType command, const uint32_t arg1, const uint32_t arg2);
-    bool sendCommand(const CommandType command);
+    // Power stuff
+    int voltage() const { return m_voltage; }
+    bool isCharging() const { return m_charging; }
+    bool isBatteryLow() const { return m_batteryLow; }
+    bool isFullyCharged() const { return m_fullyCharged; }
+
+    bool isAutoRunning() const { return m_autoRunning; }
+
+    float xRotation() const { return m_rotX; }
+    float yRotation() const { return m_rotY; }
+    float zRotation() const { return m_rotZ; }
+    bool isFlipped() const { return m_isFlipped; }
+
+    bool sensorDirty() const { return m_sensorDirty; }
+
+    const uint32_t mbApiVersion = 3u;
 
     explicit MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent);
     ~MousrHandler();
@@ -189,6 +187,9 @@ public:
     QString statusString();
     void writeData(const QByteArray &data);
 
+    int soundVolume() { return m_volume; }
+    void setSoundVolume(const int volumePercent);
+
 signals:
     void connectedChanged();
     void disconnected(); // TODO
@@ -196,6 +197,7 @@ signals:
     void autoRunningChanged();
     void orientationChanged();
     void sensorDirtyChanged();
+    void soundVolumeChanged();
 
 public slots:
     void chirp();
@@ -215,6 +217,10 @@ private slots:
     void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
 private:
+    bool sendCommand(const CommandType command, float arg1, const float arg2, const float arg3);
+    bool sendCommand(const CommandType command, const uint32_t arg1, const uint32_t arg2 = 0);
+    bool sendCommand(const CommandType command);
+
     #pragma pack(push,1)
     static_assert(sizeof(bool) == 1);
 
@@ -321,6 +327,7 @@ private:
     QPointer<QLowEnergyService> m_service;
 
     int m_voltage = 0, m_memory = 0;
+    int m_volume = 0; // todo: read this from device
     bool m_batteryLow = false, m_charging = false, m_fullyCharged = false;
     bool m_autoRunning = false;
 
