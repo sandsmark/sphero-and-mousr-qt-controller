@@ -50,7 +50,57 @@ QDebug operator<<(QDebug debug, const Autoplay::Config &c) {
     return debug.maybeSpace();
 }
 
-bool MousrHandler::sendCommand(const MousrHandler::Command command, float arg1, float arg2, float arg3)
+
+bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
+{
+    qDebug() << " + Sending" << packet.m_command;
+    if (!isConnected()) {
+        qWarning() << "trying to send when unconnected";
+        return false;
+    }
+    QByteArray buffer(sizeof(CommandPacket), 0);
+    qToLittleEndian<CommandPacket>(&packet, 1, buffer.data());
+
+    m_service->writeCharacteristic(m_writeCharacteristic, buffer);
+    return true;
+}
+
+bool MousrHandler::sendCommand(const CommandType command, const float arg1, const float arg2, const float arg3)
+{
+    qDebug() << " + Sending" << command;
+    if (!isConnected()) {
+        qWarning() << "trying to send when unconnected";
+        return false;
+    }
+    CommandPacket packet(command);
+    packet.vector3D.x = arg1;
+    packet.vector3D.y = arg2;
+    packet.vector3D.z = arg3;
+
+    sendCommandPacket(packet);
+
+    return true;
+}
+
+bool MousrHandler::sendCommand(const CommandType command, const uint32_t arg1, const uint32_t arg2)
+{
+    static_assert(sizeof(CommandPacket) == 15);
+
+    qDebug() << " + Sending" << command;
+    if (!isConnected()) {
+        qWarning() << "trying to send when unconnected";
+        return false;
+    }
+
+    CommandPacket packet(command);
+    packet.vector2D.x = arg1;
+    packet.vector2D.y = arg2;
+    sendCommandPacket(packet);
+
+    return true;
+}
+
+bool MousrHandler::sendCommand(const CommandType command)
 {
     qDebug() << " + Sending" << command;
     if (!isConnected()) {
@@ -58,124 +108,7 @@ bool MousrHandler::sendCommand(const MousrHandler::Command command, float arg1, 
         return false;
     }
 
-    QByteArray buffer(15, 0);
-    char *bytes = buffer.data();
-
-    bytes[0] = 48;
-    bytes++;
-    setBytes(&bytes, arg1);
-    setBytes(&bytes, arg2);
-    setBytes(&bytes, arg3);
-    setBytes(&bytes, uint16_t(command));
-
-    const size_t dataSize = bytes - buffer.data();
-    const size_t expectedSize = 1 + sizeof(uint16_t) + 3 * sizeof(float);
-    if (dataSize != expectedSize) {
-        qWarning() << "Invalid buffer length" << dataSize  << expectedSize;
-        return false;
-    }
-    qDebug() << "sending with 3 floats" << buffer.toHex() << buffer.size();
-
-    //m_service->writeCharacteristic(m_writeCharacteristic, buffer, QLowEnergyService::WriteWithoutResponse);
-    m_service->writeCharacteristic(m_writeCharacteristic, buffer);
-
-    //m_service->readDescriptor(m_readDescriptor);
-
-    return true;
-}
-
-bool MousrHandler::sendCommand(const MousrHandler::Command command, uint32_t arg1, uint32_t arg2)
-{
-    qDebug() << " + Sending" << command;
-    if (!isConnected()) {
-        qWarning() << "trying to send when unconnected";
-        return false;
-    }
-
-    QByteArray buffer(15, 0);
-    char *bytes = buffer.data();
-
-//    bytes[0] = 48;
-//    bytes++;
-    setBytes(&bytes, ' ');
-    setBytes(&bytes, arg1);
-    setBytes(&bytes, arg2);
-
-    size_t dataSize = bytes - buffer.data();
-    bytes += 4;
-    dataSize = bytes - buffer.data();
-    setBytes(&bytes, uint16_t(command));
-
-    dataSize = bytes - buffer.data();
-    const size_t expectedSize = 15;//1 + sizeof(uint16_t) + 2 * sizeof(uint32_t);
-    //qDebug() << "data size:" << dataSize << "expected:" << expectedSize;
-    if (dataSize != expectedSize) {
-        qWarning() << "Invalid buffer length" << dataSize  << expectedSize;
-        return false;
-    }
-    //qDebug() << "writing" << buffer.toHex();
-    //qDebug() << "sending with two ints" << buffer.toHex() << buffer.size();
-    //qDebug() << uint8_t(command) << arg1 << arg2;
-    //qDebug() << uint8_t(buffer[0]) << buffer.mid(0,1).toHex() << buffer.mid(1,4).toHex() << buffer.mid(5,4).toHex();
-    //qDebug() << "command:" << buffer.mid(13, 2).toHex();
-
-    m_service->writeCharacteristic(m_writeCharacteristic, buffer);
-    //m_service->writeCharacteristic(m_writeCharacteristic, buffer, QLowEnergyService::WriteWithoutResponse);
-
-    //m_service->readDescriptor(m_readDescriptor);
-    //m_service->readCharacteristic(m_readCharacteristic);
-
-    return true;
-}
-
-bool MousrHandler::sendCommand(const MousrHandler::Command command, std::vector<char> data)
-{
-    qDebug() << " + Sending" << command;
-    if (data.empty()) {
-        qWarning() << "trying to send when unconnected";
-        return false;
-    }
-
-    if (data.size() <= 4) {
-        data.resize(4, 0);
-    } else if (data.size() != 12) {
-        qWarning() << "invalid data length" << data.size();
-        return false;
-    }
-
-    QByteArray buffer(15, 0);
-    char *bytes = buffer.data();
-
-    bytes[0] = ' '; // always starts with this?
-    bytes++;
-    //qDebug() << "data size:" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
-    for (const char &byte : data) {
-        setBytes(&bytes, byte);
-        //qDebug() << "after adding byte:" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
-    }
-    bytes = buffer.data();
-    bytes += 13;
-    //qDebug() << "size before" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
-    setBytes(&bytes, uint16_t(command));
-    //qDebug() << "size after" << (uintptr_t(bytes) - uintptr_t(buffer.data()));
-
-    //const uintptr_t dataSize = (uintptr_t(bytes) - uintptr_t(buffer.data()));
-    //const size_t expectedSize = 1 + data.size() + 2;
-    //if (dataSize != expectedSize) {
-        //qWarning() << "Invalid buffer length" << dataSize << uintptr_t(bytes) << uintptr_t(buffer.data()) << data.size() << expectedSize;
-//        return false;
-    //}
-
-    //qDebug() << "sending bytes" << buffer.toHex() << buffer.size();
-    //qDebug() << uint8_t(command);
-    //qDebug() << uint8_t(buffer[0]) << buffer.mid(0,1).toHex() << buffer.mid(1,4).toHex() << buffer.mid(5,4).toHex();
-    //qDebug() << "command:" << buffer.mid(13, 2).toHex();
-
-    m_service->writeCharacteristic(m_writeCharacteristic, buffer, QLowEnergyService::WriteWithoutResponse);
-    //m_service->writeCharacteristic(m_writeCharacteristic, buffer);
-
-    //m_service->readDescriptor(m_readDescriptor);
-    //m_service->readCharacteristic(m_readCharacteristic);
+    sendCommandPacket(CommandPacket(command));
 
     return true;
 }
@@ -343,7 +276,7 @@ void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newStat
 //    qDebug() << "Requested notifications on values changes";
 
     //if (!sendCommand(Command::InitializeDevice, QDateTime::currentSecsSinceEpoch(), mbApiVersion)) {
-    if (!sendCommand(Command::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
+    if (!sendCommand(CommandType::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
         qWarning() << "Failed to send init command";
     }
 
@@ -354,21 +287,21 @@ void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newStat
 void MousrHandler::chirp()
 {
     const int soundClip = 6; // todo: discover if there are more clips stored
-    if (!sendCommand(Command::Chirp, {0, soundClip, 0 ,0})) {
+    if (!sendCommand(CommandType::Chirp, 0, soundClip)) {
         qWarning() << "Failed to request chirp";
     }
 }
 
 void MousrHandler::pause()
 {
-    if (!sendCommand(Command::Stop, {0, 0, 0 ,0})) {
+    if (!sendCommandPacket(CommandPacket(CommandType::Stop))) {
         qWarning() << "Failed to request stop";
     }
 }
 
 void MousrHandler::resume()
 {
-    sendCommand(Command::Stop, m_speed, m_held, m_angle);
+    sendCommand(CommandType::Stop, m_speed, m_held, m_angle);
 }
 
 void MousrHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
@@ -437,34 +370,33 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         qWarning() << "changed from unexpected characteristic" << characteristic.uuid() << data;
         return;
     }
-    if (data.isEmpty()) {
-        qWarning() << "Empty characteristic?";
-    }
 
     if (data.size() != 20) {
         qWarning() << "invalid packet size" << data.size() << "expected 20";
         return;
     }
-    uint8_t command = uint8_t(data[0]);
-    QString resp = EnumHelper::toString(Response(command));
 
-    if (resp.isEmpty()) {
+
+    ResponsePacket response;
+    static_assert(sizeof(response) == 20);
+    qFromLittleEndian<ResponsePacket>(data.data(), 1, &response);
+
+    const QString responseName = EnumHelper::toString(ResponseType(response.type));
+
+    if (responseName.isEmpty()) {
         qDebug() << "Unknown command";
-        qDebug() << command << data;
+        qDebug() << response.type << data;
         return;
     }
 
-    const char *bytes = data.constData();
-    Response type = Response(*bytes++);
-    //qDebug() << " - " << type;
 
-    switch(type){
+    switch(response.type){
     case DeviceOrientation: {
         // I just assume the order here, haven't bothered testing
-        m_rotX = parseBytes<float>(&bytes);
-        m_rotY = parseBytes<float>(&bytes);
-        m_rotZ = parseBytes<float>(&bytes);
-        m_isFlipped = parseBytes<bool>(&bytes);
+        m_rotX = response.orientation.rotation.x;
+        m_rotY = response.orientation.rotation.y;
+        m_rotZ = response.orientation.rotation.z;
+        m_isFlipped = response.orientation.isFlipped;
 
         emit orientationChanged();
 
@@ -472,15 +404,12 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
     }
     case BatteryVoltage:{
         // Voltage seems to be percent? wtf
-        m_voltage = parseBytes<uint8_t>(&bytes);
-        m_batteryLow = parseBytes<bool>(&bytes);
-
-        m_charging = parseBytes<bool>(&bytes);
-        m_fullyCharged = parseBytes<bool>(&bytes);
-
-        m_autoRunning = parseBytes<bool>(&bytes);
-
-        m_memory = parseBytes<uint16_t>(&bytes);
+        m_voltage = response.battery.voltage;
+        m_batteryLow = response.battery.isBatteryLow;
+        m_charging = response.battery.isCharging;
+        m_fullyCharged = response.battery.isFullyCharged;
+        m_autoRunning = response.battery.isAutoMode;
+        m_memory = response.battery.memory;
 
         emit powerChanged();
         emit autoRunningChanged();
@@ -488,33 +417,28 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         break;
     }
     case CrashLogString: {
-        const QString crashLog = QString::fromUtf8(data.right(data.length() - 1));
+        const QString crashLog = response.crashString.message();
         if (crashLog != "No crash log.") {
             qDebug() << " Crash log string:" << crashLog;
         }
         break;
     }
     case CrashLogFinished:
-        qDebug() << type;
+        qDebug() << response.type;
         break;
     case AnalyticsBegin: {
-        int numberOfEntries = parseBytes<uint8_t>(&bytes);
+        int numberOfEntries = response.analyticsBegin.numberOfEntries;
         qDebug() << "Number of analytics entries:" << numberOfEntries;
         break;
     }
     case SensorDirty: {
-        m_sensorDirty = parseBytes<bool>(&bytes);
+        m_sensorDirty = response.sensorDirty.isDirty;
         emit sensorDirtyChanged();
         break;
     }
     case AutoModeChanged: {
         qDebug() << "auto mode changed";
-        static const int requiredSize = 1 + sizeof(Autoplay::Config);
-        if (data.size() < requiredSize) {
-            qWarning() << "Not enough data in packet, require" << requiredSize << "got" << data.size();
-            break;
-        }
-        m_autoplay = parseBytes<Autoplay::Config>(&bytes);
+        m_autoplay = response.autoPlay.config;
         //qDebug() << "autoplay, enabled:" << m_autoplay.enabled << "surface" << m_autoplay.surface << "tail:" << m_autoplay.tail << "gamemode:" << m_autoplay.gameMode << "playmode" << m_autoplay.playMode;
         qDebug() << "enabled" << m_autoplay.enabled;
         qDebug() << "surface" << m_autoplay.m_surface;
@@ -549,13 +473,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         break;
 
     case FirmwareVersion: {
-        static const int requiredSize = 1 + sizeof(Version);
-        if (data.size() < requiredSize) {
-            qWarning() << "Not enough data in packet for version, require" << requiredSize << "got" << data.size();
-            break;
-        }
-
-        m_version = parseBytes<Version>(&bytes);
+        m_version = response.firmwareVersion.version;
 
         qDebug() << "Firmware mode:" << m_version.firmwareType;
         qDebug().noquote() << "Version" << (QByteArray::number(m_version.major) + "." + QByteArray::number(m_version.minor) + "." + QByteArray::number(m_version.commitNumber) + "-" + QByteArray(m_version.commitHash, 4).toHex());
@@ -563,18 +481,17 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         break;
     }
     case Nack: {
-        Command command = parseBytes<Command>(&bytes);
-        uint32_t unknown = parseBytes<uint8_t>(&bytes);
-        uint32_t currentApiVer = parseBytes<uint32_t>(&bytes);
-        uint32_t minApiVer = parseBytes<uint32_t>(&bytes);
-        uint32_t maxApiVer = parseBytes<uint32_t>(&bytes);
+        CommandType command = response.nack.command;
+        uint32_t currentApiVer = response.nack.currentApiVersion;
+        uint32_t minApiVer = response.nack.minimumApiVersion;
+        uint32_t maxApiVer = response.nack.maximumApiVersion;
         qWarning() << "!! Got NACK for command" << command;
-        qDebug() << "unknown num:" << unknown;
+        qDebug() << "unknown num:" << response.nack.unknown1;
         qDebug() << "Api version current:" << currentApiVer << "min:" << minApiVer << "max:" << maxApiVer;
         break;
     }
     default:
-        qWarning() << "Unhandled response" << type << data;
+        qWarning() << "Unhandled response" << response.type << data;
     }
 }
 

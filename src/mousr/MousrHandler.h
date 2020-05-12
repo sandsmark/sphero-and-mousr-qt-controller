@@ -14,6 +14,19 @@ class QBluetoothDeviceInfo;
 
 namespace mousr {
 
+template<typename T>
+struct Vector3D {
+    T x;
+    T y;
+    T z;
+};
+
+template<typename T>
+struct Vector2D {
+    T x;
+    T y;
+};
+
 class MousrHandler : public QObject
 {
     Q_OBJECT
@@ -59,7 +72,7 @@ public:
 
     bool sensorDirty() const { return m_sensorDirty; }
 
-    enum class Command : uint16_t {
+    enum class CommandType : uint16_t {
         Stop = 0,
         Spin = 1,
         Move = 2,
@@ -95,43 +108,19 @@ public:
 
         Invalid = 100
     };
-    Q_ENUM(Command)
+    Q_ENUM(CommandType)
 
-    enum class ResultType : uint16_t {
-        //FirmwareVersionReport = 28,
-        //InitEndReport = 30,
-
-        //DeviceOrientationReport = 48,
-        AutoAckSuccess = 48,
-        AutoAckReport = 49,
-
-        //ResetTailReport = 50,
-        //SensorDirty = 64,
-
-        DebugNumber = 80,
-        DebugCharacter = 81,
-        DebugCharacterAlt = 82,
-        DebugChecksum = 83,
-
-        TofStuck = 83,
-
-        //CrashlogParseFinished = 95,
-        //CrashlogAddDebugString = 96,
-        //CrashlogAddDebugMem = 97,
-        //BatteryInfo = 98,
-        //DeviceStopped = 99,
-        //DeviceStuck = 100,
-
-        //AutoAckFailed = 255
-    };
-    enum Response : uint8_t {
+    enum ResponseType : uint8_t {
         AutoModeChanged = 15,
 
         FirmwareVersion = 28,
         HardwareVersion = 29,
         InitDone = 30,
 
+//        AutoAckSuccess = 48,
         DeviceOrientation = 48,
+//        AutoAckReport = 49,
+//        ResetTailReport = 50,
         ResetTailFailInfo = 50,
 
         SensorDirty = 64, // sensor dirty
@@ -139,6 +128,8 @@ public:
         AnalyticsBegin = 80,
         AnalyticsEntry = 81,
         AnalyticsData = 82,
+
+//        TofStuck = 83,
         AnalyticsEnd = 83,
 
         CrashLogFinished = 95,
@@ -151,7 +142,7 @@ public:
 
         Nack = 255
     };
-    Q_ENUM(Response)
+    Q_ENUM(ResponseType)
 
     enum FirmwareType : uint8_t {
         DebugFirmware = 0,
@@ -186,15 +177,9 @@ public:
 
     const uint32_t mbApiVersion = 3u;
 
-    bool sendCommand(const Command command, float arg1, float arg2, float arg3);
-    bool sendCommand(const Command command, uint32_t arg1, uint32_t arg2);
-//    bool sendCommand(const Command command, const char arg1, const char arg2, const char arg3, const char arg4);
-    bool sendCommand(const MousrHandler::Command command, std::vector<char> data);
-//    bool sendCommand(const Command command, QByteArray data);
-
-//    struct CommandPacket {
-//        CommandPacket(Command command, )
-//    };
+    bool sendCommand(const CommandType command, float arg1, const float arg2, const float arg3);
+    bool sendCommand(const CommandType command, const uint32_t arg1, const uint32_t arg2);
+    bool sendCommand(const CommandType command);
 
     explicit MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent);
     ~MousrHandler();
@@ -230,6 +215,102 @@ private slots:
     void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
 private:
+    #pragma pack(push,1)
+    static_assert(sizeof(bool) == 1);
+
+    struct Version {
+        FirmwareType firmwareType;
+        uint8_t major;
+        uint16_t minor;
+        uint16_t commitNumber;
+        char commitHash[4];
+
+        uint8_t mousrVersion;
+        uint32_t hardwareVersion;
+        uint32_t bootloaderVersion;
+    };
+
+    Version m_version;
+    struct BatteryVoltageResponse {
+        uint8_t voltage;
+        bool isBatteryLow;
+        bool isCharging;
+        bool isFullyCharged;
+        bool isAutoMode;
+        uint16_t memory;
+
+        uint8_t padding[12];
+    };
+
+    struct DeviceOrientationResponse {
+        static_assert(sizeof(float) == 4);
+        Vector3D<float> rotation;
+
+        bool isFlipped;
+
+        uint8_t padding[6];
+    };
+
+    struct CrashLogStringResponse {
+        QString message() const { return QString::fromUtf8(m_string, sizeof(m_string)); }
+    private:
+        char m_string [19];
+    };
+
+    struct AnalyticsBeginResponse {
+        uint8_t numberOfEntries;
+        char unknown[18];
+    };
+    struct AutoPlayConfigResponse {
+        Autoplay::Config config;
+        uint32_t unknown;
+//        char unknown[4];
+    };
+    struct IsSensorDirtyResponse {
+        bool isDirty;
+
+        char unknown[18];
+    };
+    struct FirmwareVersionResponse {
+        Version version;
+    };
+    struct NackResponse {
+        CommandType command;
+        uint8_t unknown1;
+        uint32_t currentApiVersion;
+        uint32_t minimumApiVersion;
+        uint32_t maximumApiVersion;
+
+        uint8_t unknown2[4];
+    };
+
+    struct ResponsePacket {
+        ResponseType type;
+        union {
+            BatteryVoltageResponse battery;
+            DeviceOrientationResponse orientation;
+            CrashLogStringResponse crashString;
+            AnalyticsBeginResponse analyticsBegin;
+            AutoPlayConfigResponse autoPlay{};
+            IsSensorDirtyResponse sensorDirty;
+            FirmwareVersionResponse firmwareVersion;
+            NackResponse nack;
+        };
+    };
+
+    struct CommandPacket {
+        CommandPacket(const CommandType command) : m_command(command) {}
+
+        const uint8_t magic = 48;
+        union {
+            Vector3D<float> vector3D;
+            Vector3D<uint32_t> vector2D;
+        };
+        CommandType m_command = CommandType::Invalid;
+    };
+    #pragma pack(pop)
+
+    bool sendCommandPacket(const CommandPacket &packet);
 
     QPointer<QLowEnergyController> m_deviceController;
 
@@ -253,19 +334,6 @@ private:
     QString m_name;
 
     Autoplay::Config m_autoplay;
-
-    struct Version {
-        FirmwareType firmwareType = StableFirmware;
-        uint8_t major = 0;
-        uint16_t minor = 0;
-        uint16_t commitNumber = 0;
-        char commitHash[4] {"   "};
-
-        uint8_t mousrVersion = 0;
-        uint32_t hardwareVersion = 0;
-        uint32_t bootloaderVersion;
-    } __attribute__((packed));
-    Version m_version;
 };
 
 QDebug operator<<(QDebug debug, const Autoplay::Config &c);
