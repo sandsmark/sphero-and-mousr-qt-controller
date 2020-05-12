@@ -12,45 +12,6 @@
 
 namespace mousr {
 
-QDebug operator<<(QDebug debug, const Autoplay::Config &c) {
-    QDebugStateSaver saver(debug);
-    debug.nospace() << "AutoPlayConfig ("
-                    << "Enabled " << c.enabled << ", "
-                    << "Surface " << c.surface() << ", "
-                    << "Tail " << c.tail << ", "
-                    << "Speed " << c.speed << ", "
-                    << "Game " << c.modeName() << ", "
-                    << "PauseFrequency " << c.pauseFrequency << ", "
-                    << "PauseTime ";
-
-    if (c.pauseTime() == 0) {
-        debug.nospace() << "AllDay, ";
-    } else {
-        debug.nospace() << c.pauseTime() << ", ";
-    }
-
-    switch (c.gameMode) {
-    case Autoplay::GameMode::WallHugger:
-        debug.nospace() << "Confined " << c.pauseTime() << ", ";
-        break;
-    case Autoplay::GameMode::BackAndForth:
-        debug.nospace() << "Driving " << c.drivingMode() << ", ";
-        break;
-    default:
-        break;
-    }
-    debug.nospace() << "AllDay2 " << c.allDay << ", "
-                    << "Unknown1 " << c.unknown1 << ", "
-                    << "Unknown2 " << c.unknown2 << ", "
-                    << "Unknown3 " << c.unknown3 << ", "
-                    << "ResponseTo " << c.m_responseTo << ", "
-                    << "Unknown4 " << c.unknown4 << ", "
-                    << ")";
-
-    return debug.maybeSpace();
-}
-
-
 bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
 {
     qDebug() << " + Sending" << packet.m_command;
