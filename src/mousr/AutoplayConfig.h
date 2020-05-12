@@ -11,6 +11,21 @@ struct Autoplay {
     Q_GADGET
 
 public:
+    static constexpr uint8_t defaultModes[12][12] = {
+        //           . gamemode (look at the dot)
+        {1, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0}, // OpenWander, Calm
+        {1, 0, 0, 2, 0, 1, 20,  6, 0, 0, 0, 0}, // OpenWander, Aggressive
+        {1, 0, 0, 0, 0, 0,  0,  0, 0, 0, 0, 0}, // OpenWander, Custom
+        {1, 0, 0, 0, 1, 0, 15,  1, 0, 0, 0, 0}, // WallHugger, Calm
+        {1, 0, 0, 1, 1, 1,  6,  0, 0, 0, 0, 0}, // WallHugger, Aggressive
+        {1, 0, 0, 0, 1, 0,  0,  0, 0, 0, 0, 0}, // WallHugger, Custom
+        {1, 0, 0, 0, 2, 0,  3,  0, 0, 0, 0, 0}, // BackAndForth, Calm
+        {1, 0, 0, 1, 2, 1, 10,  0, 0, 0, 0, 0}, // BackAndForth, Aggressive
+        {1, 0, 0, 0, 2, 0,  0,  0, 0, 0, 0, 0}, // BackAndForth, Custom
+        {1, 0, 0, 0, 3, 0, 10,  6, 1, 0, 0, 0}, // Stationary, Calm
+        {1, 0, 0, 2, 3, 0, 20,  3, 1, 0, 0, 0}, // Stationary, Aggressive
+        {1, 0, 0, 0, 3, 0,  0,  0, 0, 0, 0, 0}, // Stationary, Custom
+    };
     enum Surface : uint8_t {
         Carpet = 0,
         BareFloor = 1,
@@ -40,8 +55,8 @@ public:
 
     enum GameMode : uint8_t {
         OffMode = 255,
-        Wander = 0,
-        CornerFinder = 1,
+        OpenWander = 0,
+        WallHugger = 1,
         BackAndForth = 2,
         Stationary = 3
     };
@@ -83,9 +98,9 @@ public:
 
         uint8_t pauseTime() const {
             switch(gameMode) {
-            case Autoplay::CornerFinder:
+            case Autoplay::WallHugger:
                 return pauseFrequency;
-            case Autoplay::Wander:
+            case Autoplay::OpenWander:
             case Autoplay::BackAndForth:
             case Autoplay::Stationary:
                 return pauseTimeOrConfined;
@@ -96,9 +111,9 @@ public:
         }
         void setPauseTime(uint8_t time) {
             switch(gameMode) {
-            case CornerFinder:
+            case WallHugger:
                 pauseFrequency = time;
-            case Wander:
+            case OpenWander:
             case BackAndForth:
             case Stationary:
                 pauseTimeOrConfined = time;
@@ -109,8 +124,8 @@ public:
         }
 
         void setConfineArea(bool isConfined) {
-            if (gameMode != CornerFinder) {
-                qWarning() << "Confined is only used in CornerFinder mode, not" << gameMode;
+            if (gameMode != WallHugger) {
+                qWarning() << "Confined is only used in WallHugger mode, not" << gameMode;
             }
             pauseTimeOrConfined = isConfined;
         }

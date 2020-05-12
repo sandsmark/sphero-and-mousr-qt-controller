@@ -30,7 +30,7 @@ QDebug operator<<(QDebug debug, const Autoplay::Config &c) {
     }
 
     switch (c.gameMode) {
-    case Autoplay::GameMode::CornerFinder:
+    case Autoplay::GameMode::WallHugger:
         debug.nospace() << "Confined " << c.pauseTime() << ", ";
         break;
     case Autoplay::GameMode::BackAndForth:
