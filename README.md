@@ -19,4 +19,9 @@ TODO
  * Port to BluezQt, qtbluetooth is utterly broken on Linux: https://api.kde.org/frameworks/bluez-qt/html/index.html
  * Configuring autoplay.
  * Manual control.
+
+
+Work in progress
+================
+
  * Connecting to and controlling sphero droids, because my cat also plays with those.
