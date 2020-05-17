@@ -30,6 +30,7 @@ struct Vector2D {
 class MousrHandler : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QString deviceType READ deviceType CONSTANT)
     Q_PROPERTY(QString name MEMBER m_name CONSTANT)
 
     Q_PROPERTY(QString statusString READ statusString NOTIFY connectedChanged)
@@ -160,6 +161,8 @@ public: // enums
     Q_ENUM(AnalyticsEvent)
 
 public:
+    static QString deviceType() { return "Mousr"; }
+
     int memory() const { return m_memory; }
 
     // Power stuff
@@ -189,6 +192,7 @@ public:
 
     int soundVolume() { return m_volume; }
     void setSoundVolume(const int volumePercent);
+
 
 signals:
     void connectedChanged();

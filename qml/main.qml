@@ -78,12 +78,26 @@ Window {
         }
     }
 
+    Component {
+        id: mousrComponent
+
+        Lol.MousrView {
+            device: DeviceDiscoverer.device
+        }
+    }
+
+    Component {
+        id: spheroComponent
+        Rectangle {
+            anchors.fill: parent
+            color: "red"
+        }
+    }
+
     Loader {
         id: robotLoader
         active: DeviceDiscoverer.device
         anchors.fill: parent
-        sourceComponent: Lol.MousrView {
-            device: DeviceDiscoverer.device
-        }
+        sourceComponent: DeviceDiscoverer.device ? (DeviceDiscoverer.device.deviceType === "Mousr" ?  mousrComponent : spheroComponent) : undefined
     }
 }

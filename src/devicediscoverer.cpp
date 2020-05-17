@@ -1,6 +1,7 @@
 #include "devicediscoverer.h"
 
 #include "mousr/MousrHandler.h"
+#include "sphero/SpheroHandler.h"
 
 #include <QBluetoothDeviceDiscoveryAgent>
 #include <QBluetoothDeviceInfo>
@@ -20,15 +21,13 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     // I hate these overload things..
     connect(m_discoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error), this, &DeviceDiscoverer::onAgentError);
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered, Qt::QueuedConnection);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
-    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [=](const QBluetoothDeviceInfo &, QBluetoothDeviceInfo::Fields ){
+    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [this](const QBluetoothDeviceInfo &, QBluetoothDeviceInfo::Fields ){
         if (m_restartScanTimer.isActive()) {
             qDebug() << " - Restarting scan timer";
             m_restartScanTimer.start();
         }
     });
-#endif
-    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::finished, this, [=]() {
+    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::finished, this, [this]() {
         qDebug() << "discovery finihsed";
         if (m_scanning) {
             qDebug() << " - Starting timer";
@@ -37,7 +36,7 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     });
     m_restartScanTimer.setInterval(5000);
     m_restartScanTimer.setSingleShot(true);
-    connect(&m_restartScanTimer, &QTimer::timeout, this, [=]() {
+    connect(&m_restartScanTimer, &QTimer::timeout, this, [this]() {
         if (m_scanning) {
             qDebug() << " ! Restarting scan";
             m_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
@@ -125,18 +124,31 @@ void DeviceDiscoverer::stopScanning()
 
 void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
 {
-    if (device.name() != "Mousr") {
+    if (m_device) {
+        qWarning() << "already have device, skipping" << device.name();
         return;
     }
 
-    qDebug() << "Found Mousr";
+    if (device.name() == "Mousr") {
+        qDebug() << "Found Mousr";
 
-    stopScanning();
+        mousr::MousrHandler *handler = new mousr::MousrHandler(device, this);
+        connect(handler, &mousr::MousrHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
+        m_device = handler;
+    } else if (device.name().startsWith("BB-")) {
+        qDebug() << "Found BB8";
 
-    m_device = new mousr::MousrHandler(device, this);
+        sphero::SpheroHandler *handler = new sphero::SpheroHandler(device, this);
+        connect(handler, &sphero::SpheroHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
+        m_device = handler;
+    } else {
+        return;
+    }
+
     QQmlEngine::setObjectOwnership(m_device, QQmlEngine::CppOwnership);
     emit deviceChanged();
-    connect(m_device, &mousr::MousrHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
+    stopScanning();
+
     return;
 }
 

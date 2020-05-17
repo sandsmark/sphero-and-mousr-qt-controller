@@ -48,7 +48,7 @@ private slots:
     void onAdapterError(const QBluetoothLocalDevice::Error error);
 
 private:
-    QPointer<mousr::MousrHandler> m_device;
+    QPointer<QObject> m_device;
 
     QTimer m_restartScanTimer;
     QPointer<QBluetoothDeviceDiscoveryAgent> m_discoveryAgent;
