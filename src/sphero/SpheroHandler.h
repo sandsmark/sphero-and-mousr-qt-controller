@@ -27,23 +27,119 @@ struct Vector2D {
 };
 
 struct PacketHeader {
-    enum SynchronousType : bool {
-        Asynchronous,
-        Synchronous
-    };
-    enum TimeoutHandling : bool {
+    enum TimeoutHandling : uint8_t {
         KeepTimeout = 0,
-        ResetTimeout = 1
+        ResetTimeout = 1 << 0
     };
 
-    const uint16_t magic:14 { 0b11111111111111 };
+    enum SynchronousType : uint8_t {
+        Asynchronous = 0,
+        Synchronous = 1 << 1
+    };
 
-    enum TimeoutHandling resetTimeout:1 = KeepTimeout;
+    enum CommandTarget : uint8_t {
+        Internal = 0x00,
+        HardwareControl = 0x02,
+    };
 
-    enum SynchronousType synchronous:1 = Synchronous;
+    enum InternalCommand : uint8_t {
+        Ping = 0x01,
+        Version = 0x02,
+        SetBtName = 0x10,
+        GetBtName = 0x11,
+        SetAutoReconnect = 0x12,
+        GetAutoReconnect = 0x13,
+        GetPwrState = 0x20,
+        SetPwrNotify = 0x21,
+        Sleep = 0x22,
+        GotoBl = 0x30,
+        RunL1Diags = 0x40,
+        RunL2Diags = 0x41,
+        ClearCounters = 0x42,
+        AssignCounter = 0x50,
+        PollTimes = 0x51
+    };
+
+    enum HardwareCommand : uint8_t {
+        SetHeading = 0x01,
+        SetStabiliz = 0x02,
+        SetRotationRate = 0x03,
+        SetAppConfigBlk = 0x04,
+        GetAppConfigBlk = 0x05,
+        SetDataStream = 0x11,
+        CfgColDet = 0x12,
+        ConfigLocator = 0x13,
+        SetRgbLed = 0x20,
+        SetBackLed = 0x21,
+        GetRgbLed = 0x22,
+        Roll = 0x30,
+        Boost = 0x31,
+        SetRawMotors = 0x33,
+        SetMotionTo = 0x34,
+        GetConfigBlk = 0x40,
+        SetDeviceMode = 0x42,
+        SetCfgBlk = 0x43,
+        GetDeviceMode = 0x44,
+        RunMacro = 0x50,
+        SaveTempMacro = 0x51,
+        SaveMacro = 0x52,
+        DelMacro = 0x53,
+        InitMacroExecutive = 0x54,
+        AbortMacro = 0x55,
+        GetMacroStatus = 0x56,
+        SetMacroStatus = 0x57,
+    };
+
+    const uint8_t magic = 0xFF;
+    uint8_t flags = 0xFC;
 
     uint8_t deviceID = 0;
     uint8_t commandID = 0;
+    uint8_t sequenceNumber = 0;
+    uint8_t dataLength = 0;
+};
+
+struct ResponsePacketHeader {
+    Q_GADGET
+public:
+    enum ResponseCodes : uint8_t {
+        Ok = 0x00,
+        GeneralError = 0x01,
+        ChecksumFailure = 0x02,
+        FragmentReceived = 0x3,
+        UnknownCommandId = 0x04,
+        UnsupporedCommand = 0x05,
+        BadMessageFormat = 0x06,
+        InvalidParameter = 0x07,
+        ExecutionFailed = 0x08,
+        UnknownDeviceId = 0x09,
+        VoltageTooLow = 0x31,
+        IllegalPage = 0x32,
+        FlashFailed = 0x33,
+        MainApplicationCorrupt = 0x34,
+        Timeout = 0x35
+    };
+    Q_ENUM(ResponseCodes)
+
+    enum AsyncID : uint8_t {
+        PowerNotification = 0x01,
+        Level1Diagnostic = 0x02,
+        SensorStream = 0x03,
+        ConfigBlock = 0x04,
+        SleepingIn10Sec = 0x05,
+        MacroMarkers = 0x06,
+        Collision = 0x07
+    };
+
+    enum PacketType {
+        Ack = 0xFF,
+        Data = 0xFE
+    };
+
+    const uint8_t magic = 0xFF;
+    uint8_t type = 0xFF;
+
+    uint8_t response = 0;
     uint8_t sequenceNumber = 0;
     uint8_t dataLength = 0;
 };
@@ -134,7 +230,7 @@ private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);
     void onControllerError(QLowEnergyController::Error newError);
 
-    void onServiceDiscovered(const QBluetoothUuid &newService);
+    void onServiceDiscovered();
     void onMainServiceChanged(QLowEnergyService::ServiceState newState);
     void onServiceError(QLowEnergyService::ServiceError error);
 
