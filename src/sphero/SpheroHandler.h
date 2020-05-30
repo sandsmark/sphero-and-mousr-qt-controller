@@ -69,6 +69,7 @@ struct PacketHeader {
         SetDataStream = 0x11,
         CfgColDet = 0x12,
         ConfigLocator = 0x13,
+        GetLocatorData = 0x15,
         SetRgbLed = 0x20,
         SetBackLed = 0x21,
         GetRgbLed = 0x22,
