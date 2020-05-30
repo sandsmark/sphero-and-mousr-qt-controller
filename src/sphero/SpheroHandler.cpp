@@ -12,20 +12,51 @@
 
 namespace sphero {
 
+namespace Services {
+    static const QBluetoothUuid main(QStringLiteral("{22bb746f-2ba0-7554-2d6f-726568705327}"));
+    static const QBluetoothUuid spheroBLE(QStringLiteral("{22bb746f-2bb0-7554-2d6f-726568705327}"));
+    static const QBluetoothUuid batteryControl(QStringLiteral("{00001016-d102-11e1-9b23-00025b00a5a5}"));
+
+    // Unused for now
+    static const QBluetoothUuid fwUpdate(QStringLiteral("{00010001-574f-4f20-5370-6865726f2121}"));
+
+    static const QBluetoothUuid commands(QStringLiteral("{22bb746f-2ba1-7554-2d6f-726568705327}"));
+    static const QBluetoothUuid response(QStringLiteral("{22bb746f-2ba6-7554-2d6f-726568705327}"));
+
+    namespace R2D2 {
+        static const QBluetoothUuid connect(QStringLiteral("{00020001-574f-4f20-5370-6865726f2121}"));
+        static const QBluetoothUuid main(QStringLiteral("{00010001-574f-4f20-5370-6865726f2121}"));
+    } // namespace R2D2
+
+} // namespace Services
+
 namespace Characteristics {
-namespace Radio {
-    static const QBluetoothUuid unknownRadio(QStringLiteral("{22BB746F-2BB1-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid transmitPower(QStringLiteral("{22BB746F-2BB2-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid rssi(QStringLiteral("{22BB746F-2BB6-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid deepSleep(QStringLiteral("{22BB746F-2BB7-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid unknownRadio2(QStringLiteral("{22BB746F-2BB8-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid unknownRadio3(QStringLiteral("{22BB746F-2BB9-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid unknownRadio4(QStringLiteral("{22BB746F-2BBA-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid antiDos(QStringLiteral("{22BB746F-2BBD-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid antiDosTimeout(QStringLiteral("{22BB746F-2BBE-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid wake(QStringLiteral("{22BB746F-2BBF-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid unknownRadio5(QStringLiteral("{22BB746F-3BBA-7554-2D6F-726568705327}"));
-}; // namespace Radio
+    namespace Radio {
+        static const QBluetoothUuid unknownRadio(QStringLiteral("{22bb746f-2bb1-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid transmitPower(QStringLiteral("{22bb746f-2bb2-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid rssi(QStringLiteral("{22bb746f-2bb6-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid deepSleep(QStringLiteral("{22bb746f-2bb7-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid unknownRadio2(QStringLiteral("{22bb746f-2bb8-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid unknownRadio3(QStringLiteral("{22bb746f-2bb9-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid unknownRadio4(QStringLiteral("{22bb746f-2bba-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid antiDos(QStringLiteral("{22bb746f-2bbd-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid antiDosTimeout(QStringLiteral("{22bb746f-2bbe-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid wake(QStringLiteral("{22bb746f-2bbf-7554-2d6f-726568705327}"));
+        static const QBluetoothUuid unknownRadio5(QStringLiteral("{22bb746f-3bba-7554-2d6f-726568705327}"));
+    } // namespace Radio
+
+    namespace R2D2 {
+        static const QBluetoothUuid connect(QStringLiteral("{00020005-574f-4f20-5370-6865726f2121}"));
+        static const QBluetoothUuid handle(QStringLiteral("{00020002-574f-4f20-5370-6865726f2121}"));
+        static const QBluetoothUuid main(QStringLiteral("{00010002-574f-4f20-5370-6865726f2121}"));
+
+    } // namespace R2D2
+
+    namespace Unknown {
+        static const QBluetoothUuid unknown1(QStringLiteral("{00010003-574f-4f20-5370-6865726f2121}"));
+        static const QBluetoothUuid unknown2(QStringLiteral("{00020003-574f-4f20-5370-6865726f2121}"));
+        static const QBluetoothUuid dfu2(QStringLiteral("{00020004-574f-4f20-5370-6865726f2121}"));
+    } // namespace Unknown
 
 } // namespace Characteristics
 
@@ -101,13 +132,8 @@ void SpheroHandler::onServiceDiscovered()
 {
     qDebug() << "Discovered services";
 
-    static const QBluetoothUuid fwUpdateServiceLM  =  QUuid(0x00010001, 0x574f, 0x4f20, 0x53, 0x70, 0x68, 0x65, 0x72, 0x6f, 0x21, 0x21);
 
-    static const QBluetoothUuid mainService(QStringLiteral("{22bb746f-2ba0-7554-2d6f-726568705327}"));
-    static const QBluetoothUuid spheroBLEService(QStringLiteral("{22bb746f-2bb0-7554-2d6f-726568705327}"));
-    static const QBluetoothUuid batteryControlService(QStringLiteral("{00001016-d102-11e1-9b23-00025b00a5a5}"));
-
-    m_bleService = m_deviceController->createServiceObject(spheroBLEService, this);
+    m_bleService = m_deviceController->createServiceObject(Services::spheroBLE, this);
     if (!m_bleService) {
         qWarning() << "Failed to get ble service";
         return;
@@ -125,8 +151,6 @@ void SpheroHandler::onServiceDiscovered()
 void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newState)
 {
     qDebug() << "mainservice change" << newState;
-    static const QBluetoothUuid commandsUuid(QStringLiteral("{22BB746F-2BA1-7554-2D6F-726568705327}"));
-    static const QBluetoothUuid responseUuid(QStringLiteral("{22BB746F-2BA6-7554-2D6F-726568705327}"));
 
     if (newState == QLowEnergyService::InvalidService) {
         qWarning() << "Got invalid service";
@@ -145,12 +169,12 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         return;
     }
 
-    m_commandsCharacteristic = m_mainService->characteristic(commandsUuid);
+    m_commandsCharacteristic = m_mainService->characteristic(Services::commands);
     if (!m_commandsCharacteristic.isValid()) {
         qWarning() << "Commands characteristic invalid";
         return;
     }
-    m_responseCharacteristic = m_mainService->characteristic(responseUuid);
+    m_responseCharacteristic = m_mainService->characteristic(Services::response);
     if (!m_responseCharacteristic.isValid()) {
         qWarning() << "response characteristic invalid";
         return;
@@ -197,7 +221,7 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
     qDebug() << "Requested notifications on values changes";
 
 
-    sendCommand(PacketHeader::Internal, PacketHeader::GetPwrState, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
+    sendCommand(PacketHeader::HardwareControl, PacketHeader::GetLocatorData, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
     emit connectedChanged();
 }
 
@@ -342,7 +366,6 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         checksum += uint8_t(m_receiveBuffer[i]);
         contents.append(m_receiveBuffer[i]);
     }
-    qDebug() << "Checked usm" << checksum;
     checksum ^= 0xFF;
     if (!m_receiveBuffer.endsWith(checksum)) {
         qWarning() << "Invalid checksum" << checksum;
@@ -414,7 +437,6 @@ void SpheroHandler::onBleServiceChanged(QLowEnergyService::ServiceState newState
         qDebug() << "unhandled ble service state changed:" << newState;
         return;
     }
-    static const QBluetoothUuid rssiUuid(QStringLiteral("{22bb746f-2bb6-7554-2d6f-726568705327}"));
     QLowEnergyCharacteristic antiDos = m_bleService->characteristic(Characteristics::Radio::antiDos);
     if (!antiDos.isValid()) {
         qWarning() << "Anti dos characteristic not available";
@@ -444,8 +466,7 @@ void SpheroHandler::onBleServiceChanged(QLowEnergyService::ServiceState newState
         return;
     }
 
-    static const QBluetoothUuid mainService(QStringLiteral("{22bb746f-2ba0-7554-2d6f-726568705327}"));
-    m_mainService = m_deviceController->createServiceObject(mainService, this);
+    m_mainService = m_deviceController->createServiceObject(Services::main, this);
     if (!m_mainService) {
         qWarning() << "no main service";
         return;
