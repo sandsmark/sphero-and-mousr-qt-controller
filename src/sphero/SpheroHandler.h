@@ -242,7 +242,7 @@ private slots:
     void onBleCharacteristicWritten(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
 private:
-    void setTxPower(uint8_t power);
+    void sendRadioControlCommand(const QBluetoothUuid &characteristicUuid, const QByteArray &data);
     void sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data, const PacketHeader::SynchronousType synchronous, const PacketHeader::TimeoutHandling keepTimeout);
 
 

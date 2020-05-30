@@ -437,12 +437,7 @@ void SpheroHandler::onBleServiceChanged(QLowEnergyService::ServiceState newState
         qDebug() << "unhandled ble service state changed:" << newState;
         return;
     }
-    QLowEnergyCharacteristic antiDos = m_bleService->characteristic(Characteristics::Radio::antiDos);
-    if (!antiDos.isValid()) {
-        qWarning() << "Anti dos characteristic not available";
-        return;
-    }
-    m_bleService->writeCharacteristic(antiDos, "011i3");
+    sendRadioControlCommand(Characteristics::Radio::antiDos, "011i3");
     qDebug() << "Antidos written";
 
     QLowEnergyCharacteristic txPower = m_bleService->characteristic(Characteristics::Radio::transmitPower);
@@ -493,13 +488,18 @@ void SpheroHandler::onBleCharacteristicWritten(const QLowEnergyCharacteristic &c
 
 }
 
-void SpheroHandler::setTxPower(uint8_t power)
+void SpheroHandler::sendRadioControlCommand(const QBluetoothUuid &characteristicUuid, const QByteArray &data)
 {
-    if (!isConnected()) {
-        qWarning() << "Trying to set transmit power, we're not connected";
+    if (!m_bleService || m_bleService->state() == QLowEnergyService::ServiceDiscovered) {
+        qWarning() << "Radio service not connected";
         return;
     }
-    m_mainService->writeCharacteristic(m_txPowerCharacteristic, QByteArray(1, power));
+    QLowEnergyCharacteristic characteristic = m_bleService->characteristic(characteristicUuid);
+    if (!characteristic.isValid()) {
+        qWarning() << "Characteristic" << characteristicUuid << "not available";
+        return;
+    }
+    m_bleService->writeCharacteristic(characteristic, data);
 }
 
 void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data, const PacketHeader::SynchronousType synchronous, const PacketHeader::TimeoutHandling keepTimeout)
