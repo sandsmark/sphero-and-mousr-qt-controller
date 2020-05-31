@@ -160,7 +160,8 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
 
     qDebug() << " - Successfully connected";
 
-    sendCommand(PacketHeader::HardwareControl, PacketHeader::GetLocatorData, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
+//    sendCommand(PacketHeader::HardwareControl, PacketHeader::GetLocatorData, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
+    sendCommand(PacketHeader::Internal, PacketHeader::GetPwrState, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
@@ -211,7 +212,6 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     if (characteristic.uuid() == Characteristics::Radio::rssi) {
         m_rssi = data[0];
-        qDebug() << m_rssi;
         emit rssiChanged();
         return;
     }
@@ -266,9 +266,6 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     }
 
     ResponsePacketHeader header;
-    if (header.response != ResponsePacketHeader::Ok) {
-
-    }
     qFromBigEndian<uint8_t>(m_receiveBuffer.data(), sizeof(PacketHeader), &header);
     qDebug() << " - magic" << header.magic;
     if (header.magic != 0xFF) {
@@ -277,10 +274,10 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     }
     qDebug() << " - type" << header.type;
     switch(header.type) {
-    case ResponsePacketHeader::Ack:
+    case ResponsePacketHeader::Response:
         qDebug() << " - ack response" << ResponsePacketHeader::AckType(header.response);
         break;
-    case ResponsePacketHeader::Data:
+    case ResponsePacketHeader::Notification:
         qDebug() << " - data response" << ResponsePacketHeader::DataType(header.response);
         break;
     default:
@@ -297,12 +294,9 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         return;
     }
 
-    QByteArray contents;
-
     uint8_t checksum = 0;
     for (int i=2; i<m_receiveBuffer.size() - 1; i++) {
         checksum += uint8_t(m_receiveBuffer[i]);
-        contents.append(m_receiveBuffer[i]);
     }
     checksum ^= 0xFF;
     if (!m_receiveBuffer.endsWith(checksum)) {
@@ -310,56 +304,94 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         qDebug() << "  > Expected" << uint8_t(m_receiveBuffer.back());
         return;
     }
+
+    QByteArray contents = data.mid(sizeof(ResponsePacketHeader), header.dataLength);
+    if (contents.isEmpty()) {
+        qWarning() << "No contents";
+    }
     qDebug() << " - received contents" << contents.size() << contents.toHex(':');
-    contents = contents.left(header.dataLength);
 
     qDebug() << " - response type:" << header.type;
+    m_receiveBuffer.clear(); // TODO leave some
 
     switch(header.type) {
-    case ResponsePacketHeader::Ack: {
+    case ResponsePacketHeader::Response: {
         qDebug() << " - ack response" << ResponsePacketHeader::AckType(header.response);
         qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
 
         // TODO separate function
-        if (size_t(contents.size()) < sizeof(AckResponsePacket)) {
-            qWarning() << "Impossibly short data response packet, size" << contents.size() << "we require at least" << sizeof(AckResponsePacket);
-            qDebug() << contents;
-            return;
-        }
-        const AckResponsePacket *response = reinterpret_cast<const AckResponsePacket*>(contents.data());
-        qDebug() << "Response type" << response->type << "unknown" << response->unk;
-        switch(response->type) {
-        case LocatorResponse: {
-            if (size_t(contents.length()) < sizeof(LocatorPacket)) {
-                qWarning() << "Locator response too small" << contents.length();
+        AckResponsePacket::ResponseType responseType = AckResponsePacket::ResponseType (uint8_t(contents[0]));
+        switch(responseType) {
+        case AckResponsePacket::PowerNotification: {
+            PowerStatePacket response;
+            if (size_t(contents.size()) < sizeof(response)) {
+                qWarning() << "Size of content too small";
                 return;
             }
-            contents = contents.mid(4);
-            qDebug() << "Locator size" << sizeof(LocatorPacket) << "Locatorconf" << contents.size();
-            const LocatorPacket *location = reinterpret_cast<const LocatorPacket*>(contents.data());
-            qDebug() << "tilt" << location->tilt << "position" << location->position.x << location->position.y << (location->flags ? "calibrated" : "not calibrated");
-
-            DataStreamingCommandPacket def;
-            def.packetCount = 1;
-            sendCommand(PacketHeader::HardwareControl, PacketHeader::SetDataStreaming, QByteArray((char*)&def, sizeof(def)), PacketHeader::Synchronous, PacketHeader::ResetTimeout);
+            qFromBigEndian<uint8_t>(contents.data(), sizeof(PowerStatePacket), &response);
+            qDebug() << "  ========== power response ====== ";
+            qDebug() << "  + version" << response.recordVersion;
+            qDebug() << "  + state" << response.powerState;
+            qDebug() << "  + battery voltage" << response.batteryVoltage;
+            qDebug() << "  + number of charges" << response.numberOfCharges;
+            qDebug() << "  + seconds since charge" << response.secondsSinceCharge;
             break;
         }
+        case AckResponsePacket::Level1Diagnostic: {
+            qDebug() << " ? Got level 1 diagnostic";
+            break;
+        }
+        case AckResponsePacket::SensorStream: {
+            qDebug() << " ? Got sensor data streaming";
+            break;
+        }
+        case AckResponsePacket::ConfigBlock: {
+            qDebug() << " ? Got config block";
+            break;
+        }
+        case AckResponsePacket::SleepingIn10Sec: {
+            qDebug() << " ? Got notification that it is going to sleep in 10 seconds";
+            break;
+        }
+        case AckResponsePacket::MacroMarkers: {
+            qDebug() << " ? Got macro markers";
+            break;
+        }
+        case AckResponsePacket::Collision: {
+            qDebug() << " ? Got collision notification";
+            break;
+        }
+//        case LocatorResponse: {
+//            if (size_t(contents.length()) < sizeof(LocatorPacket)) {
+//                qWarning() << "Locator response too small" << contents.length();
+//                return;
+//            }
+//            contents = contents.mid(4);
+//            qDebug() << "Locator size" << sizeof(LocatorPacket) << "Locatorconf" << contents.size();
+//            const LocatorPacket *location = reinterpret_cast<const LocatorPacket*>(contents.data());
+//            qDebug() << "tilt" << location->tilt << "position" << location->position.x << location->position.y << (location->flags ? "calibrated" : "not calibrated");
+
+//            DataStreamingCommandPacket def;
+//            def.packetCount = 1;
+//            sendCommand(PacketHeader::HardwareControl, PacketHeader::SetDataStreaming, QByteArray((char*)&def, sizeof(def)), PacketHeader::Synchronous, PacketHeader::ResetTimeout);
+//            break;
+//        }
         default:
-            qWarning() << "Unhandled ack response" << ResponseType(response->type);
+            qWarning() << "Unhandled ack response" << AckResponsePacket::ResponseType(int(contents[0]));
             break;
         }
 
         break;
     }
-    case ResponsePacketHeader::Data:
-        qDebug() << " - data response" << ResponsePacketHeader::DataType(header.response);
+    case ResponsePacketHeader::Notification:
+        qDebug() << " - data notification" << header.response;
         break;
     default:
         qWarning() << " ! unhandled type" << header.type;
         m_receiveBuffer.clear();
     }
 
-    if (header.type != ResponsePacketHeader::Ack) {
+    if (header.type != ResponsePacketHeader::Response) {
         qWarning() << " ! not a simple response";
         return;
     }
@@ -491,7 +523,7 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
     }
     toSend.append(checksum xor 0xFF);
 
-//    qDebug() << " - Writing command" << toSend.toHex();
+    qDebug() << " - Writing command" << toSend.toHex();
     m_mainService->writeCharacteristic(m_commandsCharacteristic, toSend);
 }
 

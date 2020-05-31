@@ -132,7 +132,7 @@ struct PacketHeader {
 struct ResponsePacketHeader {
     Q_GADGET
 public:
-    enum AckType : uint8_t {
+    enum ResponseType : uint8_t {
         Ok = 0x00,
         GeneralError = 0x01,
         ChecksumFailure = 0x02,
@@ -147,24 +147,36 @@ public:
         IllegalPage = 0x32,
         FlashFailed = 0x33,
         MainApplicationCorrupt = 0x34,
-        Timeout = 0x35
+        Timeout = 0x35,
+        ErrorTimeout = 0xFE, // SDK introduced??
+        TimeoutErr = 0xFF
     };
-    Q_ENUM(AckType)
+    Q_ENUM(ResponseType)
 
-    enum DataType : uint8_t {
+    enum NotificationType : uint8_t {
         PowerNotification = 0x01,
         Level1Diagnostic = 0x02,
         SensorStream = 0x03,
         ConfigBlock = 0x04,
         SleepingIn10Sec = 0x05,
         MacroMarkers = 0x06,
-        Collision = 0x07
+        Collision = 0x07,
+        OrbBasicErrorASCII = 0x09,
+        OrbBasicErrorBinary = 0x0A,
+        SelfLevelComplete = 0x0B,
+        GyroRangeExceeded = 0x0C,
+        SoulDataResponse = 0x0D,
+        SoulLevelUpNotification = 0x0E,
+        SoulShieldNotification = 0x0F,
+        BoostNotification = 0x11,
+        SoulBlockData = 0x20,
+        XPUpdateEvent = 0x21
     };
-    Q_ENUM(DataType)
+    Q_ENUM(NotificationType)
 
     enum PacketType {
-        Ack = 0xFF,
-        Data = 0xFE
+        Response = 0xFF,
+        Notification = 0xFE
     };
 
     const uint8_t magic = 0xFF;
@@ -175,22 +187,48 @@ public:
     uint8_t dataLength = 0;
 };
 
+struct AckResponsePacket
+{
+    enum ResponseType : uint8_t {
+        PowerNotification = 0x01,
+        Level1Diagnostic = 0x02,
+        SensorStream = 0x03,
+        ConfigBlock = 0x04,
+        SleepingIn10Sec = 0x05,
+        MacroMarkers = 0x06,
+        Collision = 0x07
+    };
 
-struct PowerStatePacket {
-    PacketHeader header;
+    uint8_t type;
+};
+
+struct PowerStatePacket : public AckResponsePacket {
+    enum PowerState : uint8_t {
+        BatteryCharging = 0x1,
+        BatteryOK = 0x2,
+        BatteryLow = 0x3,
+        BatteryCritical = 0x4,
+    };
+
     uint8_t recordVersion = 0;
     uint8_t powerState = 0;
     uint16_t batteryVoltage = 0;
     uint16_t numberOfCharges = 0;
     uint16_t secondsSinceCharge = 0;
-
-    uint8_t checksum = 0; // i think this is right
 };
+static_assert(sizeof(PowerStatePacket) == 9);
 
-struct AckResponsePacket
+// TODO: size/contents
+/// BB-8 and later
+struct ChargerStatusPacket : public AckResponsePacket
 {
-    uint16_t unk; /// eehidk
-    uint16_t type;
+    enum ChargerState : uint32_t {
+        UnknownState = 0x00,
+        NotCharging = 0x01,
+        Charging = 0x02,
+    };
+
+    uint32_t state;
 };
 
 struct LocatorPacket {
@@ -206,6 +244,43 @@ struct LocatorPacket {
 
     // the tilt against the cartesian plane
     int16_t tilt = 0;
+};
+
+struct SensorStreamPacket
+{
+    struct Motor {
+        int16_t left;
+        int16_t right;
+    };
+
+    ResponsePacketHeader header;
+
+    Vector3D<int16_t> accelerometerRaw; // -2048 to 2047
+    Vector3D<int16_t> gyroRaw; // -2048 to 2047
+
+    Vector3D<int16_t> unknown; // not used?
+
+    Motor motorBackRaw; // motor back EMF, raw   -32768 to 32767 22.5 cm
+    Motor motorRaw; // motor, PWM raw    -2048 to 2047   duty cycle
+
+    Orientation<int16_t> filteredOrientation; // IMU pitch angle, yaw and angle filtered   -179 to 180 degrees
+
+    Vector3D<int16_t> accelerometer; // accelerometer axis, filtered  -32768 to 32767 1/4096 G
+    Vector3D<int16_t> gyro; // filtered   -20000 to 20000 0.1 dps
+
+    Vector3D<int16_t> unknown2; // unused?
+
+    Motor motorBack; // motor back EMF, filtered  -32768 to 32767 22.5 cm
+
+    uint16_t unknown3[5]; // unused?
+
+    Quaternion<int16_t> quaternion; // -10000 to 10000 1/10000 Q
+
+    Vector2D<int16_t> odometer; // // 0800 0000h   Odometer X  -32768
+
+    int16_t acceleration; // 0 to 8000   1 mG
+
+    Vector2D<int16_t> velocity; // -32768 to 32767 mm/s
 };
 
 
@@ -228,6 +303,38 @@ struct RotateCommandPacket
 {
     PacketHeader header;
     float rate;
+};
+
+struct SetOptionsCommandPacket
+{
+    PacketHeader header;
+
+    enum Options : uint32_t {
+        /// Prevent Sphero from going to sleep when placed in the charger and connected over Bluetooth
+        PreventSleepInCharger = 1 << 0,
+
+        /// Enable Vector Drive, when Sphero is stopped and a new roll command is issued */
+        EnableVectorDrive = 1 << 1,
+
+        /// Disable self-leveling when Sphero is inserted into the charger
+        DisableSelfLevelInCharger = 1 << 2,
+
+        /// Force the tail LED always on
+        TailLightAlwaysOn = 1 << 3,
+
+        /// Enable motion timeouts, DID 0x02, CID 0x34
+        EnableMotionTimeout = 1 << 4,
+
+        DemoMode = 1 << 5,
+
+        LightDoubleTap = 1 << 6,
+        HeavyDoubleTap = 1 << 7,
+        GyroMaxAsync = 1 << 8, // new in firmware 1.47 (sphero)
+        EnableSoul   = 1 << 9,
+        SlewRawMotors  = 1 << 10,
+    };
+
+    uint32_t optionsBitmask;
 };
 
 struct DataStreamingCommandPacket
@@ -305,43 +412,6 @@ struct DataStreamingCommandPacket1_17 : DataStreamingCommandPacket
 
     };
     uint32_t sourceMaskHighBits = AllSourcesHigh; // firmware >= 1.17
-};
-
-struct SensorStreamPacket
-{
-    struct Motor {
-        int16_t left;
-        int16_t right;
-    };
-
-    ResponsePacketHeader header;
-
-    Vector3D<int16_t> accelerometerRaw; // -2048 to 2047
-    Vector3D<int16_t> gyroRaw; // -2048 to 2047
-
-    Vector3D<int16_t> unknown; // not used?
-
-    Motor motorBackRaw; // motor back EMF, raw   -32768 to 32767 22.5 cm
-    Motor motorRaw; // motor, PWM raw    -2048 to 2047   duty cycle
-
-    Orientation<int16_t> filteredOrientation; // IMU pitch angle, yaw and angle filtered   -179 to 180 degrees
-
-    Vector3D<int16_t> accelerometer; // accelerometer axis, filtered  -32768 to 32767 1/4096 G
-    Vector3D<int16_t> gyro; // filtered   -20000 to 20000 0.1 dps
-
-    Vector3D<int16_t> unknown2; // unused?
-
-    Motor motorBack; // motor back EMF, filtered  -32768 to 32767 22.5 cm
-
-    uint16_t unknown3[5]; // unused?
-
-    Quaternion<int16_t> quaternion; // -10000 to 10000 1/10000 Q
-
-    Vector2D<int16_t> odometer; // // 0800 0000h   Odometer X  -32768
-
-    int16_t acceleration; // 0 to 8000   1 mG
-
-    Vector2D<int16_t> velocity; // -32768 to 32767 mm/s
 };
 
 static_assert(sizeof(LocatorPacket) == 7);
