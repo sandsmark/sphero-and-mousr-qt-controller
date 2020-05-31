@@ -17,6 +17,7 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     m_adapter = new QBluetoothLocalDevice(this);
 
     connect(m_adapter, &QBluetoothLocalDevice::error, this, &DeviceDiscoverer::onAdapterError);
+    connect(this, &DeviceDiscoverer::availableDevicesChanged, this, &DeviceDiscoverer::statusStringChanged);
 
     // I hate these overload things..
     connect(m_discoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error), this, &DeviceDiscoverer::onAgentError);
@@ -95,6 +96,10 @@ QString DeviceDiscoverer::statusString()
         return tr("Searching error: %1").arg(m_discoveryAgent->errorString());
     }
 
+    if (!m_availableDevices.isEmpty()) {
+        return tr("Found devices");
+    }
+
     if (m_scanning) {
         return tr("Scanning for devices...");
     }
@@ -104,15 +109,7 @@ QString DeviceDiscoverer::statusString()
 
 QStringList DeviceDiscoverer::availableDevices() const
 {
-    QStringList ret;
-
-    for (const QBluetoothDeviceInfo &device : m_availableDevices) {
-        ret.append(device.name());
-    }
-
-    std::sort(ret.begin(), ret.end());
-
-    return ret;
+    return m_availableDevices.keys();
 }
 
 void DeviceDiscoverer::connectDevice(const QString &name)
@@ -195,6 +192,7 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
         qDebug() << "Found BB8";
         m_availableDevices[device.name()] = device;
     } else {
+        return;
 //        qDebug() << "Unhandled device" << device.name();
     }
 

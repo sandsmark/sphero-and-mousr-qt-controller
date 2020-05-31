@@ -62,8 +62,13 @@ Window {
                 source: "qrc:/images/corners.svg"
                 anchors.fill: parent
                 anchors.margins: -10
-                //                        opacity: TournamentController.nextRound === name ? 1 : 0.5
                 border { left: 30; top: 30; right: 30; bottom: 30 }
+                SequentialAnimation on opacity {
+                    running: DeviceDiscoverer.isScanning
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 0.4; duration: 500 }
+                    NumberAnimation { to: 1; duration: 500 }
+                }
             }
 
             ListView {
@@ -131,17 +136,6 @@ Window {
                 }
                 color: DeviceDiscoverer.isError ? "#a00" : "white"
                 wrapMode: Text.Wrap
-            }
-
-            Lol.Spinner {
-                id: spinner
-                visible: !DeviceDiscoverer.isError && !robotLoader.isActive
-                anchors {
-                    top: parent.top
-                    bottom: statusText.top
-                    bottomMargin: 10
-                    horizontalCenter: parent.horizontalCenter
-                }
             }
         }
     }

@@ -22,6 +22,7 @@ class DeviceDiscoverer : public QObject
     Q_PROPERTY(QString statusString READ statusString NOTIFY statusStringChanged)
     Q_PROPERTY(QObject* device READ device NOTIFY deviceChanged)
     Q_PROPERTY(bool isError READ isError NOTIFY statusStringChanged) // yeye
+    Q_PROPERTY(bool isScanning READ isScanning NOTIFY statusStringChanged) // yeye
     Q_PROPERTY(QStringList availableDevices READ availableDevices NOTIFY availableDevicesChanged)
 
 
@@ -36,6 +37,8 @@ public:
     bool isError() const { return m_adapterError != QBluetoothLocalDevice::NoError || QBluetoothLocalDevice::allDevices().isEmpty(); }
 
     QStringList availableDevices() const;
+
+    bool isScanning() const { return m_scanning; }
 
 public slots:
     void connectDevice(const QString &name);
