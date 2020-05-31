@@ -17,13 +17,19 @@ SOURCES += \
 
 
 HEADERS += \
+    src/BasicTypes.h \
     src/devicediscoverer.h \
     src/mousr/MousrHandler.h \
     src/mousr/AutoplayConfig.h \
     src/sphero/SpheroHandler.h \
+    src/sphero/Uuids.h \
     src/utils.h
 
 RESOURCES += \
     main.qrc
 
-DISTFILES +=
+DISTFILES += \
+    qml/main.qml \
+    qml/SpheroView.qml \
+    qml/MousrView.qml \
+    qml/Spinner.qml \

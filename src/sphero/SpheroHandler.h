@@ -1,5 +1,7 @@
 #pragma once
 
+#include "BasicTypes.h"
+
 #include <QObject>
 #include <QPointer>
 #include <QBluetoothUuid>
@@ -12,34 +14,6 @@ class QBluetoothDeviceInfo;
 
 namespace sphero {
 #pragma pack(push,1)
-
-template<typename T>
-struct Vector3D {
-    T x;
-    T y;
-    T z;
-};
-
-template<typename T>
-struct Vector2D {
-    T x;
-    T y;
-};
-
-template<typename T>
-struct Orientation {
-    T pitch;
-    T roll;
-    T yaw;
-};
-
-template<typename T>
-struct Quaternion {
-    T scalar;
-    T x;
-    T y;
-    T z;
-};
 
 struct PacketHeader {
     enum TimeoutHandling : uint8_t {
@@ -201,6 +175,7 @@ public:
     uint8_t dataLength = 0;
 };
 
+
 struct PowerStatePacket {
     PacketHeader header;
     uint8_t recordVersion = 0;
@@ -232,6 +207,7 @@ struct LocatorPacket {
     // the tilt against the cartesian plane
     int16_t tilt = 0;
 };
+
 
 struct SleepCommandPacket
 {
@@ -368,6 +344,11 @@ struct SensorStreamPacket
     Vector2D<int16_t> velocity; // -32768 to 32767 mm/s
 };
 
+static_assert(sizeof(LocatorPacket) == 7);
+static_assert(sizeof(ResponsePacketHeader) == 5);
+static_assert(sizeof(PacketHeader) == 6);
+static_assert(sizeof(SensorStreamPacket) == 87); // should be 90, I think?
+
 #pragma pack(pop)
 
 class SpheroHandler : public QObject
@@ -381,6 +362,9 @@ class SpheroHandler : public QObject
 
     Q_PROPERTY(QString deviceType READ deviceType CONSTANT)
 
+    Q_PROPERTY(float signalStrength READ signalStrength NOTIFY rssiChanged)
+    Q_PROPERTY(SpheroType robotType MEMBER m_robotType CONSTANT)
+
     enum StreamingType : uint8_t {
         NotStreaming = 0,
         StreamUnknown = 1,
@@ -389,7 +373,16 @@ class SpheroHandler : public QObject
 
     };
 
-    enum class DeviceType {
+    enum ResponseType : uint16_t {
+        StreamingResponse = 0x3,
+        CollisionDetectedResponse = 0x7,
+        PowerStateResponse = 0x9,
+        LocatorResponse = 0xb,
+    };
+
+public:
+    enum class SpheroType {
+        Unknown,
         Bb8,
         ForceBand,
         Lmq,
@@ -398,16 +391,9 @@ class SpheroHandler : public QObject
         R2d2,
         R2Q5,
         Bb9e,
-        SpheroMini
+        SpheroMini,
     };
-
-    enum ResponseType : uint16_t {
-        StreamingResponse = 0x3,
-        CollisionDetectedResponse = 0x7,
-        PowerStateResponse = 0x9,
-        LocatorResponse = 0xb,
-
-    };
+    Q_ENUM(SpheroType)
 
 public:
     explicit SpheroHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent);
@@ -420,8 +406,11 @@ public:
 
     static QString deviceType() { return "Sphero"; }
 
+    float signalStrength() const { return float(m_rssi) / 255.f; }
+
 signals:
     void connectedChanged();
+    void rssiChanged();
     void disconnected(); // TODO
 
 public slots:
@@ -434,11 +423,8 @@ private slots:
     void onMainServiceChanged(QLowEnergyService::ServiceState newState);
     void onServiceError(QLowEnergyService::ServiceError error);
 
-    void onCharacteristicRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data);
-    void onDescriptorRead(const QLowEnergyDescriptor &characteristic, const QByteArray &data);
     void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
     void onRadioServiceChanged(QLowEnergyService::ServiceState newState);
-    void onRadioCharacteristicWritten(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
 private:
     bool sendRadioControlCommand(const QBluetoothUuid &characteristicUuid, const QByteArray &data);
@@ -456,9 +442,10 @@ private:
 
     QByteArray m_receiveBuffer;
 
-    uint8_t deviceId = 0;
     QString m_name;
     uint8_t m_rssi = 0;
+
+    SpheroType m_robotType = SpheroType::Unknown;
 };
 
 } // namespace sphero

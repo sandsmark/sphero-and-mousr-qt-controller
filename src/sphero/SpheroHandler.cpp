@@ -3,6 +3,7 @@
 
 #include "SpheroHandler.h"
 #include "utils.h"
+#include "Uuids.h"
 
 #include <QLowEnergyController>
 #include <QLowEnergyConnectionParameters>
@@ -12,60 +13,14 @@
 
 namespace sphero {
 
-namespace Services {
-    static const QBluetoothUuid main(QStringLiteral("{22bb746f-2ba0-7554-2d6f-726568705327}"));
-    static const QBluetoothUuid radio(QStringLiteral("{22bb746f-2bb0-7554-2d6f-726568705327}"));
-    static const QBluetoothUuid batteryControl(QStringLiteral("{00001016-d102-11e1-9b23-00025b00a5a5}"));
-
-
-    namespace R2D2 {
-        static const QBluetoothUuid connect(QStringLiteral("{00020001-574f-4f20-5370-6865726f2121}"));
-        static const QBluetoothUuid main(QStringLiteral("{00010001-574f-4f20-5370-6865726f2121}"));
-    } // namespace R2D2
-
-} // namespace Services
-
-namespace Characteristics {
-    static const QBluetoothUuid response(QStringLiteral("{22bb746f-2ba6-7554-2d6f-726568705327}"));
-    static const QBluetoothUuid commands(QStringLiteral("{22bb746f-2ba1-7554-2d6f-726568705327}"));
-
-    namespace Radio {
-        static const QBluetoothUuid unknownRadio(QStringLiteral("{22bb746f-2bb1-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid transmitPower(QStringLiteral("{22bb746f-2bb2-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid rssi(QStringLiteral("{22bb746f-2bb6-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid deepSleep(QStringLiteral("{22bb746f-2bb7-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid unknownRadio2(QStringLiteral("{22bb746f-2bb8-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid unknownRadio3(QStringLiteral("{22bb746f-2bb9-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid unknownRadio4(QStringLiteral("{22bb746f-2bba-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid antiDos(QStringLiteral("{22bb746f-2bbd-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid antiDosTimeout(QStringLiteral("{22bb746f-2bbe-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid wake(QStringLiteral("{22bb746f-2bbf-7554-2d6f-726568705327}"));
-        static const QBluetoothUuid unknownRadio5(QStringLiteral("{22bb746f-3bba-7554-2d6f-726568705327}"));
-    } // namespace Radio
-
-    namespace R2D2 {
-        static const QBluetoothUuid connect(QStringLiteral("{00020005-574f-4f20-5370-6865726f2121}"));
-        static const QBluetoothUuid handle(QStringLiteral("{00020002-574f-4f20-5370-6865726f2121}"));
-        static const QBluetoothUuid main(QStringLiteral("{00010002-574f-4f20-5370-6865726f2121}"));
-
-    } // namespace R2D2
-
-    namespace Unknown {
-        static const QBluetoothUuid unknown1(QStringLiteral("{00010003-574f-4f20-5370-6865726f2121}"));
-        static const QBluetoothUuid unknown2(QStringLiteral("{00020003-574f-4f20-5370-6865726f2121}"));
-        static const QBluetoothUuid dfu2(QStringLiteral("{00020004-574f-4f20-5370-6865726f2121}"));
-    } // namespace Unknown
-
-} // namespace Characteristics
-
-namespace Descriptors {
-    static const QBluetoothUuid read(QStringLiteral("{00002902-0000-1000-8000-00805f9b34fb}"));
-} // namespace Descriptors
-
 SpheroHandler::SpheroHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent) :
     QObject(parent),
     m_name(deviceInfo.name())
 {
+    if (m_name.startsWith("BB-8")) {
+        m_robotType = SpheroType::Bb8;
+    }
+
     qDebug() << sizeof(SensorStreamPacket);
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
 
@@ -141,8 +96,12 @@ void SpheroHandler::onServiceDiscoveryFinished()
 
     connect(m_radioService, &QLowEnergyService::characteristicChanged, this, &SpheroHandler::onCharacteristicChanged);
     connect(m_radioService, &QLowEnergyService::stateChanged, this, &SpheroHandler::onRadioServiceChanged);
-    connect(m_radioService, &QLowEnergyService::characteristicWritten, this, &SpheroHandler::onRadioCharacteristicWritten);
     connect(m_radioService, QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error), this, &SpheroHandler::onServiceError);
+
+    connect(m_radioService, &QLowEnergyService::characteristicWritten, this, [](const QLowEnergyCharacteristic &c, const QByteArray &v) {
+        qDebug() << " - " << c.uuid() << "radio written" << v;
+    });
+
 
     if (m_mainService) {
         qWarning() << " ! main service already exists!";
@@ -155,10 +114,9 @@ void SpheroHandler::onServiceDiscoveryFinished()
         return;
     }
     connect(m_mainService, &QLowEnergyService::characteristicChanged, this, &SpheroHandler::onCharacteristicChanged);
-    connect(m_mainService, &QLowEnergyService::characteristicRead, this, &SpheroHandler::onCharacteristicRead);
     connect(m_mainService, QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error), this, &SpheroHandler::onServiceError);
     connect(m_mainService, &QLowEnergyService::characteristicWritten, this, [](const QLowEnergyCharacteristic &info, const QByteArray &value) {
-        qDebug() << " - main written" << info.uuid() << value;
+        qDebug() << " - main written" << info.uuid() << value.toHex(':');
     });
     connect(m_mainService, &QLowEnergyService::stateChanged, this, &SpheroHandler::onMainServiceChanged);
 
@@ -176,10 +134,8 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
     }
 
     if (newState == QLowEnergyService::DiscoveringServices) {
-        qDebug() << " ! Discovering services";
         return;
     }
-
 
     if (newState != QLowEnergyService::ServiceDiscovered) {
         qDebug() << " ! unhandled service state changed:" << newState;
@@ -192,41 +148,16 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         return;
     }
 
-    for (const QLowEnergyCharacteristic &c : m_mainService->characteristics()) {
-        qDebug() << " - characteristic available:" << c.name() << c.uuid() << c.properties();
-        if (c.properties() & QLowEnergyCharacteristic::Read) {
-            qDebug() << "  > Readable";
-        }
-        if (c.properties() & QLowEnergyCharacteristic::Write) {
-            qDebug() << "  > Writable";
-        }
-        if (c.properties() & QLowEnergyCharacteristic::WriteNoResponse) {
-            qDebug() << "  > Async write";
-        }
-        if (c.properties() & QLowEnergyCharacteristic::Notify) {
-            qDebug() << "  > Notify";
-            for (const QLowEnergyDescriptor &d : c.descriptors()) {
-                m_mainService->writeDescriptor(d, QByteArray::fromHex("0100"));
-            }
-        }
-    }
-
-    QLowEnergyCharacteristic responseCharacteristic = m_mainService->characteristic(Characteristics::response);
+    const QLowEnergyCharacteristic responseCharacteristic = m_mainService->characteristic(Characteristics::response);
     if (!responseCharacteristic.isValid()) {
         qWarning() << "response characteristic invalid";
         return;
     }
-    QLowEnergyDescriptor readDescriptor = responseCharacteristic.descriptor(Descriptors::read);
-    if (!readDescriptor.isValid()) {
-        qWarning() << "Read descriptor on response descriptor is invalid";
-        return;
-    }
+
     // Enable notifications
-    m_mainService->writeDescriptor(readDescriptor, QByteArray::fromHex("0100"));
-    qDebug() << " - Requested notifications on values changes";
+    m_mainService->writeDescriptor(responseCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), QByteArray::fromHex("0100"));
 
     qDebug() << " - Successfully connected";
-
 
     sendCommand(PacketHeader::HardwareControl, PacketHeader::GetLocatorData, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
 
@@ -238,6 +169,7 @@ void SpheroHandler::onControllerStateChanged(QLowEnergyController::ControllerSta
     if (state == QLowEnergyController::UnconnectedState) {
         qWarning() << " ! Disconnected";
         emit disconnected();
+        return;
     }
 
     qDebug() << " - controller state changed" << state;
@@ -250,7 +182,7 @@ void SpheroHandler::onControllerError(QLowEnergyController::Error newError)
     if (newError == QLowEnergyController::UnknownError) {
         qWarning() << "Probably 'Operation already in progress' because qtbluetooth doesn't understand why it can't get answers over dbus when a connection attempt hangs";
     }
-    connect(m_deviceController, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error), this, &SpheroHandler::onControllerError);
+    emit disconnected();
 }
 
 
@@ -264,32 +196,6 @@ void SpheroHandler::onServiceError(QLowEnergyService::ServiceError error)
     emit disconnected();
 }
 
-void SpheroHandler::onCharacteristicRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
-{
-    if (characteristic.uuid() != Characteristics::response) {
-        qWarning() << "data from unexpected characteristic" << characteristic.uuid() << data;
-        return;
-    }
-    qDebug() << " - data from read characteristic" << data.toHex();
-    qDebug() << " - data type:" << data[0];
-}
-
-void SpheroHandler::onDescriptorRead(const QLowEnergyDescriptor &descriptor, const QByteArray &data)
-{
-    if (descriptor.uuid() != Descriptors::read) {
-        qWarning() << "data from unexpected descriptor" << descriptor.uuid() << data;
-        return;
-    }
-    if (data.isEmpty()) {
-        qWarning() << "got empty data";
-        return;
-    }
-    qDebug() << " - data from read descriptor" << data;
-    qDebug() << " - data type:" << int(data[0]);
-
-//    emit dataRead(data);
-}
-
 void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
 {
     if (data.isEmpty()) {
@@ -299,11 +205,11 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     if (characteristic.uuid() == Characteristics::Radio::rssi) {
         m_rssi = data[0];
-        qDebug() << " + RSsi" << m_rssi;
+        emit rssiChanged();
         return;
     }
     if (characteristic.uuid() == QBluetoothUuid::ServiceChanged) {
-        qDebug() << " ? GATT service changed" << data.toHex();
+        qDebug() << " ? GATT service changed" << data.toHex(':');
         return;
     }
 
@@ -312,12 +218,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         return;
     }
 
-    static_assert(sizeof(PacketHeader) == 6);
-    static_assert(sizeof(LocatorPacket) == 7);
-    static_assert(sizeof(ResponsePacketHeader) == 5);
-    static_assert(sizeof(SensorStreamPacket) == 87); // should be 90, I think?
-
-    qDebug() << " ------------ Characteristic changed" << data.toHex();
+    qDebug() << " ------------ Characteristic changed" << data.toHex(':');
 
     if (data.isEmpty()) {
         qWarning() << " ! No data received";
@@ -402,13 +303,15 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         qDebug() << "  > Expected" << uint8_t(m_receiveBuffer.back());
         return;
     }
-    qDebug() << " - received contents" << contents.size() << contents.toHex();
+    qDebug() << " - received contents" << contents.size() << contents.toHex(':');
     contents = contents.left(header.dataLength);
+
+    qDebug() << " - response type:" << header.type;
 
     switch(header.type) {
     case ResponsePacketHeader::Ack: {
         qDebug() << " - ack response" << ResponsePacketHeader::AckType(header.response);
-        qDebug() << contents.length() << header.dataLength << m_receiveBuffer.length() << sizeof(LocatorPacket) << sizeof(ResponsePacketHeader);
+        qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
 
         // TODO separate function
         if (size_t(contents.size()) < sizeof(AckResponsePacket)) {
@@ -509,13 +412,13 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 void SpheroHandler::onRadioServiceChanged(QLowEnergyService::ServiceState newState)
 {
     if (newState == QLowEnergyService::DiscoveringServices) {
-        qDebug() << "unhandled radio service state changed:" << newState;
         return;
     }
     if (newState != QLowEnergyService::ServiceDiscovered) {
-        qDebug() << "unhandled radio service state changed:" << newState;
+        qDebug() << " ! unhandled radio service state changed:" << newState;
         return;
     }
+
     if (!sendRadioControlCommand(Characteristics::Radio::antiDos, "011i3") ||
         !sendRadioControlCommand(Characteristics::Radio::transmitPower, QByteArray(1, 7)) ||
         !sendRadioControlCommand(Characteristics::Radio::wake, QByteArray(1, 1))) {
@@ -523,13 +426,11 @@ void SpheroHandler::onRadioServiceChanged(QLowEnergyService::ServiceState newSta
         emit disconnected();
         return;
     }
+    const QLowEnergyCharacteristic rssiCharacteristic = m_radioService->characteristic(Characteristics::Radio::rssi);
+    m_radioService->writeDescriptor(rssiCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), QByteArray::fromHex("0100"));
+
     qDebug() << " - Init sequence done";
     m_mainService->discoverDetails();
-}
-
-void SpheroHandler::onRadioCharacteristicWritten(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue)
-{
-    qDebug() << " - " << characteristic.uuid() << "radio written" << newValue;
 }
 
 bool SpheroHandler::sendRadioControlCommand(const QBluetoothUuid &characteristicUuid, const QByteArray &data)
@@ -559,15 +460,15 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
     header.sequenceNumber = currentSequenceNumber++;
     header.commandID = commandID;
     header.deviceID = deviceId;
-    qDebug() << " - Device id:" << header.deviceID;
-    qDebug() << " - command id:" << header.commandID;
-    qDebug() << " - seq number:" << header.sequenceNumber;
+    qDebug() << " + Packet:";
+    qDebug() << "  ] Device id:" << header.deviceID;
+    qDebug() << "  ] command id:" << header.commandID;
+    qDebug() << "  ] seq number:" << header.sequenceNumber;
 
     if (header.dataLength != data.size() + 1) {
         qWarning() << "Invalid data length in header";
     }
     QByteArray headerBuffer(sizeof(PacketHeader), 0); // + 1 for checksum
-//    q<uint8_t>(&header, sizeof(PacketHeader), headerBuffer.data());
     qToBigEndian<uint8_t>(&header, sizeof(PacketHeader), headerBuffer.data());
     qDebug() << " - " << uchar(headerBuffer[0]);
     qDebug() << " - " << uchar(headerBuffer[1]);
@@ -576,16 +477,13 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
     toSend.append(headerBuffer);
     toSend.append(data);
 
-//    for (const char &b : data) {
-//        checksum += uint8_t(b) & 0xFF;
-//    }
     uint8_t checksum = 0;
     for (int i=2; i<toSend.size(); i++) {
         checksum += toSend[i];
     }
     toSend.append(checksum xor 0xFF);
 
-    qDebug() << " - Writing command" << toSend.toHex();
+//    qDebug() << " - Writing command" << toSend.toHex();
     m_mainService->writeCharacteristic(m_commandsCharacteristic, toSend);
 }
 

@@ -88,9 +88,8 @@ Window {
 
     Component {
         id: spheroComponent
-        Rectangle {
-            anchors.fill: parent
-            color: "red"
+        Lol.SpheroView {
+            device: DeviceDiscoverer.device
         }
     }
 
@@ -98,6 +97,20 @@ Window {
         id: robotLoader
         active: DeviceDiscoverer.device
         anchors.fill: parent
-        sourceComponent: DeviceDiscoverer.device ? (DeviceDiscoverer.device.deviceType === "Mousr" ?  mousrComponent : spheroComponent) : undefined
+        sourceComponent: {
+            console.log(DeviceDiscoverer.device)
+            if (!DeviceDiscoverer.device) {
+                return undefined;
+            }
+            if (DeviceDiscoverer.device.deviceType === "Mousr") {
+                return mousrComponent;
+            }
+            if (DeviceDiscoverer.device.deviceType === "Sphero") {
+                return spheroComponent;
+            }
+            console.warn("Unhandled device type " + DeviceDiscoverer.device.deviceType)
+            return undefined;
+        }
+//            DeviceDiscoverer.device ? (DeviceDiscoverer.device.deviceType === "Mousr" ?  mousrComponent : spheroComponent) : undefined
     }
 }
