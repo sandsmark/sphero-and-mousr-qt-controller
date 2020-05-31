@@ -47,6 +47,7 @@ signals:
     void statusStringChanged();
     void deviceChanged();
     void availableDevicesChanged();
+    void signalStrengthChanged(const QString &deviceName, float strength);
 
 private slots:
     void startScanning();
@@ -61,6 +62,7 @@ private slots:
     void onRobotStatusChanged(const QString &message);
 
 private:
+    void updateRssi(const QBluetoothDeviceInfo &device);
     QPointer<QObject> m_device;
 
     QTimer m_restartScanTimer;

@@ -22,7 +22,15 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     // I hate these overload things..
     connect(m_discoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error), this, &DeviceDiscoverer::onAgentError);
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered, Qt::QueuedConnection);
-    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [this](const QBluetoothDeviceInfo &, QBluetoothDeviceInfo::Fields ){
+    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [this](const QBluetoothDeviceInfo &device, QBluetoothDeviceInfo::Fields ){
+        if (device.name() == "Mousr") {
+            qDebug() << "Updated Mousr" << device.rssi();
+            updateRssi(device);
+        } else if (device.name().startsWith("BB-")) {
+            qDebug() << "Updated BB8" << device.rssi();
+            updateRssi(device);
+        }
+
         if (m_restartScanTimer.isActive()) {
             qDebug() << " - Restarting scan timer";
             m_restartScanTimer.start();
@@ -35,7 +43,7 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
             m_restartScanTimer.start();
         }
     });
-    m_restartScanTimer.setInterval(5000);
+    m_restartScanTimer.setInterval(11000);
     m_restartScanTimer.setSingleShot(true);
     connect(&m_restartScanTimer, &QTimer::timeout, this, [this]() {
         if (m_scanning) {
@@ -46,7 +54,7 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
 
     });
 
-    m_discoveryAgent->setLowEnergyDiscoveryTimeout(100);
+    m_discoveryAgent->setLowEnergyDiscoveryTimeout(10000);
 
     if (m_adapter->hostMode() == QBluetoothLocalDevice::HostPoweredOff) {
         connect(m_adapter, &QBluetoothLocalDevice::hostModeStateChanged, this, &DeviceDiscoverer::startScanning);
@@ -186,10 +194,12 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
     }
 
     if (device.name() == "Mousr") {
-        qDebug() << "Found Mousr";
+        qDebug() << "Found Mousr" << device.rssi();
+        updateRssi(device);
         m_availableDevices[device.name()] = device;
     } else if (device.name().startsWith("BB-")) {
-        qDebug() << "Found BB8";
+        qDebug() << "Found BB8" << device.rssi();
+        updateRssi(device);
         m_availableDevices[device.name()] = device;
     } else {
         return;
@@ -248,4 +258,18 @@ void DeviceDiscoverer::onRobotStatusChanged(const QString &message)
 {
     m_lastDeviceStatus = message;
     m_lastDeviceStatusTimer.restart();
+}
+
+void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
+{
+    if (device.rssi() == 0) {
+        return;
+    }
+    if(device.rssi() <= -100) {
+        emit signalStrengthChanged(device.name(), 0.f);
+    } else if(device.rssi() >= -50) {
+        emit signalStrengthChanged(device.name(), 1.f);
+    } else {
+        emit signalStrengthChanged(device.name(), 2.f * (device.rssi()/100.f + 1.f));
+    }
 }

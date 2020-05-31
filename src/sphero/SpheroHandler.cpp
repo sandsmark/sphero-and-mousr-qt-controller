@@ -211,6 +211,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     if (characteristic.uuid() == Characteristics::Radio::rssi) {
         m_rssi = data[0];
+        qDebug() << m_rssi;
         emit rssiChanged();
         return;
     }

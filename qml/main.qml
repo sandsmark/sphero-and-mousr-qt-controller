@@ -89,6 +89,16 @@ Window {
                 delegate: Item {
                     width: 200
                     height: 60
+                    property string signalText: ""
+                    Connections {
+                        target: DeviceDiscoverer
+                        onSignalStrengthChanged: {
+                            if (deviceName !== modelData) {
+                                return;
+                            }
+                            signalText = " (" + Math.floor(strength * 100) + "%)";
+                        }
+                    }
 
                     BorderImage {
                         source: "qrc:/images/end.svg"
@@ -110,7 +120,7 @@ Window {
 
                     Text {
                         id: title
-                        text: modelData
+                        text: modelData + signalText
                         anchors.centerIn: parent
                         color: "white"
                     }

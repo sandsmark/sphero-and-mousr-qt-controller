@@ -406,7 +406,15 @@ public:
 
     static QString deviceType() { return "Sphero"; }
 
-    float signalStrength() const { return float(m_rssi) / 255.f; }
+    float signalStrength() const {
+        if(m_rssi <= -100) {
+            return 0.f;
+        } else if(m_rssi >= -50) {
+            return 1.f;
+        } else {
+            return 2.f * (m_rssi/100.f + 1.f);
+        }
+    }
 
 signals:
     void connectedChanged();
@@ -444,7 +452,7 @@ private:
     QByteArray m_receiveBuffer;
 
     QString m_name;
-    uint8_t m_rssi = 0;
+    int8_t m_rssi = 0;
 
     SpheroType m_robotType = SpheroType::Unknown;
 };
