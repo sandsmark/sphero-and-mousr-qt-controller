@@ -21,6 +21,8 @@ HEADERS += \
     src/devicediscoverer.h \
     src/mousr/MousrHandler.h \
     src/mousr/AutoplayConfig.h \
+    src/sphero/CommandPackets.h \
+    src/sphero/ResponsePackets.h \
     src/sphero/SpheroHandler.h \
     src/sphero/Uuids.h \
     src/utils.h

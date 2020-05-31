@@ -5,6 +5,9 @@
 #include "utils.h"
 #include "Uuids.h"
 
+#include "ResponsePackets.h"
+#include "CommandPackets.h"
+
 #include <QLowEnergyController>
 #include <QLowEnergyConnectionParameters>
 #include <QTimer>
@@ -160,8 +163,7 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
 
     qDebug() << " - Successfully connected";
 
-//    sendCommand(PacketHeader::HardwareControl, PacketHeader::GetLocatorData, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
-    sendCommand(PacketHeader::Internal, PacketHeader::GetPwrState, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
+    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetPwrState, "");
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
@@ -260,13 +262,13 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         return;
     }
 
-    if (m_receiveBuffer.size() < int(sizeof(PacketHeader))) {
+    if (m_receiveBuffer.size() < int(sizeof(CommandPacketHeader))) {
         qDebug() << " - Not a full header" << m_receiveBuffer.size();
         return;
     }
 
     ResponsePacketHeader header;
-    qFromBigEndian<uint8_t>(m_receiveBuffer.data(), sizeof(PacketHeader), &header);
+    qFromBigEndian<uint8_t>(m_receiveBuffer.data(), sizeof(CommandPacketHeader), &header);
     qDebug() << " - magic" << header.magic;
     if (header.magic != 0xFF) {
         qWarning() << " ! Invalid magic";
@@ -275,10 +277,10 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     qDebug() << " - type" << header.type;
     switch(header.type) {
     case ResponsePacketHeader::Response:
-        qDebug() << " - ack response" << ResponsePacketHeader::AckType(header.response);
+        qDebug() << " - ack response" << ResponsePacketHeader::ResponseType(header.response);
         break;
     case ResponsePacketHeader::Notification:
-        qDebug() << " - data response" << ResponsePacketHeader::DataType(header.response);
+        qDebug() << " - data response" << ResponsePacketHeader::NotificationType(header.response);
         break;
     default:
         qWarning() << " ! unhandled type" << header.type;
@@ -288,9 +290,9 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     qDebug() << " - sequence num" << header.sequenceNumber;
     qDebug() << " - data length" << header.dataLength;
 
-    if (m_receiveBuffer.size() != sizeof(PacketHeader) + header.dataLength - 1) {
+    if (m_receiveBuffer.size() != sizeof(CommandPacketHeader) + header.dataLength - 1) {
         qWarning() << " ! Packet size wrong" << m_receiveBuffer.size();
-        qDebug() << "  > Expected" << sizeof(PacketHeader) << "+" << header.dataLength;
+        qDebug() << "  > Expected" << sizeof(CommandPacketHeader) << "+" << header.dataLength;
         return;
     }
 
@@ -316,7 +318,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     switch(header.type) {
     case ResponsePacketHeader::Response: {
-        qDebug() << " - ack response" << ResponsePacketHeader::AckType(header.response);
+        qDebug() << " - ack response" << ResponsePacketHeader::ResponseType(header.response);
         qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
 
         // TODO separate function
@@ -488,15 +490,34 @@ bool SpheroHandler::sendRadioControlCommand(const QBluetoothUuid &characteristic
     return true;
 }
 
-void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data, const PacketHeader::SynchronousType synchronous, const PacketHeader::TimeoutHandling keepTimeout)
+void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data)
 {
     static int currentSequenceNumber = 0;
-    PacketHeader header;
+    CommandPacketHeader header;
     header.dataLength = data.size() + 1; // + 1 for checksum
-    header.flags |= synchronous;
-    header.flags |= keepTimeout;
-//    header.synchronous = synchronous;
-//    header.resetTimeout = keepTimeout;
+
+    switch(deviceId) {
+    case CommandPacketHeader::Internal:
+        switch(commandID) {
+        case CommandPacketHeader::GetPwrState:
+            header.flags |= CommandPacketHeader::Synchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        default:
+            qWarning() << "Unhandled packet internal command" << commandID;
+            header.flags |= CommandPacketHeader::Synchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+
+        }
+        break;
+    default:
+        qWarning() << "Unhandled device id" << deviceId;
+        header.flags |= CommandPacketHeader::Synchronous;
+        header.flags |= CommandPacketHeader::ResetTimeout;
+        break;
+    }
+
     header.sequenceNumber = currentSequenceNumber++;
     header.commandID = commandID;
     header.deviceID = deviceId;
@@ -508,8 +529,8 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
     if (header.dataLength != data.size() + 1) {
         qWarning() << "Invalid data length in header";
     }
-    QByteArray headerBuffer(sizeof(PacketHeader), 0); // + 1 for checksum
-    qToBigEndian<uint8_t>(&header, sizeof(PacketHeader), headerBuffer.data());
+    QByteArray headerBuffer(sizeof(CommandPacketHeader), 0); // + 1 for checksum
+    qToBigEndian<uint8_t>(&header, sizeof(CommandPacketHeader), headerBuffer.data());
     qDebug() << " - " << uchar(headerBuffer[0]);
     qDebug() << " - " << uchar(headerBuffer[1]);
 
