@@ -2,6 +2,7 @@ mousr-qt-controller
 ===================
 
 ![screenshot](/screenshot.jpg)
+![screenshot of scanning](/connecting.jpg)
 
 Very simple (for now) Qt based controller for the Mousr cat toy, because the
 official app is ... lacking.
