@@ -6,34 +6,52 @@ import com.iskrembilen 1.0
 import "." as Lol
 
 Item {
-    id: spinner
-    width: 100
-    height: width
-    
-    RotationAnimation on rotation {
-        running: spinner.visible
-        loops: Animation.Infinite
-        from: 0
-        to: 360
-        duration: 500
-    }
-    
-    SequentialAnimation on opacity {
-        running: spinner.visible
-        loops: Animation.Infinite
-        PropertyAnimation { to: 1; duration: 500 }
-        PropertyAnimation { to: 0.5; duration: 500 }
-    }
-    
-    Rectangle {
-        width: parent.width
+    width: spinner.width
+    height: spinner.height
+
+    Item {
+        id: spinner
+        width: 100
         height: width
-        radius: parent.width / 2
-        border.width: 2
-    }
-    
-    Rectangle {
-        width: parent.width / 2
-        height: width
+        anchors.centerIn: parent
+
+        RotationAnimation on rotation {
+            running: spinner.visible
+            loops: Animation.Infinite
+            from: 0
+            to: 360
+            duration: 1000
+        }
+
+
+        Rectangle {
+            color: circle.color
+            width: parent.width / 2
+            height: width
+            border.width: 2
+        }
+
+        Rectangle {
+            id: circle
+            width: parent.width
+            height: width
+            radius: parent.width / 2
+            border.width: 2
+
+            SequentialAnimation on color {
+                running: spinner.visible
+                loops: Animation.Infinite
+                ColorAnimation { to: "white"; duration: 500 }
+                ColorAnimation { to: "darkGray"; duration: 500 }
+            }
+        }
+
+        Rectangle {
+            color: circle.color
+            x: 2
+            y: 2
+            width: parent.width / 2 - 4
+            height: width
+        }
     }
 }

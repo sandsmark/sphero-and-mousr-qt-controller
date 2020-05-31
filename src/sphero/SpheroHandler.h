@@ -412,6 +412,7 @@ signals:
     void connectedChanged();
     void rssiChanged();
     void disconnected(); // TODO
+    void statusMessageChanged(const QString &message);
 
 public slots:
 

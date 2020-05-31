@@ -39,6 +39,7 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     connect(&m_restartScanTimer, &QTimer::timeout, this, [this]() {
         if (m_scanning) {
             qDebug() << " ! Restarting scan";
+            emit statusStringChanged();
             m_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
         }
 
@@ -66,6 +67,11 @@ QObject *DeviceDiscoverer::device()
 
 QString DeviceDiscoverer::statusString()
 {
+    if (m_lastDeviceStatusTimer.isValid() && m_lastDeviceStatusTimer.elapsed() < 5000) {
+        if (!m_lastDeviceStatus.isEmpty()) {
+            return m_lastDeviceStatus;
+        }
+    }
     if (!m_adapter->isValid()) {
         return tr("No bluetooth adaptors available");
     }
@@ -77,6 +83,7 @@ QString DeviceDiscoverer::statusString()
         case QBluetoothLocalDevice::UnknownError:
             return tr("Problem with bluetooth device");
         default:
+            return tr("Unknown device error %1").arg(m_adapterError);
             break;
         }
     }
@@ -89,10 +96,62 @@ QString DeviceDiscoverer::statusString()
     }
 
     if (m_scanning) {
-        return tr("Looking for device...");
+        return tr("Scanning for devices...");
     }
 
     return QString();
+}
+
+QStringList DeviceDiscoverer::availableDevices() const
+{
+    QStringList ret;
+
+    for (const QBluetoothDeviceInfo &device : m_availableDevices) {
+        ret.append(device.name());
+    }
+
+    std::sort(ret.begin(), ret.end());
+
+    return ret;
+}
+
+void DeviceDiscoverer::connectDevice(const QString &name)
+{
+    if (m_device) {
+        qWarning() << "already have device, skipping" << name;
+        return;
+    }
+
+    if (!m_availableDevices.contains(name)) {
+        qWarning() << "We don't know" << name;
+        return;
+    }
+
+    QBluetoothDeviceInfo device = m_availableDevices[name];
+
+    if (name == "Mousr") {
+        mousr::MousrHandler *handler = new mousr::MousrHandler(device, this);
+        connect(handler, &mousr::MousrHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
+//        connect(handler, &mousr::MousrHandler::connectedChanged, this, &DeviceDiscoverer::onRobotStatusChanged); todo
+        m_device = handler;
+    } else if (device.name().startsWith("BB-")) {
+        qDebug() << "Found BB8";
+
+        sphero::SpheroHandler *handler = new sphero::SpheroHandler(device, this);
+        connect(handler, &sphero::SpheroHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
+        connect(handler, &sphero::SpheroHandler::statusMessageChanged, this, &DeviceDiscoverer::onRobotStatusChanged);
+        m_device = handler;
+    } else {
+        return;
+    }
+
+    QQmlEngine::setObjectOwnership(m_device, QQmlEngine::CppOwnership);
+    emit deviceChanged();
+    stopScanning();
+
+    m_availableDevices.clear();
+    emit availableDevicesChanged();
+
 }
 
 void DeviceDiscoverer::startScanning()
@@ -131,25 +190,15 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
 
     if (device.name() == "Mousr") {
         qDebug() << "Found Mousr";
-
-        mousr::MousrHandler *handler = new mousr::MousrHandler(device, this);
-        connect(handler, &mousr::MousrHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
-        m_device = handler;
+        m_availableDevices[device.name()] = device;
     } else if (device.name().startsWith("BB-")) {
         qDebug() << "Found BB8";
-
-        sphero::SpheroHandler *handler = new sphero::SpheroHandler(device, this);
-        connect(handler, &sphero::SpheroHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
-        m_device = handler;
+        m_availableDevices[device.name()] = device;
     } else {
-        return;
+//        qDebug() << "Unhandled device" << device.name();
     }
 
-    QQmlEngine::setObjectOwnership(m_device, QQmlEngine::CppOwnership);
-    emit deviceChanged();
-    stopScanning();
-
-    return;
+    emit availableDevicesChanged();
 }
 
 void DeviceDiscoverer::onDeviceDisconnected()
@@ -165,8 +214,16 @@ void DeviceDiscoverer::onDeviceDisconnected()
         qWarning() << "device disconnected, but is not set?";
     }
 
+    m_availableDevices.clear();
+    emit availableDevicesChanged();
+
     m_scanning = true;
     m_restartScanTimer.start(); // otherwise we might loop, because qbluetooth-crap caches
+    if (m_lastDeviceStatus.isEmpty() || !m_lastDeviceStatusTimer.isValid() || m_lastDeviceStatusTimer.elapsed() > 20000) {
+        m_lastDeviceStatus = tr("Unexpected disconnect from device");
+        m_lastDeviceStatusTimer.restart();
+    }
+    emit statusStringChanged();
 //    startScanning();
 }
 
@@ -187,4 +244,10 @@ void DeviceDiscoverer::onAdapterError(const QBluetoothLocalDevice::Error error)
     qWarning() << "adapter error" << error;
     m_adapterError = error;
     emit statusStringChanged();
+}
+
+void DeviceDiscoverer::onRobotStatusChanged(const QString &message)
+{
+    m_lastDeviceStatus = message;
+    m_lastDeviceStatusTimer.restart();
 }

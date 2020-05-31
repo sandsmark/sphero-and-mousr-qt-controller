@@ -130,6 +130,7 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
     if (newState == QLowEnergyService::InvalidService) {
         qWarning() << "Got invalid service";
         emit disconnected();
+        emit statusMessageChanged(tr("Sphero BLE service failed"));
         return;
     }
 
@@ -162,6 +163,7 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
     sendCommand(PacketHeader::HardwareControl, PacketHeader::GetLocatorData, "", PacketHeader::Synchronous, PacketHeader::ResetTimeout);
 
     emit connectedChanged();
+    emit statusMessageChanged(statusString());
 }
 
 void SpheroHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
@@ -169,11 +171,13 @@ void SpheroHandler::onControllerStateChanged(QLowEnergyController::ControllerSta
     if (state == QLowEnergyController::UnconnectedState) {
         qWarning() << " ! Disconnected";
         emit disconnected();
+        emit statusMessageChanged(tr("Sphero lost connection"));
         return;
     }
 
     qDebug() << " - controller state changed" << state;
     emit connectedChanged();
+    emit statusMessageChanged(statusString());
 }
 
 void SpheroHandler::onControllerError(QLowEnergyController::Error newError)
@@ -181,6 +185,7 @@ void SpheroHandler::onControllerError(QLowEnergyController::Error newError)
     qWarning() << " - controller error:" << newError << m_deviceController->errorString();
     if (newError == QLowEnergyController::UnknownError) {
         qWarning() << "Probably 'Operation already in progress' because qtbluetooth doesn't understand why it can't get answers over dbus when a connection attempt hangs";
+        emit statusMessageChanged(tr("Sphero connection attempt hung, out of range?"));
     }
     emit disconnected();
 }
@@ -193,6 +198,7 @@ void SpheroHandler::onServiceError(QLowEnergyService::ServiceError error)
         return;
     }
 
+    emit statusMessageChanged(tr("Sphero service connection failed: %1").arg(error));
     emit disconnected();
 }
 
@@ -424,6 +430,7 @@ void SpheroHandler::onRadioServiceChanged(QLowEnergyService::ServiceState newSta
         !sendRadioControlCommand(Characteristics::Radio::wake, QByteArray(1, 1))) {
         qWarning() << " ! Init sequence failed";
         emit disconnected();
+        emit statusMessageChanged(tr("Sphero Init sequence failed"));
         return;
     }
     const QLowEnergyCharacteristic rssiCharacteristic = m_radioService->characteristic(Characteristics::Radio::rssi);

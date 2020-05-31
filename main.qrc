@@ -12,5 +12,7 @@
         <file>qml/Spinner.qml</file>
         <file>qml/SpheroView.qml</file>
         <file>images/bb8.png</file>
+        <file>images/corners.svg</file>
+        <file>images/end.svg</file>
     </qresource>
 </RCC>

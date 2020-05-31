@@ -32,7 +32,7 @@ Window {
     Rectangle {
         id: deviceDiscovery
         anchors.fill: parent
-        color: "white"
+        color: "black"
 
         visible: !robotLoader.active
 
@@ -56,24 +56,92 @@ Window {
                 margins: 50
             }
             border.width: 2
-            color: DeviceDiscoverer.isError ? "lightGray" : "white"
+            color: DeviceDiscoverer.isError ? "gray" : "black"
+
+            BorderImage {
+                source: "qrc:/images/corners.svg"
+                anchors.fill: parent
+                anchors.margins: -10
+                //                        opacity: TournamentController.nextRound === name ? 1 : 0.5
+                border { left: 30; top: 30; right: 30; bottom: 30 }
+            }
+
+            ListView {
+                id: devicesList
+                anchors {
+                    top: parent.verticalCenter
+                    left: parent.left
+                    right: parent.right
+                    bottom: parent.bottom
+                    margins: 10
+                }
+
+                clip: true
+
+                visible: !DeviceDiscoverer.isError && !robotLoader.isActive
+                model: DeviceDiscoverer.availableDevices
+
+                delegate: Item {
+                    width: 200
+                    height: 60
+
+                    BorderImage {
+                        source: "qrc:/images/end.svg"
+                        anchors.fill: parent
+                        opacity: matchMouse.containsMouse ? 1 : 0.5
+                        Behavior on opacity { NumberAnimation { duration: 200 } }
+                        border { left: 25; top: 25; right: 25; bottom: 25 }
+                    }
+
+                    MouseArea {
+                        id: matchMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            DeviceDiscoverer.connectDevice(modelData)
+                        }
+                    }
+
+                    Text {
+                        id: title
+                        text: modelData
+                        anchors.centerIn: parent
+                        color: "white"
+                    }
+                }
+            }
 
             Text {
+                id: statusText
                 anchors {
-                    fill: parent
-                    margins: 20
+                    bottom: parent.verticalCenter
+                    bottomMargin: 10
                 }
+
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
                 font.bold: true
-                visible: DeviceDiscoverer.statusString.length > 0
-                text: DeviceDiscoverer.statusString
-                color: DeviceDiscoverer.isError ? "#a00" : "black"
+                visible: text.length > 0
+                text: {
+                    if (DeviceDiscoverer.device && DeviceDiscoverer.device.statusString.length > 0) {
+                        return DeviceDiscoverer.device.statusString
+                    }
+                    return DeviceDiscoverer.statusString
+                }
+                color: DeviceDiscoverer.isError ? "#a00" : "white"
                 wrapMode: Text.Wrap
             }
 
             Lol.Spinner {
                 id: spinner
                 visible: !DeviceDiscoverer.isError && !robotLoader.isActive
-                anchors.centerIn: parent
+                anchors {
+                    top: parent.top
+                    bottom: statusText.top
+                    bottomMargin: 10
+                    horizontalCenter: parent.horizontalCenter
+                }
             }
         }
     }
@@ -95,7 +163,7 @@ Window {
 
     Loader {
         id: robotLoader
-        active: DeviceDiscoverer.device
+        active: DeviceDiscoverer.device && DeviceDiscoverer.device.isConnected
         anchors.fill: parent
         sourceComponent: {
             console.log(DeviceDiscoverer.device)
