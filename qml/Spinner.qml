@@ -29,6 +29,7 @@ Item {
             width: parent.width / 2
             height: width
             border.width: 2
+            border.color: circle.border.color
         }
 
         Rectangle {
@@ -37,12 +38,19 @@ Item {
             height: width
             radius: parent.width / 2
             border.width: 2
+            border.color: "white"
 
             SequentialAnimation on color {
                 running: spinner.visible
                 loops: Animation.Infinite
                 ColorAnimation { to: "white"; duration: 500 }
-                ColorAnimation { to: "darkGray"; duration: 500 }
+                ColorAnimation { to: "black"; duration: 500 }
+            }
+            SequentialAnimation on border.color {
+                running: spinner.visible
+                loops: Animation.Infinite
+                ColorAnimation { to: "black"; duration: 500 }
+                ColorAnimation { to: "white"; duration: 500 }
             }
         }
 
