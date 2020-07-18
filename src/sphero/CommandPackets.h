@@ -57,8 +57,8 @@ struct CommandPacketHeader {
 
     enum HardwareCommand : uint8_t {
         SetHeading = 0x01,
-        Stabilization = 0x02,
-        RotationRate = 0x03,
+        SetStabilization = 0x02,
+        SetRotationRate = 0x03,
         SetAppConfigBlk = 0x04,
         GetAppConfigBlk = 0x05,
         SelfLevel = 0x09,
@@ -66,9 +66,9 @@ struct CommandPacketHeader {
         ConfigureCollisionDetection = 0x12,
         ConfigureLocator = 0x13,
         GetLocatorData = 0x15,
-        RGBLEDOutput = 0x20,
-        BackLEDOutput = 0x21,
-        GetUserRGBLEDColor = 0x22,
+        SetRGBLed = 0x20,
+        SetBackLED = 0x21,
+        GetRGBLed = 0x22,
         Roll = 0x30,
         Boost = 0x31,
         RawMotorValues = 0x33,
