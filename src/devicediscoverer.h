@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QBluetoothLocalDevice>
+#include <QBluetoothDeviceInfo>
 #include <QPointer>
 #include <QTimer>
 #include <QElapsedTimer>
@@ -54,6 +55,7 @@ private slots:
     void stopScanning();
 
     void onDeviceDiscovered(const QBluetoothDeviceInfo &device);
+    void onDeviceUpdated(const QBluetoothDeviceInfo &device, QBluetoothDeviceInfo::Fields fields);
     void onDeviceDisconnected();
 
     void onAgentError();
@@ -63,9 +65,11 @@ private slots:
 
 private:
     void updateRssi(const QBluetoothDeviceInfo &device);
+
+    static bool isSupportedDevice(const QBluetoothDeviceInfo &device);
+
     QPointer<QObject> m_device;
 
-    QTimer m_restartScanTimer;
     QPointer<QBluetoothDeviceDiscoveryAgent> m_discoveryAgent;
     QPointer<QBluetoothLocalDevice> m_adapter;
     QBluetoothLocalDevice::Error m_adapterError = QBluetoothLocalDevice::NoError;

@@ -407,13 +407,7 @@ public:
     static QString deviceType() { return "Sphero"; }
 
     float signalStrength() const {
-        if(m_rssi <= -100) {
-            return 0.f;
-        } else if(m_rssi >= -50) {
-            return 1.f;
-        } else {
-            return 2.f * (m_rssi/100.f + 1.f);
-        }
+        return rssiToStrength(m_rssi);
     }
 
 signals:

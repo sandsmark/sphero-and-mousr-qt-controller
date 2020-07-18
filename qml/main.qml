@@ -170,7 +170,6 @@ Window {
         active: DeviceDiscoverer.device && DeviceDiscoverer.device.isConnected
         anchors.fill: parent
         sourceComponent: {
-            console.log(DeviceDiscoverer.device)
             if (!DeviceDiscoverer.device) {
                 return undefined;
             }

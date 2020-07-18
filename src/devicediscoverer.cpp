@@ -4,7 +4,6 @@
 #include "sphero/SpheroHandler.h"
 
 #include <QBluetoothDeviceDiscoveryAgent>
-#include <QBluetoothDeviceInfo>
 #include <QDebug>
 #include <QQmlEngine>
 
@@ -22,39 +21,9 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     // I hate these overload things..
     connect(m_discoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error), this, &DeviceDiscoverer::onAgentError);
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered, Qt::QueuedConnection);
-    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, [this](const QBluetoothDeviceInfo &device, QBluetoothDeviceInfo::Fields ){
-        if (device.name() == "Mousr") {
-            qDebug() << "Updated Mousr" << device.rssi();
-            updateRssi(device);
-        } else if (device.name().startsWith("BB-")) {
-            qDebug() << "Updated BB8" << device.rssi();
-            updateRssi(device);
-        }
+    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, &DeviceDiscoverer::onDeviceUpdated);
 
-        if (m_restartScanTimer.isActive()) {
-            qDebug() << " - Restarting scan timer";
-            m_restartScanTimer.start();
-        }
-    });
-    connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::finished, this, [this]() {
-        qDebug() << "discovery finihsed";
-        if (m_scanning) {
-            qDebug() << " - Starting timer";
-            m_restartScanTimer.start();
-        }
-    });
-    m_restartScanTimer.setInterval(11000);
-    m_restartScanTimer.setSingleShot(true);
-    connect(&m_restartScanTimer, &QTimer::timeout, this, [this]() {
-        if (m_scanning) {
-            qDebug() << " ! Restarting scan";
-            emit statusStringChanged();
-            m_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
-        }
-
-    });
-
-    m_discoveryAgent->setLowEnergyDiscoveryTimeout(10000);
+    m_discoveryAgent->setLowEnergyDiscoveryTimeout(0);
 
     if (m_adapter->hostMode() == QBluetoothLocalDevice::HostPoweredOff) {
         connect(m_adapter, &QBluetoothLocalDevice::hostModeStateChanged, this, &DeviceDiscoverer::startScanning);
@@ -147,6 +116,7 @@ void DeviceDiscoverer::connectDevice(const QString &name)
         connect(handler, &sphero::SpheroHandler::statusMessageChanged, this, &DeviceDiscoverer::onRobotStatusChanged);
         m_device = handler;
     } else {
+        qDebug() << "unknown" << device.name();
         return;
     }
 
@@ -181,7 +151,6 @@ void DeviceDiscoverer::stopScanning()
     qDebug() << "Stopping scan";
 
     m_scanning = false;
-    m_restartScanTimer.stop();
     m_discoveryAgent->stop();
     emit statusStringChanged();
 }
@@ -193,20 +162,25 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
         return;
     }
 
-    if (device.name() == "Mousr") {
-        qDebug() << "Found Mousr" << device.rssi();
-        updateRssi(device);
-        m_availableDevices[device.name()] = device;
-    } else if (device.name().startsWith("BB-")) {
-        qDebug() << "Found BB8" << device.rssi();
-        updateRssi(device);
-        m_availableDevices[device.name()] = device;
-    } else {
+    if (!isSupportedDevice(device)) {
         return;
-//        qDebug() << "Unhandled device" << device.name();
     }
 
+    updateRssi(device);
+    m_availableDevices[device.name()] = device;
+
     emit availableDevicesChanged();
+}
+
+void DeviceDiscoverer::onDeviceUpdated(const QBluetoothDeviceInfo &device, QBluetoothDeviceInfo::Fields fields)
+{
+    if (!isSupportedDevice(device)) {
+        return;
+    }
+
+    if (fields & QBluetoothDeviceInfo::Field::RSSI) {
+        updateRssi(device);
+    }
 }
 
 void DeviceDiscoverer::onDeviceDisconnected()
@@ -226,13 +200,13 @@ void DeviceDiscoverer::onDeviceDisconnected()
     emit availableDevicesChanged();
 
     m_scanning = true;
-    m_restartScanTimer.start(); // otherwise we might loop, because qbluetooth-crap caches
     if (m_lastDeviceStatus.isEmpty() || !m_lastDeviceStatusTimer.isValid() || m_lastDeviceStatusTimer.elapsed() > 20000) {
         m_lastDeviceStatus = tr("Unexpected disconnect from device");
         m_lastDeviceStatusTimer.restart();
     }
     emit statusStringChanged();
-//    startScanning();
+
+    QMetaObject::invokeMethod(this, &DeviceDiscoverer::startScanning); // otherwise we might loop, because qbluetooth-crap caches
 }
 
 void DeviceDiscoverer::onAgentError()
@@ -265,11 +239,18 @@ void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
     if (device.rssi() == 0) {
         return;
     }
-    if(device.rssi() <= -100) {
-        emit signalStrengthChanged(device.name(), 0.f);
-    } else if(device.rssi() >= -50) {
-        emit signalStrengthChanged(device.name(), 1.f);
-    } else {
-        emit signalStrengthChanged(device.name(), 2.f * (device.rssi()/100.f + 1.f));
+    emit signalStrengthChanged(device.name(), rssiToStrength(device.rssi()));
+}
+
+bool DeviceDiscoverer::isSupportedDevice(const QBluetoothDeviceInfo &device)
+{
+    const QString name = device.name();
+
+    if (name == QLatin1String("Mousr")) {
+        return true;
+    } else if (name.startsWith(QLatin1String("BB-"))) {
+        return true;
     }
+
+    return false;
 }

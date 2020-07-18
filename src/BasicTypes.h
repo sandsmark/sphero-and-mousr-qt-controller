@@ -31,3 +31,15 @@ struct Quaternion {
 };
 
 #pragma pack(pop)
+
+
+inline float rssiToStrength(const int rssi)
+{
+    if(rssi <= -100) {
+        return 0.f;
+    } else if(rssi >= -50) {
+        return 1.f;
+    } else {
+        return 2.f * (rssi/100.f + 1.f);
+    }
+}
