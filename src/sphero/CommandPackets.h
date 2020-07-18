@@ -309,6 +309,16 @@ struct RollCommandPacket
     }
 };
 
+struct SetHeadingPacket
+{
+    uint16_t heading = 0;
+    static QByteArray create(const uint16_t heading) {
+        SetHeadingPacket def;
+        def.heading = heading;
+        return packetToByteArray(def);
+    }
+};
+
 struct EnableCollisionDetectionPacket
 {
     // The official SDK calls this "method", but also says that only method `1` is supported for now.
@@ -335,7 +345,8 @@ struct EnableCollisionDetectionPacket
 struct GoToSleepPacket
 {
     // IDK where this is used, but it is in the official SDK
-    enum SleepType {
+    // I thought this was controlled by the separate power bluetooth characteristic
+    enum SleepType : uint8_t {
         NormalSleep = 0, // Light sleep, keeps high report rate for bluetooth
         DeepSleep = 1, // idk
         LowPowerSleep = 2 // idk, I guess lower slepe
@@ -348,6 +359,35 @@ struct GoToSleepPacket
     static QByteArray create(const uint16_t wakeInterval = 5) {
         GoToSleepPacket def;
         def.wakeupInterval = wakeInterval;
+        return packetToByteArray(def);
+    }
+};
+
+struct SetNonPersistentOptionsPacket
+{
+    enum Options {
+        StopOnDisconnect = 1, // Force stop when disconnected
+        CompatibilityMode = 2 // Some compatibility mode? only for Ollie, says the doc
+    };
+
+    uint32_t optionsBitmask;
+
+    static QByteArray create(const uint32_t options = StopOnDisconnect) {
+        SetNonPersistentOptionsPacket def;
+        def.optionsBitmask = options;
+        return packetToByteArray(def);
+    }
+};
+
+// I think this is the SetDeviceMode
+struct SetUserHackModePacket
+{
+    // Enables ascii shell commands?
+    uint8_t enabled = 0;
+
+    static QByteArray create(const bool enabled) {
+        SetUserHackModePacket def;
+        def.enabled = enabled ? 1 : 0;
         return packetToByteArray(def);
     }
 };

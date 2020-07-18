@@ -113,8 +113,9 @@ void SpheroHandler::setSpeedAndAngle(int angle, int speed)
     while (angle < 0) {
         angle += 360;
     }
+    angle %= 360;
     speed = qBound(0, speed, 255);
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::Roll, RollCommandPacket::create(m_speed, m_angle % 360));
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::Roll, RollCommandPacket::create(speed, angle));
 
     if (m_speed != speed) {
         m_speed = speed;
@@ -126,9 +127,22 @@ void SpheroHandler::setSpeedAndAngle(int angle, int speed)
     }
 }
 
+void SpheroHandler::setAngle(int angle)
+{
+    while (angle < 0) {
+        angle += 360;
+    }
+    angle %= 360;
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetHeading, SetHeadingPacket::create(angle % 360));
+    if (m_angle != angle) {
+        m_angle = angle;
+        emit angleChanged();
+    }
+}
+
 void SpheroHandler::setAutoStabilize(const bool enabled)
 {
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetStabilization, enabled ? "\1" : "\0");
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetStabilization, QByteArray(1, enabled ? 1 : 0));
     if (enabled != m_autoStabilize) {
         m_autoStabilize = enabled;
         emit autoStabilizeChanged();
@@ -143,6 +157,16 @@ void SpheroHandler::setDetectCollisions(const bool enabled)
 void SpheroHandler::goToSleep()
 {
     sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::Sleep, GoToSleepPacket::create());
+}
+
+void SpheroHandler::enablePowerNotifications()
+{
+    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::SetPwrNotify, QByteArray(1, 1));
+}
+
+void SpheroHandler::setEnableAsciiShell(const bool enabled)
+{
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetDeviceMode, SetUserHackModePacket::create(enabled));
 }
 
 void SpheroHandler::onServiceDiscoveryFinished()
@@ -223,7 +247,8 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
 
     qDebug() << " - Successfully connected";
 
-    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetPwrState, "");
+    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetPwrState);
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::GetRGBLed);
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());

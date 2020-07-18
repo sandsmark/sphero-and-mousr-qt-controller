@@ -73,7 +73,7 @@ public:
     void setSpeedAndAngle(int angle, int speed);
 
     void setSpeed(int speed) { setSpeedAndAngle(speed, m_angle); }
-    void setAngle(int angle) { setSpeedAndAngle(m_speed, angle); }
+    void setAngle(int angle);
     int speed() const { return m_speed; }
     int angle() const { return m_angle; }
 
@@ -84,6 +84,7 @@ public:
     bool detectCollisions() const { return m_detectCollisions; }
 
     void goToSleep();
+    void enablePowerNotifications();
 
 signals:
     void connectedChanged();
@@ -113,7 +114,7 @@ private slots:
 
 private:
     bool sendRadioControlCommand(const QBluetoothUuid &characteristicUuid, const QByteArray &data);
-    void sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data);
+    void sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data = QByteArray());
 
 
     QPointer<QLowEnergyController> m_deviceController;
