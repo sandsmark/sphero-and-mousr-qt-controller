@@ -99,7 +99,7 @@ QString SpheroHandler::statusString()
 
 void SpheroHandler::setColor(const int r, const int g, const int b)
 {
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetRGBLed, SetColorsCommandPacket::create(r, g, b));
+    sendCommand(SetColorsCommandPacket(r, g, b, SetColorsCommandPacket::Temporary));
 
     const QColor color = QColor::fromRgb(r, g, b);
     if (color != m_color) {
@@ -115,7 +115,8 @@ void SpheroHandler::setSpeedAndAngle(int angle, int speed)
     }
     angle %= 360;
     speed = qBound(0, speed, 255);
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::Roll, RollCommandPacket::create(speed, angle));
+
+    sendCommand(RollCommandPacket({uint8_t(speed), uint16_t(angle), RollCommandPacket::Roll}));
 
     if (m_speed != speed) {
         m_speed = speed;
@@ -133,7 +134,7 @@ void SpheroHandler::setAngle(int angle)
         angle += 360;
     }
     angle %= 360;
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetHeading, SetHeadingPacket::create(angle % 360));
+    sendCommand(SetHeadingPacket({uint16_t(angle % 360)}));
     if (m_angle != angle) {
         m_angle = angle;
         emit angleChanged();
@@ -151,12 +152,12 @@ void SpheroHandler::setAutoStabilize(const bool enabled)
 
 void SpheroHandler::setDetectCollisions(const bool enabled)
 {
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::ConfigureCollisionDetection, EnableCollisionDetectionPacket::create(enabled));
+    sendCommand(EnableCollisionDetectionPacket(enabled));
 }
 
 void SpheroHandler::goToSleep()
 {
-    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::Sleep, GoToSleepPacket::create());
+    sendCommand(GoToSleepPacket());
 }
 
 void SpheroHandler::enablePowerNotifications()
@@ -166,7 +167,37 @@ void SpheroHandler::enablePowerNotifications()
 
 void SpheroHandler::setEnableAsciiShell(const bool enabled)
 {
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetDeviceMode, SetUserHackModePacket::create(enabled));
+    sendCommand(SetUserHackModePacket({enabled}));
+}
+
+void SpheroHandler::faceLeft()
+{
+    sendCommand(RollCommandPacket({uint8_t(0), uint16_t(270), RollCommandPacket::Brake}));
+}
+
+void SpheroHandler::faceRight()
+{
+    sendCommand(RollCommandPacket({uint8_t(0), uint16_t(90), RollCommandPacket::Brake}));
+}
+
+void SpheroHandler::faceForward()
+{
+    sendCommand(RollCommandPacket({uint8_t(0), uint16_t(0), RollCommandPacket::Brake}));
+}
+
+void SpheroHandler::boost(int angle, int duration)
+{
+    while (angle < 0) {
+        angle += 360;
+    }
+    angle %= 360;
+
+    sendCommand(BoostCommandPacket({uint8_t(qBound(0, duration, 255)), uint16_t(angle)}));
+
+    if (m_angle != angle) {
+        m_angle = angle;
+        emit angleChanged();
+    }
 }
 
 void SpheroHandler::onServiceDiscoveryFinished()

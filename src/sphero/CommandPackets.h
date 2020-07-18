@@ -196,6 +196,9 @@ struct SetOptionsCommandPacket
 
 struct DataStreamingCommandPacket
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::SetDataStreaming;
+
     enum SourceMask : uint32_t {
         NoMask = 0x00000000,
         LeftMotorBackEMFFiltered = 0x00000060,
@@ -282,45 +285,56 @@ struct DataStreamingCommandPacket1_17 : DataStreamingCommandPacket
 
 struct SetColorsCommandPacket
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::SetRGBLed;
+
+    enum Assignment {
+        Temporary,
+        Permanent
+    };
+
     uint8_t r = 0;
     uint8_t g = 0;
     uint8_t b = 0;
-    uint8_t unknown = 0;
+    uint8_t setAsDefault = 0;
 
-    static QByteArray create(const uint8_t r, const uint8_t g, const uint8_t b) {
-        SetColorsCommandPacket def;
-        def.r = r;
-        def.g = g;
-        def.b = b;
-        return packetToByteArray(def);
-    }
+    SetColorsCommandPacket(const uint8_t red, const uint8_t green, const uint8_t blue, const Assignment assignment) :
+        r(red),
+        g(green),
+        b(blue),
+        setAsDefault(assignment == Permanent ? 1 : 0)
+    { }
 };
 
 struct RollCommandPacket
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::Roll;
+
+    enum Type : uint8_t {
+        Brake = 0,
+        Roll = 1,
+        Calibrate = 2
+    };
+
     uint8_t speed = 0;
     uint16_t angle = 0;
-
-    static QByteArray create(const uint8_t speed, const uint16_t angle) {
-        RollCommandPacket def;
-        def.speed = speed;
-        def.angle = angle;
-        return packetToByteArray(def);
-    }
+    uint8_t type = Roll;
 };
 
 struct SetHeadingPacket
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::SetHeading;
+
     uint16_t heading = 0;
-    static QByteArray create(const uint16_t heading) {
-        SetHeadingPacket def;
-        def.heading = heading;
-        return packetToByteArray(def);
-    }
 };
 
 struct EnableCollisionDetectionPacket
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::ConfigureCollisionDetection;
+
     // The official SDK calls this "method", but also says that only method `1` is supported for now.
     uint8_t enabled = 1;
 
@@ -330,20 +344,20 @@ struct EnableCollisionDetectionPacket
     uint8_t scaledThresholdY = 1; // This gets scaled/multiplied(?) by the speed and added to the normal threshold
     uint8_t delay = 10; // Time (in seconds) from a collision is reported until detection starts again
 
-    static QByteArray create(const bool enabled, const Vector2D<uint8_t> threshold = {100, 100}, const Vector2D<uint8_t> scaledThreshold = {1, 1}) {
-        EnableCollisionDetectionPacket def;
-        def.enabled = enabled ? 1 : 0;
-        def.thresholdX = threshold.x;
-        def.thresholdY = threshold.y;
-        def.scaledThresholdX = scaledThreshold.x;
-        def.scaledThresholdY = scaledThreshold.y;
-
-        return packetToByteArray(def);
+    EnableCollisionDetectionPacket(const bool enabled_, const Vector2D<uint8_t> threshold_ = {100, 100}, const Vector2D<uint8_t> scaledThreshold_ = {1, 1}) {
+        this->enabled = enabled_ ? 1 : 0;
+        this->thresholdX = threshold_.x;
+        this->thresholdY = threshold_.y;
+        this->scaledThresholdX = scaledThreshold_.x;
+        this->scaledThresholdY = scaledThreshold_.y;
     }
 };
 
 struct GoToSleepPacket
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::Internal;
+    static constexpr uint32_t commandId = CommandPacketHeader::Sleep;
+
     // IDK where this is used, but it is in the official SDK
     // I thought this was controlled by the separate power bluetooth characteristic
     enum SleepType : uint8_t {
@@ -356,10 +370,7 @@ struct GoToSleepPacket
     uint8_t wakeMacro = 0; // If >0 macro to run when waking
     uint16_t wakeScriptLineNumber = 0; // If >0 the line number of the script in flash to run when waking
 
-    static QByteArray create(const uint16_t wakeInterval = 5) {
-        GoToSleepPacket def;
-        def.wakeupInterval = wakeInterval;
-        return packetToByteArray(def);
+    GoToSleepPacket(const uint16_t wakeInterval_ = 5) : wakeupInterval(wakeInterval_) {
     }
 };
 
@@ -379,17 +390,24 @@ struct SetNonPersistentOptionsPacket
     }
 };
 
+// Disables stabilization and moves full power in the requested direction
+struct BoostCommandPacket
+{
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::Boost;
+
+    uint8_t duration = 1; // tenths of seconds, 0 means forever (until stabilization command is received)
+    uint16_t direction = 0; // in degrees, 0-360
+};
+
 // I think this is the SetDeviceMode
 struct SetUserHackModePacket
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::SetDeviceMode;
+
     // Enables ascii shell commands?
     uint8_t enabled = 0;
-
-    static QByteArray create(const bool enabled) {
-        SetUserHackModePacket def;
-        def.enabled = enabled ? 1 : 0;
-        return packetToByteArray(def);
-    }
 };
 
 static_assert(sizeof(CommandPacketHeader) == 6);

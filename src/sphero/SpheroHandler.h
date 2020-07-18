@@ -86,6 +86,13 @@ public:
     void goToSleep();
     void enablePowerNotifications();
 
+    void setEnableAsciiShell(const bool enabled);
+
+    void faceLeft();
+    void faceRight();
+    void faceForward();
+    void boost(const int angle, int duration);
+
 signals:
     void connectedChanged();
     void rssiChanged();
@@ -115,6 +122,10 @@ private slots:
 private:
     bool sendRadioControlCommand(const QBluetoothUuid &characteristicUuid, const QByteArray &data);
     void sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data = QByteArray());
+
+    template<typename PACKET> void sendCommand(const PACKET &packet) {
+        sendCommand(PACKET::deviceId, PACKET::commandId, packetToByteArray(packet));
+    }
 
 
     QPointer<QLowEnergyController> m_deviceController;
