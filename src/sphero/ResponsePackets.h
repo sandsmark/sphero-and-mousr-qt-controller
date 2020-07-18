@@ -66,6 +66,17 @@ public:
     uint8_t dataLength = 0;
 };
 
+struct NotificationPacket
+{
+    const uint8_t magic = 0xFF;
+    const uint8_t notificationIndicator = 0xFE;
+
+    uint8_t type;
+
+    uint16_t dataLength;
+
+};
+
 struct AckResponsePacket
 {
     enum ResponseType : uint8_t {

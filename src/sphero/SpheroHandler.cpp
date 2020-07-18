@@ -373,10 +373,6 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 //            const LocatorPacket *location = reinterpret_cast<const LocatorPacket*>(contents.data());
 //            qDebug() << "tilt" << location->tilt << "position" << location->position.x << location->position.y << (location->flags ? "calibrated" : "not calibrated");
 
-//            DataStreamingCommandPacket def;
-//            def.packetCount = 1;
-//            sendCommand(PacketHeader::HardwareControl, PacketHeader::SetDataStreaming, QByteArray((char*)&def, sizeof(def)), PacketHeader::Synchronous, PacketHeader::ResetTimeout);
-//            break;
 //        }
         default:
             qWarning() << "Unhandled ack response" << AckResponsePacket::ResponseType(int(contents[0]));
@@ -503,13 +499,67 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
             header.flags |= CommandPacketHeader::Synchronous;
             header.flags |= CommandPacketHeader::ResetTimeout;
             break;
+        case CommandPacketHeader::SetPwrNotify:
+            header.flags |= CommandPacketHeader::Asynchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
         default:
             qWarning() << "Unhandled packet internal command" << commandID;
             header.flags |= CommandPacketHeader::Synchronous;
             header.flags |= CommandPacketHeader::ResetTimeout;
             break;
-
         }
+
+        break;
+    case CommandPacketHeader::HardwareControl:
+        switch(commandID) {
+        case CommandPacketHeader::GetRGBLed:
+            header.flags |= CommandPacketHeader::Synchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::GetLocatorData:
+            header.flags |= CommandPacketHeader::Synchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::SetDataStreaming:
+            header.flags |= CommandPacketHeader::Synchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::ConfigureCollisionDetection:
+            header.flags |= CommandPacketHeader::Asynchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::SetRGBLed:
+            header.flags |= CommandPacketHeader::Asynchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::SetBackLED:
+            header.flags |= CommandPacketHeader::Asynchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::Roll:
+            header.flags |= CommandPacketHeader::Asynchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::SetStabilization:
+            header.flags |= CommandPacketHeader::Asynchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::SetHeading:
+            header.flags |= CommandPacketHeader::Asynchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::SetRotationRate:
+            header.flags |= CommandPacketHeader::Asynchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        default:
+            qWarning() << "Unhandled packet hardware command" << commandID;
+            header.flags |= CommandPacketHeader::Synchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        }
+
         break;
     default:
         qWarning() << "Unhandled device id" << deviceId;
