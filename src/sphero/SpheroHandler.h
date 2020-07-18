@@ -28,21 +28,6 @@ class SpheroHandler : public QObject
     Q_PROPERTY(float signalStrength READ signalStrength NOTIFY rssiChanged)
     Q_PROPERTY(SpheroType robotType MEMBER m_robotType CONSTANT)
 
-    enum StreamingType : uint8_t {
-        NotStreaming = 0,
-        StreamUnknown = 1,
-        StreamUnknown2 = 2,
-        Streaming = 3
-
-    };
-
-    enum ResponseType : uint16_t {
-        StreamingResponse = 0x3,
-        CollisionDetectedResponse = 0x7,
-        PowerStateResponse = 0x9,
-        LocatorResponse = 0xb,
-    };
-
 public:
     enum class SpheroType {
         Unknown,

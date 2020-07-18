@@ -388,9 +388,8 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         qWarning() << " ! unhandled type" << header.type;
         m_receiveBuffer.clear();
     }
-    DataStreamingCommandPacket def;
-    def.packetCount = 1;
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetDataStreaming, QByteArray((char*)&def, sizeof(def)));
+
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetDataStreaming, DataStreamingCommandPacket::create(1));
 
     if (header.type != ResponsePacketHeader::Response) {
         qWarning() << " ! not a simple response" << header.type;

@@ -226,6 +226,15 @@ struct DataStreamingCommandPacket
     uint16_t framesPerPacket = 1;
     uint32_t sourceMask = AllSources;
     uint8_t packetCount = 0; // 0 == forever
+
+    static QByteArray create(const int packetCount, const uint16_t maxRateDivisor = 10, const uint16_t framesPerPacket = 1, const uint32_t sourceMask = AllSources) {
+        DataStreamingCommandPacket def;
+        def.packetCount = packetCount;
+        def.maxRateDivisor = maxRateDivisor;
+        def.framesPerPacket = framesPerPacket;
+        def.sourceMask = sourceMask;
+        return QByteArray(reinterpret_cast<const char*>(&def), sizeof(def));
+    }
 };
 
 struct DataStreamingCommandPacket1_17 : DataStreamingCommandPacket
