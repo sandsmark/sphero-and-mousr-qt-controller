@@ -400,6 +400,8 @@ struct BoostCommandPacket
     uint16_t direction = 0; // in degrees, 0-360
 };
 
+/// some TODOs from the official SDK (todo => figure out the deviceid and commandid)
+
 // I think this is the SetDeviceMode
 struct SetUserHackModePacket
 {
@@ -408,6 +410,22 @@ struct SetUserHackModePacket
 
     // Enables ascii shell commands?
     uint8_t enabled = 0;
+};
+
+// Is this some stuff for some internal PID controller?
+struct SetPIDCommandPacket
+{
+    enum Axis {
+        Pitch,
+        Roll,
+        Yaw
+    };
+    uint8_t axis = Pitch;
+
+
+    // Official SDK:
+    // initWithAxis:(RKAxis) axis andP:(NSNumber*) p andI:(NSNumber*)i andD:(NSNumber*)d;
+    // not sure what the P, I and D parameters are, probably uint8_t?
 };
 
 static_assert(sizeof(CommandPacketHeader) == 6);
