@@ -23,6 +23,9 @@ bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
     qToLittleEndian<CommandPacket>(&packet, 1, buffer.data());
 
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
+
+    qToBigEndian<char>(buffer.data(), buffer.size(), buffer.data());
+    qDebug() << buffer.toHex(':');
     return true;
 }
 
@@ -237,11 +240,14 @@ void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newStat
 //    qDebug() << "Requested notifications on values changes";
 
     //if (!sendCommand(Command::InitializeDevice, QDateTime::currentSecsSinceEpoch(), mbApiVersion)) {
-    if (!sendCommand(CommandType::InitializeDevice, mbApiVersion, QDateTime::currentSecsSinceEpoch())) {
-        qWarning() << "Failed to send init command";
-    }
+    const quint32 currTime = QDateTime::currentSecsSinceEpoch();
+    qDebug() << "Current time" << currTime;
+    sendSomeInit();
+//    if (!sendCommand(CommandType::InitializeDevice, mbApiVersion, currTime)) {
+//        qWarning() << "Failed to send init command";
+//    }
 
-    m_service->readCharacteristic(m_readCharacteristic);
+//    m_service->readCharacteristic(m_readCharacteristic);
     emit connectedChanged();
 }
 
@@ -276,6 +282,15 @@ void MousrHandler::setSoundVolume(const int volumePercent)
         m_volume = volumePercent;
     }
     emit soundVolumeChanged();
+}
+
+void MousrHandler::sendSomeInit()
+{
+    const char bytes[] = {
+        0x30, 0x03, 0x00, 0x00, 0x00, 0x1f, 0x63, 0x13, 0x5f, 0x00, 0x00, 0x00, 0x00, 0x1c, 0x00
+    };
+    qDebug() << QByteArray(bytes, sizeof(bytes)).toHex(':');
+    m_service->writeCharacteristic(m_writeCharacteristic, QByteArray(bytes, sizeof(bytes)));
 }
 
 void MousrHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
@@ -315,8 +330,8 @@ void MousrHandler::onCharacteristicRead(const QLowEnergyCharacteristic &characte
         qWarning() << "data from unexpected characteristic" << characteristic.uuid() << data;
         return;
     }
-    qDebug() << "data from read characteristic" << data.toHex();
-    qDebug() << "data type:" << data[0];
+    qDebug() << "data from read characteristic" << data.toHex() << "length" << data.length() << data;
+    qDebug() << "data type:" << int(data[0]) << ResponseType(int(data[0]));
 
 //    emit dataRead(data);
 }
@@ -362,6 +377,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         qDebug() << response.type << data;
         return;
     }
+//    qDebug() << "Got response" << ResponseType(response.type);
 
 
     switch(response.type){
@@ -462,6 +478,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         qWarning() << "!! Got NACK for command" << command;
         qDebug() << "unknown num:" << response.nack.unknown1;
         qDebug() << "Api version current:" << currentApiVer << "min:" << minApiVer << "max:" << maxApiVer;
+        qDebug() << "unknowns" << response.nack.unknown2[0] <<  response.nack.unknown2[1] <<  response.nack.unknown2[2] <<  response.nack.unknown2[3];
         break;
     }
     default:

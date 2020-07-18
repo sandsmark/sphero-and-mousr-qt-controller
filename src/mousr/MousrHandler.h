@@ -57,6 +57,7 @@ class MousrHandler : public QObject
 
     Q_PROPERTY(bool soundVolume READ soundVolume NOTIFY soundVolumeChanged)
 
+    Q_PROPERTY(Autoplay::Config * autoPlay READ autoPlay NOTIFY autoPlayChanged)
 
 public: // enums
     enum class CommandType : uint16_t {
@@ -195,6 +196,9 @@ public:
     int soundVolume() { return m_volume; }
     void setSoundVolume(const int volumePercent);
 
+    void sendSomeInit();
+
+    Autoplay::Config *autoPlay() { return &m_autoplay; }
 
 signals:
     void connectedChanged();
@@ -204,6 +208,7 @@ signals:
     void orientationChanged();
     void sensorDirtyChanged();
     void soundVolumeChanged();
+    void autoPlayChanged();
 
 public slots:
     void chirp();

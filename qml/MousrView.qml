@@ -170,6 +170,13 @@ Rectangle {
             text: qsTr("Memory usage: ") + device.memory
             opacity: 0.25
         }
+
+        Text {
+            width: statusColumn.width
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("Pause time: ") + device.autoPlay.pauseTime
+            opacity: 0.25
+        }
     }
 
 

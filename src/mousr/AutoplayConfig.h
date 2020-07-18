@@ -63,6 +63,8 @@ public:
 
     struct Config
     {
+        Q_GADGET
+    public:
         Config() = default;
         uint8_t enabled = 0; // 0
 
@@ -161,22 +163,23 @@ public:
             default:
                 break;
             }
-            return "Unknown mode";
+            return "Unknown mode (" + QString::number(gameMode) + ")";
         }
         Surface surface() const { return Surface(m_surface); }
     } __attribute__((packed));
+    static_assert(sizeof(Config) == 15);
 };
 
 inline QDebug operator<<(QDebug debug, const Autoplay::Config &c) {
     QDebugStateSaver saver(debug);
     debug.nospace() << "AutoPlayConfig ("
-                    << "Enabled " << c.enabled << ", "
-                    << "Surface " << c.surface() << ", "
-                    << "Tail " << c.tail << ", "
-                    << "Speed " << c.speed << ", "
-                    << "Game " << c.modeName() << ", "
-                    << "PauseFrequency " << c.pauseFrequency << ", "
-                    << "PauseTime ";
+                    << "Enabled: " << c.enabled << ", "
+                    << "Surface: " << c.surface() << ", "
+                    << "Tail: " << Autoplay::TailType(c.tail) << ", "
+                    << "Speed: " << c.speed << ", "
+                    << "Game: " << c.modeName() << ", "
+                    << "PauseFrequency: " << c.pauseFrequency << ", "
+                    << "PauseTime: ";
 
     if (c.pauseTime() == 0) {
         debug.nospace() << "AllDay, ";
@@ -194,12 +197,12 @@ inline QDebug operator<<(QDebug debug, const Autoplay::Config &c) {
     default:
         break;
     }
-    debug.nospace() << "AllDay2 " << c.allDay << ", "
-                    << "Unknown1 " << c.unknown1 << ", "
-                    << "Unknown2 " << c.unknown2 << ", "
-                    << "Unknown3 " << c.unknown3 << ", "
-                    << "ResponseTo " << c.m_responseTo << ", "
-                    << "Unknown4 " << c.unknown4 << ", "
+    debug.nospace() << "AllDay2: " << c.allDay << ", "
+                    << "Unknown1: " << c.unknown1 << ", "
+                    << "Unknown2: " << c.unknown2 << ", "
+                    << "Unknown3: " << c.unknown3 << ", "
+                    << "ResponseTo: " << c.m_responseTo << ", "
+                    << "Unknown4: " << c.unknown4 << ", "
                     << ")";
 
     return debug.maybeSpace();

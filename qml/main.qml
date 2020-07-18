@@ -92,7 +92,7 @@ Window {
                     property string signalText: ""
                     Connections {
                         target: DeviceDiscoverer
-                        onSignalStrengthChanged: {
+                        function onSignalStrengthChanged(deviceName, strength) {
                             if (deviceName !== modelData) {
                                 return;
                             }
