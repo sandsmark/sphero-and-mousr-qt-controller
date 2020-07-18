@@ -58,10 +58,22 @@ SpheroHandler::~SpheroHandler()
 {
     qDebug() << " - sphero handler dead";
     if (m_deviceController) {
-        m_deviceController->disconnectFromDevice();
+        disconnectFromRobot();
     } else {
         qWarning() << "no controller";
     }
+}
+
+void SpheroHandler::disconnectFromRobot()
+{
+    if (!isConnected()) {
+        qDebug() << "Can't disconnect when not connected";
+        return;
+    }
+
+    setAutoStabilize(false);
+    goToSleep();
+    m_deviceController->disconnectFromDevice();
 }
 
 bool SpheroHandler::isConnected()
@@ -83,6 +95,54 @@ QString SpheroHandler::statusString()
     } else {
         return tr("Found %1, trying to establish connection...").arg(name);
     }
+}
+
+void SpheroHandler::setColor(const int r, const int g, const int b)
+{
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetRGBLed, SetColorsCommandPacket::create(r, g, b));
+
+    const QColor color = QColor::fromRgb(r, g, b);
+    if (color != m_color) {
+        m_color = color;
+        emit colorChanged();
+    }
+}
+
+void SpheroHandler::setSpeedAndAngle(int angle, int speed)
+{
+    while (angle < 0) {
+        angle += 360;
+    }
+    speed = qBound(0, speed, 255);
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::Roll, RollCommandPacket::create(m_speed, m_angle % 360));
+
+    if (m_speed != speed) {
+        m_speed = speed;
+        emit speedChanged();
+    }
+    if (m_angle != angle) {
+        m_angle = angle;
+        emit angleChanged();
+    }
+}
+
+void SpheroHandler::setAutoStabilize(const bool enabled)
+{
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetStabilization, enabled ? "\1" : "\0");
+    if (enabled != m_autoStabilize) {
+        m_autoStabilize = enabled;
+        emit autoStabilizeChanged();
+    }
+}
+
+void SpheroHandler::setDetectCollisions(const bool enabled)
+{
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::ConfigureCollisionDetection, EnableCollisionDetectionPacket::create(enabled));
+}
+
+void SpheroHandler::goToSleep()
+{
+    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::Sleep, GoToSleepPacket::create());
 }
 
 void SpheroHandler::onServiceDiscoveryFinished()
@@ -492,7 +552,6 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
 {
     static int currentSequenceNumber = 0;
     CommandPacketHeader header;
-    header.dataLength = data.size() + 1; // + 1 for checksum
 
     switch(deviceId) {
     case CommandPacketHeader::Internal:
@@ -570,6 +629,8 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
         break;
     }
 
+    header.dataLength = data.size() + 1; // + 1 for checksum
+
     header.sequenceNumber = currentSequenceNumber++;
     header.commandID = commandID;
     header.deviceID = deviceId;
@@ -578,9 +639,6 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
     qDebug() << "  ] command id:" << header.commandID;
     qDebug() << "  ] seq number:" << header.sequenceNumber;
 
-    if (header.dataLength != data.size() + 1) {
-        qWarning() << "Invalid data length in header";
-    }
     QByteArray headerBuffer(sizeof(CommandPacketHeader), 0); // + 1 for checksum
     qToBigEndian<uint8_t>(&header, sizeof(CommandPacketHeader), headerBuffer.data());
     qDebug() << " - " << uchar(headerBuffer[0]);

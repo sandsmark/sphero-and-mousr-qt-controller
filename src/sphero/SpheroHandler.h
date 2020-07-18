@@ -8,6 +8,7 @@
 #include <QLowEnergyService>
 #include <QLowEnergyCharacteristic>
 #include <QLowEnergyController>
+#include <QColor>
 
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
@@ -27,6 +28,13 @@ class SpheroHandler : public QObject
 
     Q_PROPERTY(float signalStrength READ signalStrength NOTIFY rssiChanged)
     Q_PROPERTY(SpheroType robotType MEMBER m_robotType CONSTANT)
+
+    Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
+    Q_PROPERTY(int angle READ angle WRITE setAngle NOTIFY angleChanged)
+    Q_PROPERTY(int speed READ speed WRITE setSpeed NOTIFY speedChanged)
+
+    Q_PROPERTY(bool autoStabilize READ autoStabilize WRITE setAutoStabilize NOTIFY autoStabilizeChanged)
+    Q_PROPERTY(bool detectCollisions READ detectCollisions WRITE setDetectCollisions NOTIFY detectCollisionsChanged)
 
 public:
     enum class SpheroType {
@@ -58,13 +66,39 @@ public:
         return rssiToStrength(m_rssi);
     }
 
+    void setColor(const QColor &color) { setColor(color.red(), color.green(), color.blue()); }
+    void setColor(const int r, const int g, const int b);
+    QColor color() const { return m_color; }
+
+    void setSpeedAndAngle(int angle, int speed);
+
+    void setSpeed(int speed) { setSpeedAndAngle(speed, m_angle); }
+    void setAngle(int angle) { setSpeedAndAngle(m_speed, angle); }
+    int speed() const { return m_speed; }
+    int angle() const { return m_angle; }
+
+    void setAutoStabilize(const bool enabled);
+    bool autoStabilize() const { return m_autoStabilize; }
+
+    void setDetectCollisions(const bool enabled);
+    bool detectCollisions() const { return m_detectCollisions; }
+
+    void goToSleep();
+
 signals:
     void connectedChanged();
     void rssiChanged();
     void disconnected(); // TODO
     void statusMessageChanged(const QString &message);
 
+    void colorChanged();
+    void angleChanged();
+    void speedChanged();
+    void autoStabilizeChanged();
+    void detectCollisionsChanged();
+
 public slots:
+    void disconnectFromRobot();
 
 private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);
@@ -95,6 +129,13 @@ private:
 
     QString m_name;
     int8_t m_rssi = 0;
+
+    int m_angle = 0;
+    int m_speed = 0;
+    bool m_autoStabilize = false;
+    bool m_detectCollisions = false;
+
+    QColor m_color;
 
     SpheroType m_robotType = SpheroType::Unknown;
 };

@@ -3,9 +3,18 @@
 #include "BasicTypes.h"
 
 #include <QObject>
+#include <QtEndian>
 #include <cstdint>
 
 namespace sphero {
+
+template <typename PACKET>
+QByteArray packetToByteArray(const PACKET &packet)
+{
+    QByteArray ret(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
+    qToBigEndian<char*>(ret.data(), ret.size(), ret.data());
+    return ret;
+}
 
 #pragma pack(push,1)
 
@@ -123,31 +132,13 @@ struct CommandPacketHeader {
     uint8_t dataLength = 0;
 };
 
-struct SleepCommandPacket
-{
-    CommandPacketHeader header; // Just free-wheeling it here
-
-    enum SleepType {
-        SleepHighPower = 0x00,
-        SleepDeep = 0x01,
-        SleepLowPower = 0x02
-    };
-
-    uint16_t sleepTime;
-    uint8_t wakeMacro;
-    uint16_t basicLineNumber;
-};
-
 struct RotateCommandPacket
 {
-    CommandPacketHeader header;
     float rate;
 };
 
 struct SetOptionsCommandPacket
 {
-    CommandPacketHeader header;
-
     enum Options : uint32_t {
         /// Prevent Sphero from going to sleep when placed in the charger and connected over Bluetooth
         PreventSleepInCharger = 1 << 0,
@@ -173,7 +164,34 @@ struct SetOptionsCommandPacket
         SlewRawMotors  = 1 << 10,
     };
 
-    uint32_t optionsBitmask;
+    uint32_t optionsBitmask = 0;
+
+    // Use the options as a bitmask, e. g. `create(Options::PreventSleepInCharger | Options::DemoMode);`
+    static QByteArray create(const uint32_t options) {
+        SetOptionsCommandPacket def;
+        def.optionsBitmask = options;
+        return packetToByteArray(def);
+    }
+
+    // don't use this, you get unreadable code
+    // Only supports the documented options from the SDK
+    static QByteArray create(const bool preventSleepInCharger,
+                             const bool enableVectorDrive,
+                             const bool disableSelfLevelInCharger,
+                             const bool tailLightAlwaysOn,
+                             const bool enableMotionTimeout
+                             )
+    {
+        SetOptionsCommandPacket def;
+
+        if (preventSleepInCharger) def.optionsBitmask |= PreventSleepInCharger;
+        if (enableVectorDrive) def.optionsBitmask |= EnableVectorDrive;
+        if (disableSelfLevelInCharger) def.optionsBitmask |= DisableSelfLevelInCharger;
+        if (tailLightAlwaysOn) def.optionsBitmask |= TailLightAlwaysOn;
+        if (enableMotionTimeout) def.optionsBitmask |= EnableMotionTimeout;
+
+        return packetToByteArray(def);
+    }
 };
 
 struct DataStreamingCommandPacket
@@ -233,7 +251,7 @@ struct DataStreamingCommandPacket
         def.maxRateDivisor = maxRateDivisor;
         def.framesPerPacket = framesPerPacket;
         def.sourceMask = sourceMask;
-        return QByteArray(reinterpret_cast<const char*>(&def), sizeof(def));
+        return packetToByteArray(def);
     }
 };
 
@@ -260,6 +278,78 @@ struct DataStreamingCommandPacket1_17 : DataStreamingCommandPacket
 
     };
     uint32_t sourceMaskHighBits = AllSourcesHigh; // firmware >= 1.17
+};
+
+struct SetColorsCommandPacket
+{
+    uint8_t r = 0;
+    uint8_t g = 0;
+    uint8_t b = 0;
+    uint8_t unknown = 0;
+
+    static QByteArray create(const uint8_t r, const uint8_t g, const uint8_t b) {
+        SetColorsCommandPacket def;
+        def.r = r;
+        def.g = g;
+        def.b = b;
+        return packetToByteArray(def);
+    }
+};
+
+struct RollCommandPacket
+{
+    uint8_t speed = 0;
+    uint16_t angle = 0;
+
+    static QByteArray create(const uint8_t speed, const uint16_t angle) {
+        RollCommandPacket def;
+        def.speed = speed;
+        def.angle = angle;
+        return packetToByteArray(def);
+    }
+};
+
+struct EnableCollisionDetectionPacket
+{
+    // The official SDK calls this "method", but also says that only method `1` is supported for now.
+    uint8_t enabled = 1;
+
+    uint8_t thresholdX = 100;
+    uint8_t scaledThresholdX = 1; // This gets scaled/multiplied(?) by the speed and added to the normal threshold
+    uint8_t thresholdY = 100;
+    uint8_t scaledThresholdY = 1; // This gets scaled/multiplied(?) by the speed and added to the normal threshold
+    uint8_t delay = 10; // Time (in seconds) from a collision is reported until detection starts again
+
+    static QByteArray create(const bool enabled, const Vector2D<uint8_t> threshold = {100, 100}, const Vector2D<uint8_t> scaledThreshold = {1, 1}) {
+        EnableCollisionDetectionPacket def;
+        def.enabled = enabled ? 1 : 0;
+        def.thresholdX = threshold.x;
+        def.thresholdY = threshold.y;
+        def.scaledThresholdX = scaledThreshold.x;
+        def.scaledThresholdY = scaledThreshold.y;
+
+        return packetToByteArray(def);
+    }
+};
+
+struct GoToSleepPacket
+{
+    // IDK where this is used, but it is in the official SDK
+    enum SleepType {
+        NormalSleep = 0, // Light sleep, keeps high report rate for bluetooth
+        DeepSleep = 1, // idk
+        LowPowerSleep = 2 // idk, I guess lower slepe
+    };
+
+    uint16_t wakeupInterval = 5; // Time (in seconds) of intervals between automatically waking, if 0 sleeps forever
+    uint8_t wakeMacro = 0; // If >0 macro to run when waking
+    uint16_t wakeScriptLineNumber = 0; // If >0 the line number of the script in flash to run when waking
+
+    static QByteArray create(const uint16_t wakeInterval = 5) {
+        GoToSleepPacket def;
+        def.wakeupInterval = wakeInterval;
+        return packetToByteArray(def);
+    }
 };
 
 static_assert(sizeof(CommandPacketHeader) == 6);
