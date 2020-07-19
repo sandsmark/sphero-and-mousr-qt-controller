@@ -11,8 +11,8 @@ namespace sphero {
 struct ResponsePacketHeader {
     Q_GADGET
 public:
-    enum ResponseType : uint8_t {
-        Ok = 0x00,
+    enum PacketType : uint8_t {
+        Ack = 0x00,
         GeneralError = 0x01,
         ChecksumFailure = 0x02,
         FragmentReceived = 0x3,
@@ -30,7 +30,7 @@ public:
         ErrorTimeout = 0xFE, // SDK introduced??
         TimeoutErr = 0xFF
     };
-    Q_ENUM(ResponseType)
+    Q_ENUM(PacketType)
 
     enum NotificationType : uint8_t {
         PowerNotification = 0x01,
@@ -53,7 +53,7 @@ public:
     };
     Q_ENUM(NotificationType)
 
-    enum PacketType {
+    enum Type {
         Response = 0xFF,
         Notification = 0xFE
     };
@@ -61,7 +61,7 @@ public:
     const uint8_t magic = 0xFF;
     uint8_t type = 0xFF;
 
-    uint8_t response = 0;
+    uint8_t packetType = 0;
     uint8_t sequenceNumber = 0;
     uint8_t dataLength = 0;
 };
@@ -79,6 +79,9 @@ struct NotificationPacket
 
 struct AckResponsePacket
 {
+    Q_GADGET
+public:
+    // I don't think all these are valid here?
     enum ResponseType : uint8_t {
         PowerNotification = 0x01,
         Level1Diagnostic = 0x02,
@@ -86,8 +89,19 @@ struct AckResponsePacket
         ConfigBlock = 0x04,
         SleepingIn10Sec = 0x05,
         MacroMarkers = 0x06,
-        Collision = 0x07
+        Collision = 0x07,
+        OrbBasicErrorASCII = 0x09,
+        OrbBasicErrorBinary = 0x0A,
+        SelfLevelComplete = 0x0B,
+        GyroRangeExceeded = 0x0C,
+        SoulDataResponse = 0x0D,
+        SoulLevelUpNotification = 0x0E,
+        SoulShieldNotification = 0x0F,
+        BoostNotification = 0x11,
+        SoulBlockData = 0x20,
+        XPUpdateEvent = 0x21
     };
+    Q_ENUM(ResponseType)
 
     uint8_t type;
 };

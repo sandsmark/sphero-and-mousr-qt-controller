@@ -23,6 +23,7 @@ SpheroHandler::SpheroHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     if (m_name.startsWith("BB-8")) {
         m_robotType = SpheroType::Bb8;
     }
+    qDebug() << "Connecting to" << deviceInfo.address().toString();
 
     qDebug() << sizeof(SensorStreamPacket);
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
@@ -393,10 +394,10 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     qDebug() << " - type" << header.type;
     switch(header.type) {
     case ResponsePacketHeader::Response:
-        qDebug() << " - ack response" << ResponsePacketHeader::ResponseType(header.response);
+        qDebug() << " - response" << ResponsePacketHeader::PacketType(header.packetType);
         break;
     case ResponsePacketHeader::Notification:
-        qDebug() << " - data response" << ResponsePacketHeader::NotificationType(header.response);
+        qDebug() << " - data response" << ResponsePacketHeader::NotificationType(header.packetType);
         break;
     default:
         qWarning() << " ! unhandled type" << header.type;
@@ -422,6 +423,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         qDebug() << "  > Expected" << uint8_t(m_receiveBuffer.back());
         return;
     }
+    qDebug() << "Checksum:" << int(checksum);
 
     QByteArray contents = data.mid(sizeof(ResponsePacketHeader), header.dataLength);
     if (contents.isEmpty()) {
@@ -434,7 +436,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     switch(header.type) {
     case ResponsePacketHeader::Response: {
-        qDebug() << " - ack response" << ResponsePacketHeader::ResponseType(header.response);
+        qDebug() << " - ack response" << ResponsePacketHeader::PacketType(header.packetType);
         qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
 
         // TODO separate function
@@ -491,21 +493,21 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
 //        }
         default:
-            qWarning() << "Unhandled ack response" << AckResponsePacket::ResponseType(int(contents[0]));
+            qWarning() << "Unhandled ack response" << AckResponsePacket::ResponseType(int(contents[0])) << uint(contents[0]) << header.packetType;
             break;
         }
 
         break;
     }
     case ResponsePacketHeader::Notification:
-        qDebug() << " - data notification" << header.response;
+        qDebug() << " - data notification" << header.packetType;
         break;
     default:
         qWarning() << " ! unhandled type" << header.type;
         m_receiveBuffer.clear();
     }
 
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetDataStreaming, DataStreamingCommandPacket::create(1));
+//    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetDataStreaming, DataStreamingCommandPacket::create(1));
 
     if (header.type != ResponsePacketHeader::Response) {
         qWarning() << " ! not a simple response" << header.type;
@@ -611,6 +613,7 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
 
     switch(deviceId) {
     case CommandPacketHeader::Internal:
+        qDebug() << "Sending" << CommandPacketHeader::InternalCommand(commandID);
         switch(commandID) {
         case CommandPacketHeader::GetPwrState:
             header.flags |= CommandPacketHeader::Synchronous;
@@ -629,6 +632,7 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
 
         break;
     case CommandPacketHeader::HardwareControl:
+        qDebug() << "Sending" << CommandPacketHeader::HardwareCommand(commandID);
         switch(commandID) {
         case CommandPacketHeader::GetRGBLed:
             header.flags |= CommandPacketHeader::Synchronous;

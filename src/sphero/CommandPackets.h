@@ -13,27 +13,33 @@ QByteArray packetToByteArray(const PACKET &packet)
 {
     QByteArray ret(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
     qToBigEndian<char*>(ret.data(), ret.size(), ret.data());
+    ret.detach();
     return ret;
 }
 
 #pragma pack(push,1)
 
 struct CommandPacketHeader {
+    Q_GADGET
+public:
     enum TimeoutHandling : uint8_t {
         KeepTimeout = 0,
         ResetTimeout = 1 << 0
     };
+    Q_ENUM(TimeoutHandling)
 
     enum SynchronousType : uint8_t {
         Asynchronous = 0,
         Synchronous = 1 << 1
     };
+    Q_ENUM(SynchronousType)
 
     enum CommandTarget : uint8_t {
         Internal = 0x00,
         Bootloader = 0x01,
         HardwareControl = 0x02,
     };
+    Q_ENUM(CommandTarget)
 
     enum BootloaderCommand : uint8_t {
         BeginReflash = 0x02,
@@ -42,6 +48,7 @@ struct CommandPacketHeader {
         IsPageBlank = 0x05,
         EraseUserConfig = 0x06
     };
+    Q_ENUM(BootloaderCommand)
 
     enum InternalCommand : uint8_t {
         Ping = 0x01,
@@ -55,7 +62,7 @@ struct CommandPacketHeader {
         Sleep = 0x22,
         GetVoltageTrip = 0x23,
         SetVoltageTrip = 0x24,
-        SetInactiveTimeout = 0x22,
+        SetInactiveTimeout = 0x25,
         GotoBl = 0x30,
         RunL1Diags = 0x40,
         RunL2Diags = 0x41,
@@ -63,6 +70,7 @@ struct CommandPacketHeader {
         AssignCounter = 0x50,
         PollTimes = 0x51
     };
+    Q_ENUM(InternalCommand)
 
     enum HardwareCommand : uint8_t {
         SetHeading = 0x01,
@@ -118,10 +126,13 @@ struct CommandPacketHeader {
         ReadOdometer = 0x75,
         WritePersistentPage = 0x90
     };
+    Q_ENUM(HardwareCommand)
+
     enum SoulCommands : uint8_t {
         ReadSoulBlock = 0xf0,
         SoulAddXP = 0xf1
     };
+    Q_ENUM(SoulCommands)
 
     const uint8_t magic = 0xFF;
     uint8_t flags = 0xFC;
