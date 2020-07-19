@@ -384,7 +384,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     }
 
     ResponsePacketHeader header;
-    qFromBigEndian<uint8_t>(m_receiveBuffer.data(), sizeof(CommandPacketHeader), &header);
+    qFromBigEndian<uint8_t>(m_receiveBuffer.data(), sizeof(ResponsePacketHeader), &header);
     qDebug() << " - magic" << header.magic;
     if (header.magic != 0xFF) {
         qWarning() << " ! Invalid magic";
