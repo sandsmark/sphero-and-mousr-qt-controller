@@ -154,6 +154,8 @@ private:
     QColor m_color;
 
     SpheroType m_robotType = SpheroType::Unknown;
+    QMap<uint8_t, QPair<uint8_t, uint8_t>> m_pendingSyncRequests;
+    uint8_t m_nextSequenceNumber = 0;
 };
 
 } // namespace sphero

@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QtEndian>
+#include <QCoreApplication>
 
 namespace sphero {
 
@@ -290,6 +291,9 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
 
     sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetPwrState);
     sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::GetRGBLed);
+//    sendCommand(CommandPacketHeader::Hardware, CommandPacketHeader::SetDataStreaming ); -> gives us a fragment
+//    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetBtName);
+    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetAutoReconnect);
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
@@ -401,15 +405,22 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         return;
     }
     qDebug() << " - type" << header.type;
+
     switch(header.type) {
-    case ResponsePacketHeader::Response:
+    case ResponsePacketHeader::Response: {
         qDebug() << " - response" << ResponsePacketHeader::PacketType(header.packetType);
+        if (header.packetType == ResponsePacketHeader::InvalidParameter) {
+            qWarning() << "We sent an invalid parameter!";
+            return;
+        }
+
         break;
+    }
     case ResponsePacketHeader::Notification:
         qDebug() << " - data response" << ResponsePacketHeader::NotificationType(header.packetType);
         break;
     default:
-        qWarning() << " ! unhandled type" << header.type;
+        qWarning() << " !!!!!!!!!!!!!!!!!!!!!  unhandled response type!: " << header.type;
         m_receiveBuffer.clear();
     }
 
@@ -432,9 +443,10 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         qDebug() << "  > Expected" << uint8_t(m_receiveBuffer.back());
         return;
     }
-    qDebug() << "Checksum:" << int(checksum);
 
-    QByteArray contents = data.mid(sizeof(ResponsePacketHeader), header.dataLength);
+    qDebug() << "Checksum:" << QByteArray::number(checksum, 16);
+
+    QByteArray contents = data.mid(sizeof(ResponsePacketHeader), header.dataLength - 1); // checksum is last byte
     if (contents.isEmpty()) {
         qWarning() << "No contents";
     }
@@ -446,50 +458,84 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     switch(header.type) {
     case ResponsePacketHeader::Response: {
         qDebug() << " - ack response" << ResponsePacketHeader::PacketType(header.packetType);
+        if (header.packetType == ResponsePacketHeader::PacketType::FragmentReceived) {
+            qDebug() << "Received first fragment, should we ack or something?";
+        }
         qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
 
+        if (!m_pendingSyncRequests.contains(header.sequenceNumber)) {
+            qWarning() << "this was not an expected response";
+            return;
+        }
+
+        const QPair<uint8_t, uint8_t> responseToCommand = m_pendingSyncRequests.take(header.sequenceNumber);
         // TODO separate function
-        AckResponsePacket::ResponseType responseType = AckResponsePacket::ResponseType (uint8_t(contents[0]));
-        switch(responseType) {
-        case AckResponsePacket::PowerNotification: {
-            PowerStatePacket response;
-            if (size_t(contents.size()) < sizeof(response)) {
-                qWarning() << "Size of content too small";
-                return;
+        switch(responseToCommand.first) {
+        case CommandPacketHeader::Internal:
+            switch(responseToCommand.second) {
+            case CommandPacketHeader::GetPwrState: {
+                bool ok;
+                PowerStatePacket response = byteArrayToPacket<PowerStatePacket>(contents, &ok);
+                if (!ok) {
+                    return;
+                }
+                qDebug() << "  ========== power response ====== ";
+                qDebug() << "  + version" << response.recordVersion;
+                qDebug() << "  + state" << response.powerState;
+                qDebug() << "  + battery voltage" << response.batteryVoltage;
+                qDebug() << "  + number of charges" << response.numberOfCharges;
+                qDebug() << "  + seconds since charge" << response.secondsSinceCharge;
+                break;
             }
-            qFromBigEndian<uint8_t>(contents.data(), sizeof(PowerStatePacket), &response);
-            qDebug() << "  ========== power response ====== ";
-            qDebug() << "  + version" << response.recordVersion;
-            qDebug() << "  + state" << response.powerState;
-            qDebug() << "  + battery voltage" << response.batteryVoltage;
-            qDebug() << "  + number of charges" << response.numberOfCharges;
-            qDebug() << "  + seconds since charge" << response.secondsSinceCharge;
+            default:
+                qWarning() << "unhandled internal response" << CommandPacketHeader::InternalCommand(responseToCommand.second);
+                break;
+            }
             break;
+        case CommandPacketHeader::HardwareControl: {
+            switch(responseToCommand.second) {
+            case CommandPacketHeader::GetRGBLed: {
+                bool ok;
+                RgbPacket resp = byteArrayToPacket<RgbPacket>(contents, &ok);
+                if (!ok) {
+                    return;
+                }
+                qDebug() << QColor(resp.red, resp.green, resp.blue);
+                break;
+            }
+            default:
+                qWarning() << "unhandled hardware response" << CommandPacketHeader::HardwareCommand(responseToCommand.second);
+                break;
+            }
         }
-        case AckResponsePacket::Level1Diagnostic: {
-            qDebug() << " ? Got level 1 diagnostic";
-            break;
+        default:
+            qWarning() << "unhandled command target" << responseToCommand.first;
         }
-        case AckResponsePacket::SensorStream: {
-            qDebug() << " ? Got sensor data streaming";
-            break;
-        }
-        case AckResponsePacket::ConfigBlock: {
-            qDebug() << " ? Got config block";
-            break;
-        }
-        case AckResponsePacket::SleepingIn10Sec: {
-            qDebug() << " ? Got notification that it is going to sleep in 10 seconds";
-            break;
-        }
-        case AckResponsePacket::MacroMarkers: {
-            qDebug() << " ? Got macro markers";
-            break;
-        }
-        case AckResponsePacket::Collision: {
-            qDebug() << " ? Got collision notification";
-            break;
-        }
+
+//        case AckResponsePacket::Level1Diagnostic: {
+//            qDebug() << " ? Got level 1 diagnostic";
+//            break;
+//        }
+//        case AckResponsePacket::SensorStream: {
+//            qDebug() << " ? Got sensor data streaming";
+//            break;
+//        }
+//        case AckResponsePacket::ConfigBlock: {
+//            qDebug() << " ? Got config block";
+//            break;
+//        }
+//        case AckResponsePacket::SleepingIn10Sec: {
+//            qDebug() << " ? Got notification that it is going to sleep in 10 seconds";
+//            break;
+//        }
+//        case AckResponsePacket::MacroMarkers: {
+//            qDebug() << " ? Got macro markers";
+//            break;
+//        }
+//        case AckResponsePacket::Collision: {
+//            qDebug() << " ? Got collision notification";
+//            break;
+//        }
 //        case LocatorResponse: {
 //            if (size_t(contents.length()) < sizeof(LocatorPacket)) {
 //                qWarning() << "Locator response too small" << contents.length();
@@ -501,10 +547,10 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 //            qDebug() << "tilt" << location->tilt << "position" << location->position.x << location->position.y << (location->flags ? "calibrated" : "not calibrated");
 
 //        }
-        default:
-            qWarning() << "Unhandled ack response" << AckResponsePacket::ResponseType(int(contents[0])) << uint(contents[0]) << header.packetType;
-            break;
-        }
+//        default:
+//            qWarning() << " !!!!!!!!!!!!!!!!!! Unhandled ack response" << AckResponsePacket::ResponseType(int(contents[0])) << uint(contents[0]) << header.packetType;
+//            break;
+//        }
 
         break;
     }
@@ -617,8 +663,9 @@ bool SpheroHandler::sendRadioControlCommand(const QBluetoothUuid &characteristic
 
 void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data)
 {
-    static int currentSequenceNumber = 0;
     CommandPacketHeader header;
+
+    AckResponsePacket::ResponseType expectedResponse = AckResponsePacket::Invalid;
 
     switch(deviceId) {
     case CommandPacketHeader::Internal:
@@ -632,8 +679,17 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
             header.flags |= CommandPacketHeader::Asynchronous;
             header.flags |= CommandPacketHeader::ResetTimeout;
             break;
+        case CommandPacketHeader::Sleep:
+            header.flags |= CommandPacketHeader::Synchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        case CommandPacketHeader::GetAutoReconnect:
+            header.flags |= CommandPacketHeader::Synchronous;
+            header.flags |= CommandPacketHeader::ResetTimeout;
+            break;
         default:
             qWarning() << "Unhandled packet internal command" << commandID;
+            return;
             header.flags |= CommandPacketHeader::Synchronous;
             header.flags |= CommandPacketHeader::ResetTimeout;
             break;
@@ -700,7 +756,19 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
 
     header.dataLength = data.size() + 1; // + 1 for checksum
 
-    header.sequenceNumber = currentSequenceNumber++;
+    if (header.flags & CommandPacketHeader::Synchronous) {
+        if (m_pendingSyncRequests.contains(m_nextSequenceNumber)) {
+            qWarning() << "We have outstanding requests, overflow?";
+            qWarning() << "Next request:" << m_nextSequenceNumber;
+            return;
+        }
+        if (expectedResponse == AckResponsePacket::Invalid) {
+            qWarning() << "No expected response set for" << deviceId << commandID;
+        }
+        header.sequenceNumber = m_nextSequenceNumber++;
+        m_pendingSyncRequests.insert(header.sequenceNumber, {deviceId, commandID});
+    }
+
     header.commandID = commandID;
     header.deviceID = deviceId;
     qDebug() << " + Packet:";

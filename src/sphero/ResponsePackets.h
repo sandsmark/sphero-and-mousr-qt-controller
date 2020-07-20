@@ -3,8 +3,26 @@
 #include "BasicTypes.h"
 
 #include <QObject>
+#include <QtEndian>
+#include <QDebug>
 
 namespace sphero {
+
+// data needs to have correct endinanness
+template <typename PACKET>
+PACKET byteArrayToPacket(const QByteArray &data, bool *ok)
+{
+    if (size_t(data.size()) < sizeof(PACKET)) {
+        qWarning() << "Invalid packet size, need" << sizeof(PACKET) << "but got" << data.size();
+        *ok = false;
+        return {};
+    }
+    PACKET ret;
+    memcpy(&ret, data.data(), sizeof(PACKET));
+    *ok = true;
+    return ret;
+}
+
 
 #pragma pack(push,1)
 
@@ -83,6 +101,7 @@ struct AckResponsePacket
 public:
     // I don't think all these are valid here?
     enum ResponseType : uint8_t {
+        Invalid = 0x0,
         PowerNotification = 0x01,
         Level1Diagnostic = 0x02,
         SensorStream = 0x03,
@@ -106,7 +125,7 @@ public:
     uint8_t type;
 };
 
-struct PowerStatePacket : public AckResponsePacket {
+struct PowerStatePacket {;// : public AckResponsePacket {
     enum PowerState : uint8_t {
         BatteryCharging = 0x1,
         BatteryOK = 0x2,
@@ -120,7 +139,7 @@ struct PowerStatePacket : public AckResponsePacket {
     uint16_t numberOfCharges = 0;
     uint16_t secondsSinceCharge = 0;
 };
-static_assert(sizeof(PowerStatePacket) == 9);
+static_assert(sizeof(PowerStatePacket) == 8);
 
 // TODO: size/contents
 /// BB-8 and later
@@ -185,6 +204,12 @@ struct SensorStreamPacket
     int16_t acceleration; // 0 to 8000   1 mG
 
     Vector2D<int16_t> velocity; // -32768 to 32767 mm/s
+};
+
+struct RgbPacket {
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
 };
 
 static_assert(sizeof(LocatorPacket) == 7);

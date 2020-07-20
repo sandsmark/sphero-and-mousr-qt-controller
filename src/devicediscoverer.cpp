@@ -36,6 +36,9 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
 DeviceDiscoverer::~DeviceDiscoverer()
 {
     stopScanning();
+    if (m_device) {
+        m_device->deleteLater();
+    }
 }
 
 QObject *DeviceDiscoverer::device()

@@ -37,6 +37,8 @@ public:
         Internal = 0x00,
         Bootloader = 0x01,
         HardwareControl = 0x02,
+
+        InvalidTarget = 0xFF
     };
     Q_ENUM(CommandTarget)
 
@@ -67,7 +69,9 @@ public:
         RunL2Diags = 0x41,
         ClearCounters = 0x42,
         AssignCounter = 0x50,
-        PollTimes = 0x51
+        PollTimes = 0x51,
+
+        InvalidInternalCommand = 0xFF
     };
     Q_ENUM(InternalCommand)
 
@@ -123,7 +127,9 @@ public:
         SetSSBUnlockFlagsBlock = 0x72,
         ResetSoulBlock = 0x73,
         ReadOdometer = 0x75,
-        WritePersistentPage = 0x90
+        WritePersistentPage = 0x90,
+
+        InvalidHardwareCommand = 0xFF
     };
     Q_ENUM(HardwareCommand)
 
