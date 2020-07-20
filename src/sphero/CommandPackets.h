@@ -12,8 +12,7 @@ template <typename PACKET>
 QByteArray packetToByteArray(const PACKET &packet)
 {
     QByteArray ret(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
-    qToBigEndian<char*>(ret.data(), ret.size(), ret.data());
-    ret.detach();
+    qToBigEndian<char>(ret.data(), sizeof(PACKET), ret.data());
     return ret;
 }
 
