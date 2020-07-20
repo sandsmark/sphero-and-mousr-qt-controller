@@ -81,7 +81,7 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     QObject(parent),
     m_name(deviceInfo.name())
 {
-    static_assert(sizeof(Autoplay::Config) == 15);
+    static_assert(sizeof(Autoplay) == 15);
     static_assert(sizeof(Version) == 19);
 
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
