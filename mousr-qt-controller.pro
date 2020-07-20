@@ -1,7 +1,8 @@
 TARGET = mousr-qt-controller
 TEMPLATE = app
 
-CONFIG += sanitizer sanitize_undefined c++2a
+CONFIG += sanitizer sanitize_undefined # sanitize_address
+CONFIG += c++2a
 
 QT += quick bluetooth
 
