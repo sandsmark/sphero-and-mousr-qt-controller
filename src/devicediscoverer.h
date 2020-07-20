@@ -45,6 +45,7 @@ public:
 
 public slots:
     void connectDevice(const QString &name);
+    float signalStrength(const QString &name);
 
 signals:
     void statusStringChanged();

@@ -283,6 +283,15 @@ void DeviceDiscoverer::onRobotStatusChanged(const QString &message)
     m_lastDeviceStatusTimer.restart();
 }
 
+float DeviceDiscoverer::signalStrength(const QString &name)
+{
+    if (!m_availableDevices.contains(name)) {
+        qWarning() << "Unknown device" << name;
+        return 0;
+    }
+    return rssiToStrength(m_availableDevices[name].rssi());
+}
+
 void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
 {
     emit signalStrengthChanged(device.name(), rssiToStrength(device.rssi()));
