@@ -13,30 +13,9 @@ Rectangle {
     readonly property int margins: 10
     anchors.fill: parent
 
-    Lol.Spinner {
-        id: spinner
-        anchors.centerIn: parent
-
-        visible: !device.isConnected
-    }
-
-    Text {
-        id: statusString
-
-        anchors {
-            horizontalCenter: parent.horizontalCenter
-            top: spinner.bottom
-            topMargin: 20
-        }
-
-        font.bold: true
-        visible: !device.isConnected
-        text: DeviceDiscoverer.device.statusString
-    }
-
     Column {
         id: orientationView
-        visible: device.isConnected && !device.isCharging
+        visible: !device.isCharging
 
         x: robotView.margins
         y: robotView.margins
@@ -86,7 +65,7 @@ Rectangle {
 
 
     Image {
-        visible: device.isConnected && device.isCharging
+        visible: device.isCharging
 
         anchors {
             verticalCenter: parent.verticalCenter
@@ -105,7 +84,6 @@ Rectangle {
         id: statusColumn
         x: parent.width / 3
         y: robotView.margins
-        visible: device.isConnected
         width: parent.width / 3 - margins * 2
 
         Rectangle {
@@ -186,7 +164,6 @@ Rectangle {
         y: robotView.margins
         spacing: robotView.margins
         width: parent.width / 3 - margins * 2
-        visible: device.isConnected
 
         anchors {
             margins: robotView.margins
