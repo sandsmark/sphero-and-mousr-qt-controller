@@ -34,7 +34,7 @@ Window {
         anchors.fill: parent
         color: "black"
 
-        visible: !robotLoader.active
+        visible: !robotLoader.item
 
         Image {
             anchors.fill: parent
@@ -83,7 +83,7 @@ Window {
 
                 clip: true
 
-                visible: !DeviceDiscoverer.isError && !robotLoader.isActive
+                visible: !DeviceDiscoverer.device
                 model: DeviceDiscoverer.availableDevices
 
                 delegate: Lol.Button {
@@ -145,10 +145,11 @@ Window {
 
     Loader {
         id: robotLoader
-        active: DeviceDiscoverer.device && DeviceDiscoverer.device.isConnected
+        active: DeviceDiscoverer.device !== null && DeviceDiscoverer.device.isConnected
+
         anchors.fill: parent
         sourceComponent: {
-            if (!DeviceDiscoverer.device) {
+            if (!DeviceDiscoverer.device || !DeviceDiscoverer.device.isConnected) {
                 return undefined;
             }
             if (DeviceDiscoverer.device.deviceType === "Mousr") {
@@ -160,6 +161,5 @@ Window {
             console.warn("Unhandled device type " + DeviceDiscoverer.device.deviceType)
             return undefined;
         }
-//            DeviceDiscoverer.device ? (DeviceDiscoverer.device.deviceType === "Mousr" ?  mousrComponent : spheroComponent) : undefined
     }
 }
