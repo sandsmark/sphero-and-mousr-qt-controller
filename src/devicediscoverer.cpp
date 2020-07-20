@@ -242,11 +242,35 @@ void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
 
 bool DeviceDiscoverer::isSupportedDevice(const QBluetoothDeviceInfo &device)
 {
-    const QString name = device.name();
+    const QVector<quint16> manufacturerIds = device.manufacturerIds();
+    if (manufacturerIds.count() > 1) {
+        qDebug() << "Unexpected amount of manufacturer IDs" << device.name() << manufacturerIds;
+    }
 
+    if (manufacturerIds.contains(mousr::manufacturerID)) {
+        // It _seems_ like the manufacturer data is the reversed of most of the address, except the last part which is 0xFC in the address and 0x3C in the manufacturer data
+//        QByteArray deviceAddress = QByteArray::fromHex(device.address().toString().toLatin1());
+//        if (!deviceAddress.isEmpty()) {
+//            std::reverse(deviceAddress.begin(), deviceAddress.end());
+//            qDebug() << deviceAddress.toHex(':') << device.manufacturerData(mousr::petronicsManufacturerID).toHex(':').toUpper();
+//        }
+        return true;
+    }
+
+    if (manufacturerIds.contains(sphero::manufacturerID)) {
+        return true;
+    }
+
+    const QString name = device.name();
     if (name == QLatin1String("Mousr")) {
+        if (!manufacturerIds.isEmpty()) {
+            qDebug() << "unexpected manufacturer ID for mousr:" << manufacturerIds;
+        }
         return true;
     } else if (name.startsWith(QLatin1String("BB-"))) {
+        if (!manufacturerIds.isEmpty()) {
+            qDebug() << "unexpeced manufacturer ID for Sphero:" << manufacturerIds;
+        }
         return true;
     }
 

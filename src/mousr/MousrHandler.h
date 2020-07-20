@@ -14,6 +14,8 @@ class QBluetoothDeviceInfo;
 
 namespace mousr {
 
+static constexpr int manufacturerID = 1500;
+
 template<typename T>
 struct Vector3D {
     T x;

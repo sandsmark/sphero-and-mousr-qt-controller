@@ -15,6 +15,10 @@ class QBluetoothDeviceInfo;
 
 namespace sphero {
 
+// BB-8 at least
+static constexpr int manufacturerID = 12339;
+
+
 class SpheroHandler : public QObject
 {
     Q_OBJECT
