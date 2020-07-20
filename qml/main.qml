@@ -89,6 +89,8 @@ Window {
                 delegate: Lol.Button {
                     function updateText(strength) {
                         text = modelData + " (" + Math.floor(strength * 100) + "%)";
+
+                        active = strength > 0
                     }
 
                     Component.onCompleted: {

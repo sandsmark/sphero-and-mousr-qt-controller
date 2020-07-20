@@ -2,6 +2,7 @@ import QtQuick 2.0
 
 Item {
     property string text
+    property bool active: true
 
     signal clicked()
 
@@ -30,6 +31,6 @@ Item {
         id: title
         anchors.centerIn: parent
         text: parent.text
-        color: "white"
+        color: active ? "white" : "gray"
     }
 }
