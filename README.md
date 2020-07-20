@@ -1,8 +1,12 @@
 mousr-qt-controller
 ===================
 
-![screenshot](/screenshot.jpg)
+Screenshots
+-----------
+
 ![screenshot of scanning](/connecting.jpg)
+![screenshot](/screenshot.jpg)
+![screenshot](/sphero-screenshot.jpg)
 
 Very simple (for now) Qt based controller for the Mousr (and soon Sphero) cat
 toy, because the official app is ... lacking.
