@@ -138,7 +138,7 @@ QString MousrHandler::statusString()
 //        QTimer::singleShot(1000, this, &QObject::deleteLater);
         return tr("Failed to connect to %1").arg(name);
     } else {
-        return tr("Found %1, trying to establish connection...").arg(name);
+        return tr("Connecting to %1...").arg(name);
     }
 }
 
@@ -176,15 +176,6 @@ void MousrHandler::onServiceDiscovered(const QBluetoothUuid &newService)
     //qDebug() << "got service:"  << m_service->serviceName() << m_service->serviceUuid();
 
     connect(m_service, &QLowEnergyService::characteristicChanged, this, &MousrHandler::onCharacteristicChanged);
-    connect(m_service, &QLowEnergyService::characteristicRead, this, &MousrHandler::onCharacteristicRead);
-    //connect(m_service, &QLowEnergyService::characteristicWritten, this, [](const QLowEnergyCharacteristic &descriptor, const QByteArray &newValue) {
-    //        qDebug() << "Characteristic" << descriptor.uuid() << "wrote" << newValue;
-    //        });;
-
-    connect(m_service, &QLowEnergyService::descriptorRead, this, &MousrHandler::onDescriptorRead);
-    //connect(m_service, &QLowEnergyService::descriptorWritten, this, [](const QLowEnergyDescriptor &descriptor, const QByteArray &newValue) {
-    //        qDebug() << "Descriptor" << descriptor.uuid() << "wrote" << newValue;
-    //        });;
 
     connect(m_service, QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error), this, &MousrHandler::onServiceError);
     connect(m_service, &QLowEnergyService::stateChanged, this, &MousrHandler::onServiceStateChanged);
@@ -242,10 +233,10 @@ void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newStat
     //if (!sendCommand(Command::InitializeDevice, QDateTime::currentSecsSinceEpoch(), mbApiVersion)) {
     const quint32 currTime = QDateTime::currentSecsSinceEpoch();
     qDebug() << "Current time" << currTime;
-    sendSomeInit();
-//    if (!sendCommand(CommandType::InitializeDevice, mbApiVersion, currTime)) {
-//        qWarning() << "Failed to send init command";
-//    }
+//    sendSomeInit();
+    if (!sendCommand(CommandType::InitializeDevice, mbApiVersion, currTime)) {
+        qWarning() << "Failed to send init command";
+    }
 
 //    m_service->readCharacteristic(m_readCharacteristic);
     emit connectedChanged();
@@ -324,35 +315,6 @@ void MousrHandler::onServiceError(QLowEnergyService::ServiceError error)
     emit disconnected();
 }
 
-void MousrHandler::onCharacteristicRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
-{
-    if (characteristic != m_readCharacteristic) {
-        qWarning() << "data from unexpected characteristic" << characteristic.uuid() << data;
-        return;
-    }
-    qDebug() << "data from read characteristic" << data.toHex() << "length" << data.length() << data;
-    qDebug() << "data type:" << int(data[0]) << ResponseType(int(data[0]));
-
-//    emit dataRead(data);
-}
-
-void MousrHandler::onDescriptorRead(const QLowEnergyDescriptor &descriptor, const QByteArray &data)
-{
-
-    if (descriptor != m_readDescriptor) {
-        qWarning() << "data from unexpected descriptor" << descriptor.uuid() << data;
-        return;
-    }
-    if (data.isEmpty()) {
-        qWarning() << "got empty data";
-        return;
-    }
-    qDebug() << "data from read descriptor" << data;
-    qDebug() << "data type:" << int(data[0]);
-
-//    emit dataRead(data);
-}
-
 void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
 {
     if (characteristic != m_readCharacteristic) {
@@ -429,23 +391,6 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
     case AutoModeChanged: {
         qDebug() << "auto mode changed";
         m_autoplay = response.autoPlay.config;
-        //qDebug() << "autoplay, enabled:" << m_autoplay.enabled << "surface" << m_autoplay.surface << "tail:" << m_autoplay.tail << "gamemode:" << m_autoplay.gameMode << "playmode" << m_autoplay.playMode;
-        qDebug() << "enabled" << m_autoplay.enabled;
-        qDebug() << "surface" << m_autoplay.m_surface;
-        qDebug() << "tail" << m_autoplay.tail;
-        qDebug() << "speed" << m_autoplay.speed;
-        qDebug() << "gameMode" << m_autoplay.gameMode;
-        qDebug() << "playMode" << m_autoplay.m_drivingMode;
-        qDebug() << "pauseFrequency" << m_autoplay.pauseFrequency;
-        qDebug() << "confinedOrPauseTime" << m_autoplay.pauseTimeOrConfined;
-        qDebug() << "pauseLengthOrBackup" << m_autoplay.pauseLengthOrBackUp;
-        qDebug() << "allDay" << m_autoplay.allDay;
-
-        qDebug() << "unknown1" << m_autoplay.unknown1;
-        qDebug() << "unknown2" << m_autoplay.unknown2;
-        qDebug() << "unknown3" << m_autoplay.unknown3;
-        qDebug() << "response type" << m_autoplay.m_responseTo;
-        qDebug() << "unknown4" << m_autoplay.unknown4;
         qDebug() << m_autoplay;
         break;
     }

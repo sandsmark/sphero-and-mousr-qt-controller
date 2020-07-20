@@ -223,8 +223,6 @@ private slots:
     void onServiceStateChanged(QLowEnergyService::ServiceState newState);
     void onServiceError(QLowEnergyService::ServiceError error);
 
-    void onCharacteristicRead(const QLowEnergyCharacteristic &characteristic, const QByteArray &data);
-    void onDescriptorRead(const QLowEnergyDescriptor &characteristic, const QByteArray &data);
     void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
 private:
