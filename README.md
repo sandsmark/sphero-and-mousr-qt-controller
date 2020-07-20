@@ -1,4 +1,4 @@
-mousr-qt-controller
+Cat Robot Controller
 ===================
 
 Screenshots
