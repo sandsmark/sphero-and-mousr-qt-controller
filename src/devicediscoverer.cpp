@@ -166,10 +166,11 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
         return;
     }
 
-    updateRssi(device);
-    m_availableDevices[device.name()] = device;
 
+    m_availableDevices[device.name()] = device;
     emit availableDevicesChanged();
+
+    updateRssi(device);
 }
 
 void DeviceDiscoverer::onDeviceUpdated(const QBluetoothDeviceInfo &device, QBluetoothDeviceInfo::Fields fields)
