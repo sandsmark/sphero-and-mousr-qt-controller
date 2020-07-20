@@ -202,7 +202,6 @@ void DeviceDiscoverer::onDeviceDisconnected()
     m_availableDevices.clear();
     emit availableDevicesChanged();
 
-    m_scanning = true;
     if (m_lastDeviceStatus.isEmpty() || !m_lastDeviceStatusTimer.isValid() || m_lastDeviceStatusTimer.elapsed() > 20000) {
         m_lastDeviceStatus = tr("Unexpected disconnect from device");
         m_lastDeviceStatusTimer.restart();
