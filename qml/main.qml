@@ -87,15 +87,20 @@ Window {
                 model: DeviceDiscoverer.availableDevices
 
                 delegate: Lol.Button {
-                    property string signalText: ""
-                    text: modelData + signalText
+                    function updateText(strength) {
+                        text = modelData + " (" + Math.floor(strength * 100) + "%)";
+                    }
+
+                    Component.onCompleted: {
+                        updateText(DeviceDiscoverer.signalStrength(modelData))
+                    }
+
                     Connections {
                         target: DeviceDiscoverer
                         function onSignalStrengthChanged(deviceName, strength) {
-                            if (deviceName !== modelData) {
-                                return;
+                            if (deviceName === modelData) {
+                                updateText(strength)
                             }
-                            signalText = " (" + Math.floor(strength * 100) + "%)";
                         }
                     }
 
