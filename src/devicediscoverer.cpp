@@ -103,14 +103,15 @@ void DeviceDiscoverer::connectDevice(const QString &name)
 
     stopScanning();
 
-    QBluetoothDeviceInfo device = m_availableDevices[name];
+    const QBluetoothDeviceInfo &device = m_availableDevices[name];
 
-    if (name == "Mousr") {
+    const RobotType type = robotType(device);
+    if (type == Mousr) {
         mousr::MousrHandler *handler = new mousr::MousrHandler(device, this);
         connect(handler, &mousr::MousrHandler::disconnected, this, &DeviceDiscoverer::onDeviceDisconnected);
 //        connect(handler, &mousr::MousrHandler::connectedChanged, this, &DeviceDiscoverer::onRobotStatusChanged); todo
         m_device = handler;
-    } else if (device.name().startsWith("BB-")) {
+    } else if (type == Sphero) {
         qDebug() << "Found BB8";
 
         sphero::SpheroHandler *handler = new sphero::SpheroHandler(device, this);
@@ -162,7 +163,7 @@ inline void debugVisibleDevices(const QBluetoothDeviceInfo &device)
     if (device.manufacturerIds().isEmpty()) {
         return;
     }
-    if (DeviceDiscoverer::isSupportedDevice(device)) {
+    if (DeviceDiscoverer::robotType(device) != DeviceDiscoverer::Unknown) {
         return;
     }
 
@@ -206,7 +207,7 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
     debugVisibleDevices(device);
 #endif
 
-    if (!isSupportedDevice(device)) {
+    if (DeviceDiscoverer::robotType(device) == DeviceDiscoverer::Unknown) {
         return;
     }
 
@@ -224,7 +225,7 @@ void DeviceDiscoverer::onDeviceUpdated(const QBluetoothDeviceInfo &device, QBlue
     }
 #endif
 
-    if (!isSupportedDevice(device)) {
+    if (DeviceDiscoverer::robotType(device) == DeviceDiscoverer::Unknown) {
         return;
     }
 
@@ -297,7 +298,7 @@ void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
     emit signalStrengthChanged(device.name(), rssiToStrength(device.rssi()));
 }
 
-bool DeviceDiscoverer::isSupportedDevice(const QBluetoothDeviceInfo &device)
+DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceInfo &device)
 {
     const QVector<quint16> manufacturerIds = device.manufacturerIds();
     if (manufacturerIds.count() > 1) {
@@ -311,11 +312,11 @@ bool DeviceDiscoverer::isSupportedDevice(const QBluetoothDeviceInfo &device)
 //            std::reverse(deviceAddress.begin(), deviceAddress.end());
 //            qDebug() << deviceAddress.toHex(':') << device.manufacturerData(mousr::petronicsManufacturerID).toHex(':').toUpper();
 //        }
-        return true;
+        return Mousr;
     }
 
     if (manufacturerIds.contains(sphero::manufacturerID)) {
-        return true;
+        return Sphero;
     }
 
     const QString name = device.name();
@@ -323,13 +324,13 @@ bool DeviceDiscoverer::isSupportedDevice(const QBluetoothDeviceInfo &device)
         if (!manufacturerIds.isEmpty()) {
             qDebug() << "unexpected manufacturer ID for mousr:" << manufacturerIds;
         }
-        return true;
+        return Mousr;
     } else if (name.startsWith(QLatin1String("BB-"))) {
         if (!manufacturerIds.isEmpty()) {
             qDebug() << "unexpeced manufacturer ID for Sphero:" << manufacturerIds;
         }
-        return true;
+        return Sphero;
     }
 
-    return false;
+    return Unknown;
 }

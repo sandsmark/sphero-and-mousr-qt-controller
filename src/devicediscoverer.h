@@ -28,6 +28,11 @@ class DeviceDiscoverer : public QObject
 
 
 public:
+    enum RobotType {
+        Unknown,
+        Mousr,
+        Sphero
+    };
     explicit DeviceDiscoverer(QObject *parent = nullptr);
     ~DeviceDiscoverer();
 
@@ -41,7 +46,7 @@ public:
 
     bool isScanning() const { return m_scanning; }
 
-    static bool isSupportedDevice(const QBluetoothDeviceInfo &device);
+    static RobotType robotType(const QBluetoothDeviceInfo &device);
 
 public slots:
     void connectDevice(const QString &name);
