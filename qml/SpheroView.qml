@@ -13,7 +13,7 @@ Rectangle {
 
     Connections {
         target: device
-        onConnectedChanged: {
+        function onConnectedChanged() {
             console.log(" Connected changed! " + device.isConnected)
         }
     }
