@@ -2,6 +2,8 @@ import QtQuick 2.0
 import QtQuick.Window 2.12
 import com.iskrembilen 1.0
 
+import QtGraphicalEffects 1.12
+
 // I don't understand qml anymore...
 import "." as Lol
 
@@ -50,8 +52,16 @@ Rectangle {
         font.bold: true
         text: device.name
     }
+    RadialGradient {
+        anchors.fill: image
+        gradient: Gradient {
+            GradientStop { position: 0.3; color: device.color }
+            GradientStop { position: 0.5; color: "transparent" }
+        }
+    }
     Image {
-        visible: device.isConnected
+        id: image
+        visible: true//device.isConnected
         anchors {
             top: name.bottom
             topMargin: 20
@@ -67,6 +77,12 @@ Rectangle {
             }
         }
     }
+//    ColorOverlay {
+//        anchors.fill: image
+//        source: image
+//        color: device.color
+//        opacity: 0.3
+//    }
 
     Text {
         id: signalStrength

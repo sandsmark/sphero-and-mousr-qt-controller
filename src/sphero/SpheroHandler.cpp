@@ -409,10 +409,6 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     switch(header.type) {
     case ResponsePacketHeader::Response: {
         qDebug() << " - response" << ResponsePacketHeader::PacketType(header.packetType);
-        if (header.packetType == ResponsePacketHeader::InvalidParameter) {
-            qWarning() << "We sent an invalid parameter!";
-            return;
-        }
 
         break;
     }
@@ -463,6 +459,16 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         }
         qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
 
+        if (header.packetType == ResponsePacketHeader::InvalidParameter) {
+            qWarning() << "We sent an invalid parameter!";
+            if (m_pendingSyncRequests.contains(header.sequenceNumber)) {
+                qDebug() << m_pendingSyncRequests.take(header.sequenceNumber);
+            } else {
+                qDebug() << "unknown request";
+            }
+            return;
+        }
+
         if (!m_pendingSyncRequests.contains(header.sequenceNumber)) {
             qWarning() << "this was not an expected response";
             return;
@@ -500,7 +506,8 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
                 if (!ok) {
                     return;
                 }
-                qDebug() << QColor(resp.red, resp.green, resp.blue);
+                m_color = QColor (resp.red, resp.green, resp.blue);
+                emit colorChanged();
                 break;
             }
             default:
