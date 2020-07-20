@@ -41,6 +41,8 @@ public:
 
     bool isScanning() const { return m_scanning; }
 
+    static bool isSupportedDevice(const QBluetoothDeviceInfo &device);
+
 public slots:
     void connectDevice(const QString &name);
 
@@ -66,7 +68,6 @@ private slots:
 private:
     void updateRssi(const QBluetoothDeviceInfo &device);
 
-    static bool isSupportedDevice(const QBluetoothDeviceInfo &device);
 
     QPointer<QObject> m_device;
 

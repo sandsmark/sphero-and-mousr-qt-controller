@@ -157,6 +157,44 @@ void DeviceDiscoverer::stopScanning()
     emit statusStringChanged();
 }
 
+inline void debugVisibleDevices(const QBluetoothDeviceInfo &device)
+{
+    if (device.manufacturerIds().isEmpty()) {
+        return;
+    }
+    if (DeviceDiscoverer::isSupportedDevice(device)) {
+        return;
+    }
+
+    static const QSet<int> knownIds({
+        223, // Misfit Wearables
+        224, // Google
+        76, // Apple
+        117, // Samsung
+        1447, // Sonos
+        6, // Microsoft
+        89, //Nordic Semiconductor ASA
+        272, // Nippon Seiki Co., Ltd.
+        196, // ​​LG Electronics​
+        761, // IMAGINATION TECHNOLOGIES LTD
+        135, // Garmin International, Inc.
+        474, // Logitech International SA
+
+        // Unregistered/illegal
+        9474, // 'Expert'
+        0x3638, // UVC G3 camera?
+        2561, // LE-Bose Free SoundSport
+        61374, // Anki (Vector Cube)
+    });
+
+    for (const quint16 mfgid : device.manufacturerIds()) {
+        if (knownIds.contains(mfgid)) {
+            return;
+        }
+        qDebug() << "discovered" << device.name() << device.address().toString() << device.manufacturerIds() << device.minorDeviceClass() << device.majorDeviceClass() << device.manufacturerData() << device.serviceClasses() << device.rssi();
+    }
+}
+
 void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
 {
     if (m_device) {
@@ -164,10 +202,13 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
         return;
     }
 
+#ifndef NDEBUG
+    debugVisibleDevices(device);
+#endif
+
     if (!isSupportedDevice(device)) {
         return;
     }
-
 
     m_availableDevices[device.name()] = device;
     emit availableDevicesChanged();
@@ -177,6 +218,12 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
 
 void DeviceDiscoverer::onDeviceUpdated(const QBluetoothDeviceInfo &device, QBluetoothDeviceInfo::Fields fields)
 {
+#ifndef NDEBUG
+    if (!(fields & QBluetoothDeviceInfo::Field::RSSI)) {
+        debugVisibleDevices(device);
+    }
+#endif
+
     if (!isSupportedDevice(device)) {
         return;
     }
