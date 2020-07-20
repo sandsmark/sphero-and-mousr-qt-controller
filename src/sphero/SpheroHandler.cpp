@@ -74,7 +74,16 @@ void SpheroHandler::disconnectFromRobot()
 
     setAutoStabilize(false);
     goToSleep();
+
+    // Disconnect from device invalidates
+    disconnect(m_mainService, nullptr, this, nullptr);
+    m_mainService->deleteLater();
+    disconnect(m_radioService, nullptr, this, nullptr);
+    m_radioService->deleteLater();
+
     m_deviceController->disconnectFromDevice();
+
+    qDebug() << "Disconnected from robot";
 }
 
 bool SpheroHandler::isConnected()
