@@ -101,6 +101,8 @@ void DeviceDiscoverer::connectDevice(const QString &name)
         return;
     }
 
+    stopScanning();
+
     QBluetoothDeviceInfo device = m_availableDevices[name];
 
     if (name == "Mousr") {
@@ -116,13 +118,13 @@ void DeviceDiscoverer::connectDevice(const QString &name)
         connect(handler, &sphero::SpheroHandler::statusMessageChanged, this, &DeviceDiscoverer::onRobotStatusChanged);
         m_device = handler;
     } else {
-        qDebug() << "unknown" << device.name();
+        qWarning() << "unknown device!" << device.name();
+        Q_ASSERT(false);
         return;
     }
 
     QQmlEngine::setObjectOwnership(m_device, QQmlEngine::CppOwnership);
     emit deviceChanged();
-    stopScanning();
 
     m_availableDevices.clear();
     emit availableDevicesChanged();
