@@ -237,9 +237,6 @@ void DeviceDiscoverer::onRobotStatusChanged(const QString &message)
 
 void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
 {
-    if (device.rssi() == 0) {
-        return;
-    }
     emit signalStrengthChanged(device.name(), rssiToStrength(device.rssi()));
 }
 
