@@ -35,6 +35,9 @@ struct Quaternion {
 
 inline float rssiToStrength(const int rssi)
 {
+    if (rssi == 0) { // special case in QtBluetooth apparently
+        return 0.f;
+    }
     if(rssi <= -100) {
         return 0.f;
     } else if(rssi >= -50) {
