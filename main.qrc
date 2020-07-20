@@ -14,5 +14,6 @@
         <file>images/bb8.png</file>
         <file>images/corners.svg</file>
         <file>images/end.svg</file>
+        <file>qml/Button.qml</file>
     </qresource>
 </RCC>

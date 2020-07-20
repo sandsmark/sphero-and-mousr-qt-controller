@@ -86,10 +86,9 @@ Window {
                 visible: !DeviceDiscoverer.isError && !robotLoader.isActive
                 model: DeviceDiscoverer.availableDevices
 
-                delegate: Item {
-                    width: 200
-                    height: 60
+                delegate: Lol.Button {
                     property string signalText: ""
+                    text: modelData + signalText
                     Connections {
                         target: DeviceDiscoverer
                         function onSignalStrengthChanged(deviceName, strength) {
@@ -100,29 +99,8 @@ Window {
                         }
                     }
 
-                    BorderImage {
-                        source: "qrc:/images/end.svg"
-                        anchors.fill: parent
-                        opacity: matchMouse.containsMouse ? 1 : 0.5
-                        Behavior on opacity { NumberAnimation { duration: 200 } }
-                        border { left: 25; top: 25; right: 25; bottom: 25 }
-                    }
-
-                    MouseArea {
-                        id: matchMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            DeviceDiscoverer.connectDevice(modelData)
-                        }
-                    }
-
-                    Text {
-                        id: title
-                        text: modelData + signalText
-                        anchors.centerIn: parent
-                        color: "white"
+                    onClicked: {
+                        DeviceDiscoverer.connectDevice(modelData)
                     }
                 }
             }
