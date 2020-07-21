@@ -19,13 +19,11 @@ bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
         qWarning() << "trying to send when unconnected";
         return false;
     }
-    QByteArray buffer(sizeof(CommandPacket), 0);
-    qToLittleEndian<CommandPacket>(&packet, 1, buffer.data());
+    QByteArray buffer(sizeof(CommandPacket), Qt::Uninitialized);
+    qToLittleEndian<char>(&packet, sizeof(CommandPacket), buffer.data());
 
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
 
-    qToBigEndian<char>(buffer.data(), buffer.size(), buffer.data());
-    qDebug() << buffer.toHex(':');
     return true;
 }
 
