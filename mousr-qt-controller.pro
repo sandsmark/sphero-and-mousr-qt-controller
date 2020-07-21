@@ -13,6 +13,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     src/main.cpp \
     src/devicediscoverer.cpp \
+    src/mousr/AutoplayConfig.cpp \
     src/mousr/MousrHandler.cpp \
     src/sphero/SpheroHandler.cpp \
 

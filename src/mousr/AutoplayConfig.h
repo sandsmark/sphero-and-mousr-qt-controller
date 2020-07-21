@@ -6,28 +6,32 @@
 
 namespace mousr {
 
-struct Autoplay {
+struct AutoplayConfig {
     Q_GADGET
 
     Q_PROPERTY(uint8_t pauseTime READ pauseTime WRITE setPauseTime)
     Q_PROPERTY(uint8_t surface MEMBER m_surface)
 
 public:
-    static constexpr uint8_t defaultModes[12][12] = {
-        //           . gamemode (look at the dot)
-        {1, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0}, // OpenWander, Calm
-        {1, 0, 0, 2, 0, 1, 20,  6, 0, 0, 0, 0}, // OpenWander, Aggressive
-        {1, 0, 0, 0, 0, 0,  0,  0, 0, 0, 0, 0}, // OpenWander, Custom
-        {1, 0, 0, 0, 1, 0, 15,  1, 0, 0, 0, 0}, // WallHugger, Calm
-        {1, 0, 0, 1, 1, 1,  6,  0, 0, 0, 0, 0}, // WallHugger, Aggressive
-        {1, 0, 0, 0, 1, 0,  0,  0, 0, 0, 0, 0}, // WallHugger, Custom
-        {1, 0, 0, 0, 2, 0,  3,  0, 0, 0, 0, 0}, // BackAndForth, Calm
-        {1, 0, 0, 1, 2, 1, 10,  0, 0, 0, 0, 0}, // BackAndForth, Aggressive
-        {1, 0, 0, 0, 2, 0,  0,  0, 0, 0, 0, 0}, // BackAndForth, Custom
-        {1, 0, 0, 0, 3, 0, 10,  6, 1, 0, 0, 0}, // Stationary, Calm
-        {1, 0, 0, 2, 3, 0, 20,  3, 1, 0, 0, 0}, // Stationary, Aggressive
-        {1, 0, 0, 0, 3, 0,  0,  0, 0, 0, 0, 0}, // Stationary, Custom
+    enum StandardGameModes {
+        OpenWanderCalm = 0,
+        OpenWanderAggressive = 1,
+        OpenWanderCustom = 2,
+
+        WallhuggerCalm = 3,
+        WallhuggerAggressive = 4,
+        WallhuggerCustom = 5,
+
+        BackAndForthCalm = 6,
+        BackAndForthAggressive = 7,
+        BackAndForthCustom = 8,
+
+        StationaryCalm = 9,
+        StationaryAggressive = 10,
+        StationaryCustom = 11,
     };
+    Q_ENUM(StandardGameModes)
+
     enum Surface : uint8_t {
         Carpet = 0,
         BareFloor = 1,
@@ -98,11 +102,11 @@ public:
 
     uint8_t pauseTime() const {
         switch(gameMode) {
-        case Autoplay::WallHugger:
+        case AutoplayConfig::WallHugger:
             return pauseFrequency;
-        case Autoplay::OpenWander:
-        case Autoplay::BackAndForth:
-        case Autoplay::Stationary:
+        case AutoplayConfig::OpenWander:
+        case AutoplayConfig::BackAndForth:
+        case AutoplayConfig::Stationary:
             return pauseTimeOrConfined;
         default:
             qWarning() << "unhandled game mode" << gameMode;
@@ -140,6 +144,8 @@ public:
         pauseLengthOrBackUp = isBackUp;
     }
 
+    static AutoplayConfig createConfig(StandardGameModes gamemode);
+
     Q_INVOKABLE DrivingMode drivingMode() const { return DrivingMode(m_drivingMode); }
     Q_INVOKABLE void setDrivingMode(uint8_t mode) {
         switch(gameMode) {
@@ -165,14 +171,14 @@ public:
     }
     Surface surface() const { return Surface(m_surface); }
 } __attribute__((packed));
-static_assert(sizeof(Autoplay) == 15);
+static_assert(sizeof(AutoplayConfig) == 15);
 
-inline QDebug operator<<(QDebug debug, const Autoplay &c) {
+inline QDebug operator<<(QDebug debug, const AutoplayConfig &c) {
     QDebugStateSaver saver(debug);
     debug.nospace() << "AutoPlayConfig ("
                     << "Enabled: " << c.enabled << ", "
                     << "Surface: " << c.surface() << ", "
-                    << "Tail: " << Autoplay::TailType(c.tail) << ", "
+                    << "Tail: " << AutoplayConfig::TailType(c.tail) << ", "
                     << "Speed: " << c.speed << ", "
                     << "Game: " << c.modeName() << ", "
                     << "PauseFrequency: " << c.pauseFrequency << ", "
@@ -185,10 +191,10 @@ inline QDebug operator<<(QDebug debug, const Autoplay &c) {
     }
 
     switch (c.gameMode) {
-    case Autoplay::GameMode::WallHugger:
+    case AutoplayConfig::GameMode::WallHugger:
         debug.nospace() << "Confined " << c.pauseTime() << ", ";
         break;
-    case Autoplay::GameMode::BackAndForth:
+    case AutoplayConfig::GameMode::BackAndForth:
         debug.nospace() << "Driving " << c.drivingMode() << ", ";
         break;
     default:
@@ -207,4 +213,4 @@ inline QDebug operator<<(QDebug debug, const Autoplay &c) {
 
 }//namespace mousr
 
-Q_DECLARE_METATYPE(mousr::Autoplay*)
+Q_DECLARE_METATYPE(mousr::AutoplayConfig)

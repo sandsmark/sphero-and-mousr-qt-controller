@@ -57,7 +57,7 @@ class MousrHandler : public QObject
 
     Q_PROPERTY(bool soundVolume READ soundVolume NOTIFY soundVolumeChanged)
 
-    Q_PROPERTY(Autoplay *autoPlay READ autoPlay NOTIFY autoPlayChanged)
+    Q_PROPERTY(AutoplayConfig *autoPlay READ autoPlay NOTIFY autoPlayChanged)
 
 public: // enums
     enum class CommandType : uint16_t {
@@ -198,7 +198,7 @@ public:
 
     void sendSomeInit();
 
-    Autoplay *autoPlay() { return &m_autoplay; }
+    AutoplayConfig *autoPlay() { return &m_autoplay; }
 
 signals:
     void connectedChanged();
@@ -277,7 +277,7 @@ private:
         char unknown[18];
     };
     struct AutoPlayConfigResponse {
-        Autoplay config;
+        AutoplayConfig config;
         uint32_t unknown;
 //        char unknown[4];
     };
@@ -349,9 +349,9 @@ private:
 
     QString m_name;
 
-    Autoplay m_autoplay;
+    AutoplayConfig m_autoplay;
 };
 
-QDebug operator<<(QDebug debug, const Autoplay &c);
+QDebug operator<<(QDebug debug, const AutoplayConfig &c);
 
 } // namespace mousr
