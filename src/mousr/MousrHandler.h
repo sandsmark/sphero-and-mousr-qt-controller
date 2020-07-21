@@ -314,7 +314,8 @@ private:
     };
 
     struct CommandPacket {
-        CommandPacket(const CommandType command) : m_command(command) {}
+        CommandPacket(const CommandType command) : vector3D({}), // we have to initialize ourselves, so idk initialize the 3d vector
+            m_command(command) {}
 
         const uint8_t magic = 48;
         union {
