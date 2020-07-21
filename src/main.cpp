@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     qmlRegisterUncreatableType<mousr::MousrHandler>("com.iskrembilen", 1, 0, "DeviceHandler", "Only valid when discovered");
-    qmlRegisterAnonymousType<mousr::AutoplayConfig>("com.iskrembilen", 1);//, "AutoplayConfig", "Only valid when discovered");
+    qmlRegisterUncreatableType<mousr::AutoplayConfig>("com.iskrembilen", 1, 0, "AutoplayConfig", "Only for enums and stuff");
     qmlRegisterUncreatableType<sphero::SpheroHandler>("com.iskrembilen", 1, 0, "SpheroHandler", "Only valid when discovered");
 
     qmlRegisterSingletonType<DeviceDiscoverer>("com.iskrembilen", 1, 0, "DeviceDiscoverer", [](QQmlEngine *, QJSEngine*) -> QObject* {

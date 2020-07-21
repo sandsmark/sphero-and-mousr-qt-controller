@@ -9,9 +9,6 @@ namespace mousr {
 struct AutoplayConfig {
     Q_GADGET
 
-    Q_PROPERTY(uint8_t pauseTime READ pauseTime WRITE setPauseTime)
-    Q_PROPERTY(uint8_t surface MEMBER m_surface)
-
 public:
     enum StandardGameModes {
         OpenWanderCalm = 0,
@@ -31,6 +28,8 @@ public:
         StationaryCustom = 11,
     };
     Q_ENUM(StandardGameModes)
+
+    static AutoplayConfig createConfig(StandardGameModes gamemode);
 
     enum Surface : uint8_t {
         Carpet = 0,
@@ -68,40 +67,55 @@ public:
     };
     Q_ENUM(GameMode)
 
+
+    static QStringList gameModeNames() {
+        return {
+            "Off",
+            "Open Wandering",
+            "Wall Hugger",
+            "Back and Forth",
+            "Stationary"
+        };
+    }
+    static QStringList drivingModeNames() {
+        return {
+            "DriveStraight",
+            "Snaking"
+        };
+    }
+
+    ///////////////////////
+    /// Actual contents ///
+    ///////////////////////
+
     uint8_t enabled = 0; // 0
 
     uint8_t m_surface = 0; // 1
     uint8_t tail = 0; // 2
-
     uint8_t speed = 0; // 3
 
-    uint8_t gameMode = 0; // 4
+    uint8_t m_gameMode = 0; // 4
     uint8_t m_drivingMode = 0; // 5
-
-    //GameMode gameMode = OffMode; // 4 --- also PresetMode?
-    //PlayMode playMode = DriveStraight; // 5
 
     // Values used: 0, 5, 10, 20, 30, 60, 255
     uint8_t pauseFrequency = 0; // 6
-
     uint8_t pauseTimeOrConfined = 0; // 7
 
     // Values used for pause time; 3, 6, 10, 15, 20, 0 (all day mode)
     uint8_t pauseLengthOrBackUp = 0; // 8
-
     uint8_t allDay = 0; // 9
 
     uint8_t unknown1 = 0; // 10
     uint8_t unknown2 = 0; // 11
     uint8_t unknown3 = 0; // 12
 
+    //Response response = Response::Nack;
     uint8_t m_responseTo = 0; // 13
 
-    //Response response = Response::Nack; // 13
     uint8_t unknown4 = 0; // 14
 
     uint8_t pauseTime() const {
-        switch(gameMode) {
+        switch(m_gameMode) {
         case AutoplayConfig::WallHugger:
             return pauseFrequency;
         case AutoplayConfig::OpenWander:
@@ -109,12 +123,12 @@ public:
         case AutoplayConfig::Stationary:
             return pauseTimeOrConfined;
         default:
-            qWarning() << "unhandled game mode" << gameMode;
+            qWarning() << "unhandled game mode" << m_gameMode;
             return pauseTimeOrConfined;
         }
     }
     void setPauseTime(uint8_t time) {
-        switch(gameMode) {
+        switch(m_gameMode) {
         case WallHugger:
             pauseFrequency = time;
             break;
@@ -124,52 +138,59 @@ public:
             pauseTimeOrConfined = time;
             break;
         default:
-            qWarning() << "unhandled game mode" << gameMode;
+            qWarning() << "unhandled game mode" << m_gameMode;
             pauseTimeOrConfined = time;
         }
     }
 
     void setConfineArea(bool isConfined) {
-        if (gameMode != WallHugger) {
-            qWarning() << "Confined is only used in WallHugger mode, not" << gameMode;
+        if (m_gameMode != WallHugger) {
+            qWarning() << "Confined is only used in WallHugger mode, not" << m_gameMode;
         }
         pauseTimeOrConfined = isConfined;
     }
 
     bool backUp() const { return pauseLengthOrBackUp; }
     void setBackUp(bool isBackUp) {
-        if (gameMode != GameMode::Stationary) {
-            qWarning() << "BackUp only used in Stationary, not in" << gameMode;
+        if (m_gameMode != GameMode::Stationary) {
+            qWarning() << "BackUp only used in Stationary, not in" << m_gameMode;
         }
         pauseLengthOrBackUp = isBackUp;
     }
 
-    static AutoplayConfig createConfig(StandardGameModes gamemode);
-
-    Q_INVOKABLE DrivingMode drivingMode() const { return DrivingMode(m_drivingMode); }
-    Q_INVOKABLE void setDrivingMode(uint8_t mode) {
-        switch(gameMode) {
+    DrivingMode drivingMode() const { return DrivingMode(m_drivingMode); }
+    void setDrivingMode(uint8_t mode) {
+        switch(m_gameMode) {
         case BackAndForth:
             m_drivingMode = DrivingMode(mode);
             break;
         default:
-            qWarning() << "Driving mode not used in game mode" << gameMode;
+            qWarning() << "Driving mode not used in game mode" << m_gameMode;
             break;
         }
 
         m_drivingMode = DrivingMode(mode);
     }
 
-    Q_INVOKABLE QString modeName() const {
-        switch (gameMode) {
+    GameMode gameMode() const { return GameMode(m_gameMode); }
+    void setGameMode(const GameMode mode) { m_gameMode = mode; }
+
+    QString modeName() const {
+        switch (m_gameMode) {
         case GameMode::OffMode:
             return "Off";
         default:
             break;
         }
-        return "Unknown mode (" + QString::number(gameMode) + ")";
+        return "Unknown mode (" + QString::number(m_gameMode) + ")";
     }
+
+
     Surface surface() const { return Surface(m_surface); }
+    void setSurface(const Surface surface) { m_surface = surface; }
+    void setTailType(const TailType type) { tail = type; }
+    TailType tailType() const { return TailType(tail); }
+
 } __attribute__((packed));
 static_assert(sizeof(AutoplayConfig) == 15);
 
@@ -190,7 +211,7 @@ inline QDebug operator<<(QDebug debug, const AutoplayConfig &c) {
         debug.nospace() << c.pauseTime() << ", ";
     }
 
-    switch (c.gameMode) {
+    switch (c.m_gameMode) {
     case AutoplayConfig::GameMode::WallHugger:
         debug.nospace() << "Confined " << c.pauseTime() << ", ";
         break;
@@ -211,6 +232,5 @@ inline QDebug operator<<(QDebug debug, const AutoplayConfig &c) {
     return debug.maybeSpace();
 }
 
-}//namespace mousr
 
-Q_DECLARE_METATYPE(mousr::AutoplayConfig)
+}//namespace mousr

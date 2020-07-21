@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QtEndian>
+#include <QQmlEngine>
 
 namespace mousr {
 
@@ -80,6 +81,7 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     m_name(deviceInfo.name())
 {
     static_assert(sizeof(AutoplayConfig) == 15);
+
     static_assert(sizeof(Version) == 19);
 
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
@@ -226,17 +228,10 @@ void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newStat
     // fucking read descriptor to get characteristicChanged to work?
     m_service->writeDescriptor(m_readDescriptor, QByteArray::fromHex("0100"));
 
-//    qDebug() << "Requested notifications on values changes";
-
-    //if (!sendCommand(Command::InitializeDevice, QDateTime::currentSecsSinceEpoch(), mbApiVersion)) {
-    const quint32 currTime = QDateTime::currentSecsSinceEpoch();
-    qDebug() << "Current time" << currTime;
-//    sendSomeInit();
-    if (!sendCommand(CommandType::InitializeDevice, mbApiVersion, currTime)) {
+    if (!sendCommand(CommandType::InitializeDevice, mbApiVersion, quint32(QDateTime::currentSecsSinceEpoch()))) {
         qWarning() << "Failed to send init command";
     }
 
-//    m_service->readCharacteristic(m_readCharacteristic);
     emit connectedChanged();
 }
 
@@ -271,15 +266,6 @@ void MousrHandler::setSoundVolume(const int volumePercent)
         m_volume = volumePercent;
     }
     emit soundVolumeChanged();
-}
-
-void MousrHandler::sendSomeInit()
-{
-    const char bytes[] = {
-        0x30, 0x03, 0x00, 0x00, 0x00, 0x1f, 0x63, 0x13, 0x5f, 0x00, 0x00, 0x00, 0x00, 0x1c, 0x00
-    };
-    qDebug() << QByteArray(bytes, sizeof(bytes)).toHex(':');
-    m_service->writeCharacteristic(m_writeCharacteristic, QByteArray(bytes, sizeof(bytes)));
 }
 
 void MousrHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
@@ -388,8 +374,9 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
     }
     case AutoModeChanged: {
         qDebug() << "auto mode changed";
-        m_autoplay = response.autoPlay.config;
+        m_autoplay = std::move(response.autoPlay.config);
         qDebug() << m_autoplay;
+        emit autoPlayChanged();
         break;
     }
 

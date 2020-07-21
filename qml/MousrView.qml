@@ -152,12 +152,10 @@ Rectangle {
         Text {
             width: statusColumn.width
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("Pause time: ") + device.autoPlay.pauseTime
+            text: qsTr("Pause time: ") + device.autoplayPauseTime
             opacity: 0.25
         }
     }
-
-
 
     Column {
         id: controls
@@ -176,9 +174,44 @@ Rectangle {
             text: qsTr("Chirp")
         }
 
-        CheckBox {
-            text: qsTr("Auto mode")
-            checked: device.isAutoRunning
+        GroupBox {
+            title: qsTr("Auto mode")
+            width: parent.width - margins
+
+            Column {
+                spacing: margins
+
+                CheckBox {
+                    text: qsTr("Enabled")
+                    checked: device.isAutoRunning
+                    onCheckedStateChanged: {
+                        console.log("Disable or enable, what u want", checkedState)
+                    }
+                }
+
+                ComboBox {
+                    model: device.autoplayGameModeNames()
+                    currentIndex: device.autoplayGameMode
+                    onActivated: {
+                        device.autoplayGameMode = index
+
+                        // Restore the binding
+                        currentIndex = Qt.binding(function() { return device.autoplayGameMode })
+                    }
+                }
+
+                ComboBox {
+                    model: device.autoplayDrivingModeNames()
+                    currentIndex: device.autoplayDrivingMode
+                    onActivated: {
+                        device.autoplayDrivingMode = index
+
+                        // Restore the binding
+                        currentIndex = Qt.binding(function() { return device.autoplayDrivingMode })
+                    }
+                }
+            }
         }
+
     }
 }

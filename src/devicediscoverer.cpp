@@ -14,6 +14,7 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     m_discoveryAgent = new QBluetoothDeviceDiscoveryAgent(this);
 
     m_adapter = new QBluetoothLocalDevice(this);
+    m_adapter->setHostMode(QBluetoothLocalDevice::HostPoweredOff);
 
     connect(m_adapter, &QBluetoothLocalDevice::error, this, &DeviceDiscoverer::onAdapterError);
     connect(this, &DeviceDiscoverer::availableDevicesChanged, this, &DeviceDiscoverer::statusStringChanged);
@@ -95,7 +96,7 @@ QStringList DeviceDiscoverer::availableDevices() const
 void DeviceDiscoverer::connectDevice(const QString &name)
 {
     if (m_device) {
-        qWarning() << "already have device, skipping" << name;
+        qWarning() << "already have device, not connecting to" << name;
         return;
     }
 
@@ -202,7 +203,7 @@ inline void debugVisibleDevices(const QBluetoothDeviceInfo &device)
 void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
 {
     if (m_device) {
-        qWarning() << "already have device, skipping" << device.name();
+        qWarning() << "already have device, not checkking" << device.name();
         return;
     }
 
