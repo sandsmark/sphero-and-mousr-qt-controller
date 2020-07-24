@@ -1,5 +1,7 @@
 import QtQuick 2.0
 import QtQuick.Window 2.12
+import QtGraphicalEffects 1.13
+
 import com.iskrembilen 1.0
 
 // I don't understand qml anymore...
@@ -29,18 +31,81 @@ Window {
         }
     }
 
-    Rectangle {
+    Image {
+        anchors.fill: parent
+        source: "qrc:images/bg.png"
+        fillMode: Image.Tile
+    }
+
+    Repeater {
+        model: 9
+        Item {
+            anchors.fill: parent
+            Item {
+                id: layer1
+                property int layerIndex: index + 1
+                anchors.fill: parent
+                visible: false
+
+                Repeater {
+                    model: 10
+                    Rectangle {
+                        id: bubble
+                        color: "lightblue"
+                        property real fromX: Math.random() * window.width - width
+                        property real fromY: Math.random() * window.height - height
+                        property real toX: Math.random() * window.width - width
+                        property real toY: Math.random() * window.height - height
+
+                        x: fromX
+                        y: fromY
+                        width: Math.random() * 10 + layer1.layerIndex * 10
+                        height: width
+                        radius: width / 2
+
+                        Component.onCompleted: {
+                            animStartTimer.start()
+                        }
+                        Timer {
+                            id: animStartTimer
+                            interval: Math.random() * 5000
+                            repeat: false
+                            onTriggered: { xAnim.start(); yAnim.start(); }
+                        }
+
+                        SequentialAnimation on x {
+                            id: xAnim
+                            running: false
+                            loops: Animation.Infinite
+                            PropertyAnimation { easing.type: Easing.InOutSine; to: bubble.toX; duration: Math.random() * 1000 + 10000 }
+                            PropertyAnimation { easing.type: Easing.InOutSine; to: bubble.fromX; duration: Math.random() * 1000 + 10000 }
+                        }
+                        SequentialAnimation on y {
+                            id: yAnim
+                            running: false
+                            loops: Animation.Infinite
+                            PropertyAnimation { easing.type: Easing.InOutSine; to: bubble.toY; duration: Math.random() * 1000 + 10000 }
+                            PropertyAnimation { easing.type: Easing.InOutSine; to: bubble.fromY; duration: Math.random() * 1000 + 10000 }
+                        }
+                    }
+                }
+            }
+
+            FastBlur {
+                anchors.fill: layer1
+                source: layer1
+                radius: 10 * index
+                opacity: 1 - layer1.layerIndex * 0.05
+            }
+        }
+    }
+
+    Item {
         id: deviceDiscovery
         anchors.fill: parent
-        color: "black"
 
-        visible: !robotLoader.item
-
-        Image {
-            anchors.fill: parent
-            source: "qrc:images/bg.png"
-            fillMode: Image.Tile
-        }
+        visible: !robotLoader.active
+        opacity: 0.75
 
         BorderImage {
             anchors.fill: statusBox
@@ -169,4 +234,5 @@ Window {
             return undefined;
         }
     }
+
 }
