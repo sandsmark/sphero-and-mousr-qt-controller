@@ -313,6 +313,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
 
 
     ResponsePacket response;
+
     static_assert(sizeof(response) == 20);
     qFromLittleEndian<ResponsePacket>(data.data(), 1, &response);
 
@@ -328,27 +329,39 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
 
     switch(response.type){
     case DeviceOrientation: {
-        // I just assume the order here, haven't bothered testing
-        m_rotX = response.orientation.rotation.x;
-        m_rotY = response.orientation.rotation.y;
-        m_rotZ = response.orientation.rotation.z;
-        m_isFlipped = response.orientation.isFlipped;
-
-        emit orientationChanged();
+        if (!fuzzyVectorsEqual(response.orientation.rotation, m_rotation)) {
+            m_rotation = response.orientation.rotation;
+            emit orientationChanged();
+        }
+        if (response.orientation.isFlipped != m_isFlipped) {
+            m_isFlipped = response.orientation.isFlipped;
+            emit orientationChanged();
+        }
 
         break;
     }
     case BatteryVoltage:{
-        // Voltage seems to be percent? wtf
-        m_voltage = response.battery.voltage;
-        m_batteryLow = response.battery.isBatteryLow;
-        m_charging = response.battery.isCharging;
-        m_fullyCharged = response.battery.isFullyCharged;
-        m_autoRunning = response.battery.isAutoMode;
-        m_memory = response.battery.memory;
+        if (response.battery.isAutoMode != m_autoRunning) {
+            m_autoRunning = response.battery.isAutoMode;
+            emit autoRunningChanged();
+        }
 
-        emit powerChanged();
-        emit autoRunningChanged();
+        const bool differentValues =
+                response.battery.voltage != m_voltage ||
+                response.battery.isBatteryLow != m_batteryLow ||
+                response.battery.isCharging != m_charging ||
+                response.battery.isFullyCharged != m_fullyCharged ||
+                response.battery.memory != m_memory;
+
+        if (differentValues) {
+            // Voltage seems to be percent? wtf
+            m_voltage = response.battery.voltage;
+            m_batteryLow = response.battery.isBatteryLow;
+            m_charging = response.battery.isCharging;
+            m_fullyCharged = response.battery.isFullyCharged;
+            m_memory = response.battery.memory;
+            emit powerChanged();
+        }
 
         break;
     }

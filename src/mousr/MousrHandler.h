@@ -21,7 +21,35 @@ struct Vector3D {
     T x;
     T y;
     T z;
+
+    // No const reference because of alignment issues
+    template<typename OTHER>
+    Vector3D &operator=(const Vector3D<OTHER> other) {
+        x = qRound(other.x);
+        y = qRound(other.y);
+        z = qRound(other.z);
+        return *this;
+    }
+
+    // This fucks up because alignment
+    template<typename OTHER>
+    bool operator==(const OTHER &other) = delete;
 };
+
+// Can't use a member function and can't use references because of alignment issues (the vectors in the packets aren't properly aligned)
+inline bool fuzzyVectorsEqual(Vector3D<float> floatVector, Vector3D<int> intVector)
+{
+        return qRound(floatVector.x) == intVector.x
+            && qRound(floatVector.y) == intVector.y
+            && qRound(floatVector.z) == intVector.z;
+}
+
+inline bool fuzzyVectorsEqual(Vector3D<int> intVector, Vector3D<float> floatVector)
+{
+        return qRound(floatVector.x) == intVector.x
+            && qRound(floatVector.y) == intVector.y
+            && qRound(floatVector.z) == intVector.z;
+}
 
 template<typename T>
 struct Vector2D {
@@ -198,9 +226,9 @@ public:
 
     bool isAutoRunning() const { return m_autoRunning; }
 
-    float xRotation() const { return m_rotX; }
-    float yRotation() const { return m_rotY; }
-    float zRotation() const { return m_rotZ; }
+    float xRotation() const { return m_rotation.x; }
+    float yRotation() const { return m_rotation.y; }
+    float zRotation() const { return m_rotation.z; }
     bool isFlipped() const { return m_isFlipped; }
 
     bool sensorDirty() const { return m_sensorDirty; }
@@ -361,7 +389,7 @@ private:
 
     float m_speed = 0.f, m_held = 0.f, m_angle = 0.f;
 
-    float m_rotX = 0.f, m_rotY = 0.f, m_rotZ = 0.f;
+    Vector3D<int> m_rotation{};
     bool m_isFlipped = false;
 
     bool m_sensorDirty = false;

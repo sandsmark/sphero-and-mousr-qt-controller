@@ -208,7 +208,7 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
     }
 
 #ifndef NDEBUG
-    debugVisibleDevices(device);
+//    debugVisibleDevices(device);
 #endif
 
     if (DeviceDiscoverer::robotType(device) == DeviceDiscoverer::Unknown) {
@@ -310,6 +310,9 @@ DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceIn
     }
 
     if (manufacturerIds.contains(mousr::manufacturerID)) {
+        qDebug() << device.name();
+        qDebug() << "discovered" << device.name() << device.address().toString() << device.manufacturerIds() << device.minorDeviceClass() << device.majorDeviceClass() << device.manufacturerData() << device.serviceClasses() << device.rssi();
+
         // It _seems_ like the manufacturer data is the reversed of most of the address, except the last part which is 0xFC in the address and 0x3C in the manufacturer data
 //        QByteArray deviceAddress = QByteArray::fromHex(device.address().toString().toLatin1());
 //        if (!deviceAddress.isEmpty()) {

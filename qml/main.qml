@@ -57,6 +57,8 @@ Window {
                         property real toX: Math.random() * window.width - width
                         property real toY: Math.random() * window.height - height
 
+                        property bool animStarted: false
+
                         x: fromX
                         y: fromY
                         width: Math.random() * 10 + layer1.layerIndex * 10
@@ -66,23 +68,24 @@ Window {
                         Component.onCompleted: {
                             animStartTimer.start()
                         }
+
                         Timer {
                             id: animStartTimer
                             interval: Math.random() * 5000
                             repeat: false
-                            onTriggered: { xAnim.start(); yAnim.start(); }
+                            onTriggered: { animStarted = true; }
                         }
 
                         SequentialAnimation on x {
                             id: xAnim
-                            running: false
+                            running: animStarted && deviceDiscovery.visible
                             loops: Animation.Infinite
                             PropertyAnimation { easing.type: Easing.InOutSine; to: bubble.toX; duration: Math.random() * 1000 + 10000 }
                             PropertyAnimation { easing.type: Easing.InOutSine; to: bubble.fromX; duration: Math.random() * 1000 + 10000 }
                         }
                         SequentialAnimation on y {
                             id: yAnim
-                            running: false
+                            running: animStarted && deviceDiscovery.visible
                             loops: Animation.Infinite
                             PropertyAnimation { easing.type: Easing.InOutSine; to: bubble.toY; duration: Math.random() * 1000 + 10000 }
                             PropertyAnimation { easing.type: Easing.InOutSine; to: bubble.fromY; duration: Math.random() * 1000 + 10000 }
@@ -104,7 +107,7 @@ Window {
         id: deviceDiscovery
         anchors.fill: parent
 
-        visible: !robotLoader.active
+        visible: !robotLoader.sourceComponent
         opacity: 0.75
 
         BorderImage {
