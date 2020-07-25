@@ -33,6 +33,7 @@ RobotType typeFromName(const QString &name)
         {"Q5", RobotType::R2Q5},
         {"GB", RobotType::BB9E},
         {"SM", RobotType::SpheroMini},
+        {"1C", RobotType::WeBall},
     };
 
     return prefixes[name.left(2)];
@@ -76,6 +77,9 @@ QString displayName(const QString &id)
     case RobotType::SpheroMini:
         prettyName = "Sphero Mini";
         break;
+    case RobotType::WeBall:
+        prettyName = "We Ball";
+        break;
     case RobotType::Unknown: // should never happen according to the check above, but idk lol
         prettyName = "[unknown]";
         break;
@@ -113,9 +117,7 @@ SpheroHandler::SpheroHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     QObject(parent),
     m_name(deviceInfo.name())
 {
-    if (m_name.startsWith("BB-8")) {
-        m_robotType = RobotType::BB8;
-    }
+    m_robotType = typeFromName(m_name);
     qDebug() << "Connecting to" << deviceInfo.address().toString();
 
     qDebug() << sizeof(SensorStreamPacket);
@@ -189,7 +191,7 @@ bool SpheroHandler::isConnected()
 
 QString SpheroHandler::statusString()
 {
-    const QString name = m_name.isEmpty() ? "device" : m_name;
+    const QString name = m_name.isEmpty() ? "device" : displayName(m_name);
     if (isConnected()) {
         return tr("Connected to %1").arg(name);
     } else if (m_deviceController && m_deviceController->state() == QLowEnergyController::UnconnectedState) {
@@ -246,7 +248,7 @@ void SpheroHandler::setAngle(int angle)
 
 void SpheroHandler::setAutoStabilize(const bool enabled)
 {
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetStabilization, QByteArray(1, enabled ? 1 : 0));
+    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetStabilization, QByteArray(enabled ? "\x1" : "\x0", 1));
     if (enabled != m_autoStabilize) {
         m_autoStabilize = enabled;
         emit autoStabilizeChanged();
@@ -263,9 +265,17 @@ void SpheroHandler::goToSleep()
     sendCommand(GoToSleepPacket());
 }
 
+void SpheroHandler::goToDeepSleep()
+{
+    // Not sure if this is necessary first
+//    sendCommand(GoToSleepPacket());
+
+    sendRadioControlCommand(Characteristics::Radio::BB8::deepSleep, "011i3");
+}
+
 void SpheroHandler::enablePowerNotifications()
 {
-    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::SetPwrNotify, QByteArray(1, 1));
+    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::SetPwrNotify, QByteArray("\x1", 1));
 }
 
 void SpheroHandler::setEnableAsciiShell(const bool enabled)
@@ -307,13 +317,41 @@ void SpheroHandler::onServiceDiscoveryFinished()
 {
     qDebug() << " - Discovered services";
 
+#if 0 // for dumping all services and all their characteristics
+    for (const QBluetoothUuid &service : m_deviceController->services()) {
+        qDebug() << service;
+        QLowEnergyService *leService = m_deviceController->createServiceObject(service);
+        connect(leService, &QLowEnergyService::stateChanged, this, [=](QLowEnergyService::ServiceState newState) {
+            if (newState == QLowEnergyService::InvalidService) {
+                qWarning() << "invalided" << service;
+                leService->deleteLater();
+                return;
+            }
 
-    m_radioService = m_deviceController->createServiceObject(Services::radio, this);
+            if (newState == QLowEnergyService::DiscoveringServices) {
+                return;
+            }
+
+            if (newState != QLowEnergyService::ServiceDiscovered) {
+                qDebug() << " ! unhandled service state changed:" << newState;
+                leService->deleteLater();
+                return;
+            }
+            for (const QLowEnergyCharacteristic &characteristic : leService->characteristics()) {
+                qDebug() << "service" << service << "has char" << characteristic.uuid() << characteristic.name();
+            }
+            leService->deleteLater();
+        });
+        leService->discoverDetails();
+    }
+#endif
+
+    m_radioService = m_deviceController->createServiceObject(Services::BB8::radio, this);
     if (!m_radioService) {
-        qWarning() << " ! Failed to get ble service";
+        qWarning() << " ! Failed to get radio service";
         return;
     }
-    qDebug() << " - Got ble service";
+    qDebug() << " - Got radio service";
 
     connect(m_radioService, &QLowEnergyService::characteristicChanged, this, &SpheroHandler::onCharacteristicChanged);
     connect(m_radioService, &QLowEnergyService::stateChanged, this, &SpheroHandler::onRadioServiceChanged);
@@ -329,7 +367,7 @@ void SpheroHandler::onServiceDiscoveryFinished()
         return;
     }
 
-    m_mainService = m_deviceController->createServiceObject(Services::main, this);
+    m_mainService = m_deviceController->createServiceObject(Services::BB8::main, this);
     if (!m_mainService) {
         qWarning() << " ! no main service";
         return;
@@ -364,13 +402,13 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         return;
     }
 
-    m_commandsCharacteristic = m_mainService->characteristic(Characteristics::commands);
+    m_commandsCharacteristic = m_mainService->characteristic(Characteristics::Main::BB8::commands);
     if (!m_commandsCharacteristic.isValid()) {
         qWarning() << "Commands characteristic invalid";
         return;
     }
 
-    const QLowEnergyCharacteristic responseCharacteristic = m_mainService->characteristic(Characteristics::response);
+    const QLowEnergyCharacteristic responseCharacteristic = m_mainService->characteristic(Characteristics::Main::BB8::response);
     if (!responseCharacteristic.isValid()) {
         qWarning() << "response characteristic invalid";
         return;
@@ -434,17 +472,18 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         return;
     }
 
-    if (characteristic.uuid() == Characteristics::Radio::rssi) {
+    if (characteristic.uuid() == Characteristics::Radio::BB8::rssi) {
         m_rssi = data[0];
         emit rssiChanged();
         return;
     }
     if (characteristic.uuid() == QBluetoothUuid::ServiceChanged) {
+        // TODO: I think maybe this is when it is removed from the charger, and the battery service becomes available
         qDebug() << " ? GATT service changed" << data.toHex(':');
         return;
     }
 
-    if (characteristic.uuid() != Characteristics::response) {
+    if (characteristic.uuid() != Characteristics::Main::BB8::response) {
         qWarning() << " ? Changed from unexpected characteristic" << characteristic.name() << characteristic.uuid() << data;
         return;
     }
@@ -730,15 +769,22 @@ void SpheroHandler::onRadioServiceChanged(QLowEnergyService::ServiceState newSta
         return;
     }
 
-    if (!sendRadioControlCommand(Characteristics::Radio::antiDos, "011i3") ||
-        !sendRadioControlCommand(Characteristics::Radio::transmitPower, QByteArray(1, 7)) ||
-        !sendRadioControlCommand(Characteristics::Radio::wake, QByteArray(1, 1))) {
+    // TODO: R2D2:
+    // 1. Antidos
+    // 2. write dfu handle request notification
+    // 2. read DFU:handle, receive: 0000   0b 00 01 00 04 00 02 02                           ........
+    // 3. write main:main notification
+    // 4. write main service (wake from sleep packet): 0000   8d 0a 13 0d 00 d5 d8                              .......
+
+    if (!sendRadioControlCommand(Characteristics::Radio::BB8::antiDos, "011i3") ||
+        !sendRadioControlCommand(Characteristics::Radio::BB8::transmitPower, "\x7") ||
+        !sendRadioControlCommand(Characteristics::Radio::BB8::wake, "\x1")) {
         qWarning() << " ! Init sequence failed";
         emit disconnected();
         emit statusMessageChanged(tr("Sphero Init sequence failed"));
         return;
     }
-    const QLowEnergyCharacteristic rssiCharacteristic = m_radioService->characteristic(Characteristics::Radio::rssi);
+    const QLowEnergyCharacteristic rssiCharacteristic = m_radioService->characteristic(Characteristics::Radio::BB8::rssi);
     m_radioService->writeDescriptor(rssiCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), QByteArray::fromHex("0100"));
 
     qDebug() << " - Init sequence done";
@@ -789,9 +835,6 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
         default:
             qWarning() << "Unhandled packet internal command" << commandID;
             return;
-            header.flags |= CommandPacketHeader::Synchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
         }
 
         break;
@@ -892,6 +935,46 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
 
     qDebug() << " - Writing command" << toSend.toHex();
     m_mainService->writeCharacteristic(m_commandsCharacteristic, toSend);
+}
+
+RobotDefinition::RobotDefinition(const RobotType type)
+{
+    switch (type) {
+    // I think so from random googling, but I don't have one so not tested
+    case RobotType::Ollie:
+    case RobotType::WeBall:
+
+        // Tested
+    case RobotType::BB8:
+        mainService = Services::BB8::main;
+        batteryService = Services::BB8::battery;
+        radioService = Services::BB8::radio;
+
+        commandsCharacteristic = Characteristics::Main::BB8::commands;
+
+        radioPassword = "011i3";
+        break;
+
+        // Not tested
+    case RobotType::SpheroMini:
+    case RobotType::LMQ:
+
+        // These I have
+    case RobotType::BB9E:
+    case RobotType::R2D2:
+        mainService = Services::main;
+        batteryService = Services::battery;
+        radioService = Services::radio;
+
+        commandsCharacteristic = Characteristics::Main::commands;
+
+        radioPassword = "usetheforce...band";
+        break;
+
+    default:
+        qWarning() << "unhandled type" << int(type);
+        return;
+    }
 }
 
 } // namespace sphero

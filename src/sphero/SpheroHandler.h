@@ -29,12 +29,26 @@ enum class RobotType {
     R2Q5,
     BB9E,
     SpheroMini,
+    WeBall,
 };
 
 RobotType typeFromName(const QString &name);
 bool isValidRobot(const QString &name, const QString &address);
 
 QString displayName(const QString &id);
+
+struct RobotDefinition {
+    RobotDefinition() = default;
+    explicit RobotDefinition(const RobotType type);
+
+    QBluetoothUuid mainService;
+    QBluetoothUuid radioService;
+    QBluetoothUuid batteryService;
+
+    QBluetoothUuid commandsCharacteristic;
+
+    QByteArray radioPassword;
+};
 
 class SpheroHandler : public QObject
 {
@@ -94,6 +108,7 @@ public:
     bool detectCollisions() const { return m_detectCollisions; }
 
     void goToSleep();
+    void goToDeepSleep();
     void enablePowerNotifications();
 
     void setEnableAsciiShell(const bool enabled);
@@ -160,6 +175,7 @@ private:
     QColor m_color;
 
     RobotType m_robotType = RobotType::Unknown;
+
     QMap<uint8_t, QPair<uint8_t, uint8_t>> m_pendingSyncRequests;
     uint8_t m_nextSequenceNumber = 0;
 };

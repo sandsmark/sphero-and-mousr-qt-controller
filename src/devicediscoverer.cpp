@@ -11,15 +11,15 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     QObject(parent),
     m_scanning(false)
 {
-    m_discoveryAgent = new QBluetoothDeviceDiscoveryAgent(this);
 
     m_adapter = new QBluetoothLocalDevice(this);
-    m_adapter->setHostMode(QBluetoothLocalDevice::HostPoweredOff);
+    m_adapter->setHostMode(QBluetoothLocalDevice::HostPoweredOff); // we need to do this because bluez is crap
 
     connect(m_adapter, &QBluetoothLocalDevice::error, this, &DeviceDiscoverer::onAdapterError);
     connect(this, &DeviceDiscoverer::availableDevicesChanged, this, &DeviceDiscoverer::statusStringChanged);
 
     // I hate these overload things..
+    m_discoveryAgent = new QBluetoothDeviceDiscoveryAgent(this);
     connect(m_discoveryAgent, QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error), this, &DeviceDiscoverer::onAgentError);
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceDiscovered, this, &DeviceDiscoverer::onDeviceDiscovered, Qt::QueuedConnection);
     connect(m_discoveryAgent, &QBluetoothDeviceDiscoveryAgent::deviceUpdated, this, &DeviceDiscoverer::onDeviceUpdated);
@@ -164,13 +164,14 @@ void DeviceDiscoverer::stopScanning()
 
 inline void debugVisibleDevices(const QBluetoothDeviceInfo &device)
 {
-    if (device.manufacturerIds().isEmpty()) {
-        return;
-    }
+//    if (device.manufacturerIds().isEmpty()) {
+//        return;
+//    }
     if (DeviceDiscoverer::robotType(device) != DeviceDiscoverer::Unknown) {
         return;
     }
 
+    // 0x3033 / 12339 == Sphero
     static const QSet<int> knownIds({
         223, // Misfit Wearables
         224, // Google
