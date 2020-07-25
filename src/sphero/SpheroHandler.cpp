@@ -17,12 +17,104 @@
 
 namespace sphero {
 
+RobotType typeFromName(const QString &name)
+{
+    if (name.length() < 4 || name[2] != '-') {
+        return RobotType::Unknown;
+    }
+
+    static const QMap<QString, RobotType> prefixes = {
+        {"BB", RobotType::BB8},
+        {"FB", RobotType::ForceBand},
+        {"LM", RobotType::LMQ},
+        {"2B", RobotType::Ollie},
+        {"SK", RobotType::SPRK},
+        {"D2", RobotType::R2D2},
+        {"Q5", RobotType::R2Q5},
+        {"GB", RobotType::BB9E},
+        {"SM", RobotType::SpheroMini},
+    };
+
+    return prefixes[name.left(2)];
+}
+
+QString displayName(const QString &id)
+{
+    const RobotType type = typeFromName(id);
+    if (type == RobotType::Unknown) {
+        return id;
+    }
+
+    const QString suffix = id.mid(3);
+
+    QString prettyName;
+    switch(type) {
+    case RobotType::BB8:
+        prettyName = "BB-8";
+        break;
+    case RobotType::ForceBand:
+        prettyName = "Force Band";
+        break;
+    case RobotType::LMQ:
+        prettyName = "Lightning McQueen";
+        break;
+    case RobotType::Ollie:
+        prettyName = "Ollie";
+        break;
+    case RobotType::SPRK:
+        prettyName = "SPRK";
+        break;
+    case RobotType::R2D2:
+        prettyName = "R2-D2";
+        break;
+    case RobotType::R2Q5:
+        prettyName = "R2-Q5";
+        break;
+    case RobotType::BB9E:
+        prettyName = "BB-9E";
+        break;
+    case RobotType::SpheroMini:
+        prettyName = "Sphero Mini";
+        break;
+    case RobotType::Unknown: // should never happen according to the check above, but idk lol
+        prettyName = "[unknown]";
+        break;
+//    default:
+//        return id;
+    }
+
+    return prettyName + ' ' + suffix;
+}
+
+bool isValidRobot(const QString &name, const QString &address)
+{
+    if (name.length() != 7) {
+        return false;
+    }
+    if (address.length() != 17) {
+        return false;
+    }
+
+    if (typeFromName(name) == RobotType::Unknown) {
+        return false;
+    }
+
+    // The naming scheme is XX-YYZZ, where XX is the type prefix, YY is the second to last byte of the address and ZZ is the last byte
+    const QString part1 = address.mid(12, 2);
+    const QString part2 = address.mid(15, 2);
+    if (!name.endsWith(part1 + part2, Qt::CaseInsensitive)) {
+        return false;
+    }
+
+    return true;
+}
+
 SpheroHandler::SpheroHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent) :
     QObject(parent),
     m_name(deviceInfo.name())
 {
     if (m_name.startsWith("BB-8")) {
-        m_robotType = SpheroType::Bb8;
+        m_robotType = RobotType::BB8;
     }
     qDebug() << "Connecting to" << deviceInfo.address().toString();
 

@@ -208,10 +208,18 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
     }
 
 #ifndef NDEBUG
-//    debugVisibleDevices(device);
+    debugVisibleDevices(device);
 #endif
 
-    if (DeviceDiscoverer::robotType(device) == DeviceDiscoverer::Unknown) {
+    const QString deviceName = device.name();
+    switch(DeviceDiscoverer::robotType(device)) {
+    case Sphero:
+        m_displayNames[deviceName] = sphero::displayName(deviceName);
+        break;
+    case Mousr:
+        m_displayNames[deviceName] = deviceName; // todo
+        break;
+    case Unknown:
         return;
     }
 
@@ -297,6 +305,14 @@ float DeviceDiscoverer::signalStrength(const QString &name)
     return rssiToStrength(m_availableDevices[name].rssi());
 }
 
+QString DeviceDiscoverer::displayName(const QString &name)
+{
+    if (!m_displayNames.contains(name)) {
+        return name;
+    }
+    return m_displayNames[name];
+}
+
 void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
 {
     emit signalStrengthChanged(device.name(), rssiToStrength(device.rssi()));
@@ -322,11 +338,18 @@ DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceIn
         return Mousr;
     }
 
+    // This only seems to be BB8
     if (manufacturerIds.contains(sphero::manufacturerID)) {
         return Sphero;
     }
 
     const QString name = device.name();
+
+    // The others we need to rely on the name for
+    if (sphero::isValidRobot(name, device.address().toString())) {
+        return Sphero;
+    }
+
     if (name == QLatin1String("Mousr")) {
         if (!manufacturerIds.isEmpty()) {
             qDebug() << "unexpected manufacturer ID for mousr:" << manufacturerIds;

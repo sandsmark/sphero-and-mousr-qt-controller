@@ -6,7 +6,7 @@ Item {
 
     signal clicked()
 
-    width: 200
+    width: 250
     height: 60
 
     BorderImage {
@@ -29,7 +29,9 @@ Item {
 
     Text {
         id: title
-        anchors.centerIn: parent
+        anchors.fill: parent
+        anchors.leftMargin: 20
+        verticalAlignment: Text.AlignVCenter
         text: parent.text
         color: active ? "white" : "gray"
     }

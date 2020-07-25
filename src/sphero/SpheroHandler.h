@@ -18,6 +18,23 @@ namespace sphero {
 // BB-8 at least
 static constexpr int manufacturerID = 12339;
 
+enum class RobotType {
+    Unknown,
+    BB8,
+    ForceBand,
+    LMQ,
+    Ollie,
+    SPRK,
+    R2D2,
+    R2Q5,
+    BB9E,
+    SpheroMini,
+};
+
+RobotType typeFromName(const QString &name);
+bool isValidRobot(const QString &name, const QString &address);
+
+QString displayName(const QString &id);
 
 class SpheroHandler : public QObject
 {
@@ -31,7 +48,7 @@ class SpheroHandler : public QObject
     Q_PROPERTY(QString deviceType READ deviceType CONSTANT)
 
     Q_PROPERTY(float signalStrength READ signalStrength NOTIFY rssiChanged)
-    Q_PROPERTY(SpheroType robotType MEMBER m_robotType CONSTANT)
+    Q_PROPERTY(RobotType robotType MEMBER m_robotType CONSTANT)
 
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
     Q_PROPERTY(int angle READ angle WRITE setAngle NOTIFY angleChanged)
@@ -41,21 +58,10 @@ class SpheroHandler : public QObject
     Q_PROPERTY(bool detectCollisions READ detectCollisions WRITE setDetectCollisions NOTIFY detectCollisionsChanged)
 
 public:
-    enum class SpheroType {
-        Unknown,
-        Bb8,
-        ForceBand,
-        Lmq,
-        Ollie,
-        Spkr,
-        R2d2,
-        R2Q5,
-        Bb9e,
-        SpheroMini,
-    };
-    Q_ENUM(SpheroType)
+    Q_ENUM(RobotType)
 
 public:
+
     explicit SpheroHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent);
     ~SpheroHandler();
 
@@ -153,7 +159,7 @@ private:
 
     QColor m_color;
 
-    SpheroType m_robotType = SpheroType::Unknown;
+    RobotType m_robotType = RobotType::Unknown;
     QMap<uint8_t, QPair<uint8_t, uint8_t>> m_pendingSyncRequests;
     uint8_t m_nextSequenceNumber = 0;
 };

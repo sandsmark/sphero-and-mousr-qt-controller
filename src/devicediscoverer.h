@@ -51,6 +51,7 @@ public:
 public slots:
     void connectDevice(const QString &name);
     float signalStrength(const QString &name);
+    QString displayName(const QString &name);
 
 signals:
     void statusStringChanged();
@@ -85,6 +86,7 @@ private:
     bool m_hasDevices = false;
     bool m_scanning = false;
     QHash<QString, QBluetoothDeviceInfo> m_availableDevices;
+    QHash<QString, QString> m_displayNames;
 
     QString m_lastDeviceStatus;
     QElapsedTimer m_lastDeviceStatusTimer;

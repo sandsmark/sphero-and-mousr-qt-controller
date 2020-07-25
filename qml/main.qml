@@ -156,7 +156,7 @@ Window {
 
                 delegate: Lol.Button {
                     function updateText(strength) {
-                        text = modelData + " (" + Math.floor(strength * 100) + "%)";
+                        text = DeviceDiscoverer.displayName(modelData) + " (" + Math.floor(strength * 100) + "%)";
 
                         active = strength > 0
                     }
