@@ -168,6 +168,7 @@ struct LocatorPacket {
     // the tilt against the cartesian plane
     int16_t tilt = 0;
 };
+static_assert(sizeof(LocatorPacket) == 7);
 
 struct SensorStreamPacket
 {

@@ -93,4 +93,22 @@ Rectangle {
         visible: device.isConnected
         text: "Signal strength: " + Math.ceil(device.signalStrength * 100) + "%"
     }
+
+    Component.onCompleted: forceActiveFocus()
+
+    focus: true
+    Keys.onLeftPressed: {
+        device.angle += 10
+    }
+    Keys.onRightPressed: {
+        device.angle -= 10
+    }
+    Keys.onUpPressed: {
+        device.speed = 128
+    }
+
+    Keys.onReleased:
+        if (event.key === Qt.Key_Up) {
+            device.brake()
+        }
 }

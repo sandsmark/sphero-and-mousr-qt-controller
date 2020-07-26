@@ -166,6 +166,10 @@ public:
                 flags |= CommandPacketHeader::Synchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
+            case CommandPacketHeader::Ping:
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
             default:
                 qWarning() << "Unhandled packet internal command" << m_commandID;
                 return;
@@ -200,11 +204,11 @@ public:
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::Roll:
-                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::Synchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::SetStabilization:
-                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::Synchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::SetHeading:
@@ -499,6 +503,7 @@ struct RollCommandPacket
     uint16_t angle = 0;
     uint8_t type = Roll;
 };
+static_assert(sizeof(RollCommandPacket) == 4);
 
 struct SetHeadingPacket
 {

@@ -91,9 +91,8 @@ public:
 
     void setSpeedAndAngle(int speed, int angle);
 
-    void setSpeed(int speed) { setSpeedAndAngle(speed, m_angle); }
+    void setSpeed(int speed);
     void setAngle(int angle);
-    void brake();
     int speed() const { return m_speed; }
     int angle() const { return m_angle; }
 
@@ -132,6 +131,7 @@ signals:
 
 public slots:
     void disconnectFromRobot();
+    void brake();
 
 private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);

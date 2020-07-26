@@ -234,13 +234,20 @@ void SpheroHandler::setSpeedAndAngle(int speed, int angle)
     }
 }
 
+void SpheroHandler::setSpeed(int speed)
+{
+    setSpeedAndAngle(speed, 0);
+}
+
 void SpheroHandler::setAngle(int angle)
 {
     while (angle < 0) {
         angle += 360;
     }
     angle %= 360;
-    sendCommand(v1::SetHeadingPacket({uint16_t(angle % 360)}));
+    qDebug() << "Setting angle to" << angle;
+    sendCommand(v1::SetHeadingPacket({uint16_t(angle)}));
+//    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(angle), v1::RollCommandPacket::Fast}));
     if (m_angle != angle) {
         m_angle = angle;
         emit angleChanged();
@@ -251,6 +258,25 @@ void SpheroHandler::brake()
 {
     sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
 }
+
+void SpheroHandler::faceLeft()
+{
+//    setAngle(270);
+    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(270), v1::RollCommandPacket::Brake}));
+}
+
+void SpheroHandler::faceRight()
+{
+//    setAngle(90);
+    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(90), v1::RollCommandPacket::Brake}));
+}
+
+void SpheroHandler::faceForward()
+{
+//    setAngle(0);
+    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
+}
+
 
 void SpheroHandler::setAutoStabilize(const bool enabled)
 {
@@ -287,21 +313,6 @@ void SpheroHandler::enablePowerNotifications()
 void SpheroHandler::setEnableAsciiShell(const bool enabled)
 {
     sendCommand(v1::SetUserHackModePacket({enabled}));
-}
-
-void SpheroHandler::faceLeft()
-{
-    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(270), v1::RollCommandPacket::Brake}));
-}
-
-void SpheroHandler::faceRight()
-{
-    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(90), v1::RollCommandPacket::Brake}));
-}
-
-void SpheroHandler::faceForward()
-{
-    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
 }
 
 void SpheroHandler::boost(int angle, int duration)
@@ -425,7 +436,8 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
 
     qDebug() << " - Successfully connected";
 
-    sendCommand(v1::SetPowerNotifyCommandPacket{1});
+    sendCommand(v1::SetPowerNotifyCommandPacket{0});
+    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::Ping, {});
     sendCommand(v1::SetNonPersistentOptionsPacket{v1::SetNonPersistentOptionsPacket::StopOnDisconnect});
 //    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::);
 //    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetRGBLed);
@@ -433,7 +445,8 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
 //    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetBtName);
 //    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::GetAutoReconnect);
     setAutoStabilize(true);
-    setDetectCollisions(true);
+//    setDetectCollisions(true);
+    setColor(Qt::green);
 
     sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::SetDataStreaming, v1::DataStreamingCommandPacket::create(1) );
 
@@ -653,10 +666,22 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
                 emit colorChanged();
                 break;
             }
+            case v1::CommandPacketHeader::SetHeading: {
+                qDebug() << "Heading set";
+                break;
+            }
+            case v1::CommandPacketHeader::Roll: {
+                qDebug() << "Roll set";
+                break;
+            }
             case v1::CommandPacketHeader::SetDataStreaming: {
                 qDebug() << "Data streaming enabled";
-                setSpeedAndAngle(128, 10);
+                sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
 //                faceLeft();
+//                setAngle(180);
+//                setSpeedAndAngle(0, 180);
+//                sendCommand(v1::RollCommandPacket({uint8_t(255), uint16_t(0), v1::RollCommandPacket::Roll}));
+//                faceRight();
                 break;
             }
             default:
