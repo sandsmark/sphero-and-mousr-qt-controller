@@ -230,12 +230,12 @@ public:
             break;
         }
 
-        m_flags = flags;
-
-        qDebug() << " + Packet:";
-        qDebug() << "  ] Device id:" << m_deviceID;
-        qDebug() << "  ] command id:" << m_commandID;
-        qDebug() << "  ] seq number:" << m_sequenceNumber;
+//        m_flags = flags;
+        if (flags & Synchronous) {
+            m_flags = 0xff;
+        } else {
+            m_flags = 0xfe;
+        }
 
     }
 
@@ -272,7 +272,12 @@ public:
 
         toSend.append(checksum xor 0xFF);
 
-        qDebug() << " - Writing command" << toSend.toHex();
+        qDebug() << " - Writing command" << toSend.toHex(':');
+
+        qDebug() << " + Packet:";
+        qDebug() << "  ] Device id:" << m_deviceID;
+        qDebug() << "  ] command id:" << m_commandID;
+        qDebug() << "  ] seq number:" << m_sequenceNumber;
 
         return toSend;
     }
@@ -351,7 +356,7 @@ struct SetOptionsCommandPacket
     }
 };
 
-struct DataStreamingCommandPacket
+struct DataStreamingCommandPacket_Old
 {
     static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
     static constexpr uint32_t commandId = CommandPacketHeader::SetDataStreaming;
@@ -359,7 +364,7 @@ struct DataStreamingCommandPacket
     enum SourceMask : uint32_t {
         NoMask = 0x00000000,
         LeftMotorBackEMFFiltered = 0x00000060,
-        RightMotorBackEMFFiltered = 0x00000060,
+        RightMotorBackEMFFiltered = 0x00180000,
 
         MagnetometerZFiltered = 0x00000080,
         MagnetometerYFiltered = 0x00000100,
@@ -391,22 +396,24 @@ struct DataStreamingCommandPacket
         GyroZRaw = 0x04000000,
         GyroYRaw = 0x08000000,
         GyroXRaw = 0x10000000,
+        GyroRawAll = 0x1C000000,
 
         AccelerometerZRaw = 0x20000000,
         AccelerometerYRaw = 0x40000000,
         AccelerometerXRaw = 0x80000000,
         AccelerometerRaw =  0xE0000000,
 
-        AllSources = 0xFFFFFFFF,
+//        AllSources = 0xFFFFFFFF,
+        AllSources = LeftMotorBackEMFFiltered | RightMotorBackEMFFiltered
     };
 
-    uint16_t maxRateDivisor = 10;
+    uint16_t maxRateDivisor = 400;
     uint16_t framesPerPacket = 1;
     uint32_t sourceMask = AllSources;
     uint8_t packetCount = 0; // 0 == forever
 
-    static QByteArray create(const int packetCount, const uint16_t maxRateDivisor = 10, const uint16_t framesPerPacket = 1, const uint32_t sourceMask = AllSources) {
-        DataStreamingCommandPacket def;
+    static QByteArray create(const int packetCount, const uint16_t maxRateDivisor = 400, const uint16_t framesPerPacket = 1, const uint32_t sourceMask = AllSources) {
+        DataStreamingCommandPacket_Old def;
         def.packetCount = packetCount;
         def.maxRateDivisor = maxRateDivisor;
         def.framesPerPacket = framesPerPacket;
@@ -415,8 +422,11 @@ struct DataStreamingCommandPacket
     }
 };
 
-struct DataStreamingCommandPacket1_17 : DataStreamingCommandPacket
+struct DataStreamingCommandPacket : DataStreamingCommandPacket_Old
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::SetDataStreaming;
+
     enum SourceMask : uint64_t {
         Quaternion0 = 0x80000000,
         Quaternion1 = 0x40000000,
@@ -438,7 +448,18 @@ struct DataStreamingCommandPacket1_17 : DataStreamingCommandPacket
 
     };
     uint32_t sourceMaskHighBits = AllSourcesHigh; // firmware >= 1.17
+
+    static QByteArray create(const int packetCount, const uint16_t maxRateDivisor = 10, const uint16_t framesPerPacket = 1, const uint32_t sourceMask = AllSources, const uint32_t sourceMask2 = NoMask) {
+        DataStreamingCommandPacket def;
+        def.packetCount = packetCount;
+        def.maxRateDivisor = maxRateDivisor;
+        def.framesPerPacket = framesPerPacket;
+        def.sourceMask = sourceMask;
+        def.sourceMaskHighBits = sourceMask2;
+        return packetToByteArray(def);
+    }
 };
+static_assert(sizeof(DataStreamingCommandPacket) == 13);
 
 struct SetColorsCommandPacket
 {
@@ -471,7 +492,7 @@ struct RollCommandPacket
     enum Type : uint8_t {
         Brake = 0,
         Roll = 1,
-        Calibrate = 2
+        Fast = 2
     };
 
     uint8_t speed = 0;
@@ -533,18 +554,21 @@ struct GoToSleepPacket
 
 struct SetNonPersistentOptionsPacket
 {
+    static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
+    static constexpr uint32_t commandId = CommandPacketHeader::SetNonPersistentOptionFlags;
+
     enum Options {
         StopOnDisconnect = 1, // Force stop when disconnected
         CompatibilityMode = 2 // Some compatibility mode? only for Ollie, says the doc
     };
 
-    uint32_t optionsBitmask;
+    uint32_t optionsBitmask = StopOnDisconnect;
 
-    static QByteArray create(const uint32_t options = StopOnDisconnect) {
-        SetNonPersistentOptionsPacket def;
-        def.optionsBitmask = options;
-        return packetToByteArray(def);
-    }
+//    static QByteArray create(const uint32_t options = StopOnDisconnect) {
+//        SetNonPersistentOptionsPacket def;
+//        def.optionsBitmask = options;
+//        return packetToByteArray(def);
+//    }
 };
 
 // Disables stabilization and moves full power in the requested direction
@@ -586,6 +610,13 @@ struct SetPIDCommandPacket
 };
 
 
+struct SetPowerNotifyCommandPacket
+{
+    static constexpr uint32_t deviceId = CommandPacketHeader::Internal;
+    static constexpr uint32_t commandId = CommandPacketHeader::SetPwrNotify;
+
+    uint8_t enabled = 0;
+};
 #pragma pack(pop)
 
 } // namespace v1

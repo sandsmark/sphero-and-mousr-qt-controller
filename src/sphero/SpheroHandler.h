@@ -42,6 +42,8 @@ class SpheroHandler : public QObject
     Q_PROPERTY(bool autoStabilize READ autoStabilize WRITE setAutoStabilize NOTIFY autoStabilizeChanged)
     Q_PROPERTY(bool detectCollisions READ detectCollisions WRITE setDetectCollisions NOTIFY detectCollisionsChanged)
 
+    Q_PROPERTY(PowerState powerState READ powerState NOTIFY powerChanged)
+
 public:
     enum class RobotType {
         Unknown,
@@ -57,6 +59,15 @@ public:
         WeBall,
     };
     Q_ENUM(RobotType)
+
+    enum PowerState : uint8_t {
+        UnknownPowerState = 0x0,
+        BatteryCharging = 0x1,
+        BatteryOK = 0x2,
+        BatteryLow = 0x3,
+        BatteryCritical = 0x4,
+    };
+    Q_ENUM(PowerState)
 
 public:
 
@@ -78,10 +89,11 @@ public:
     void setColor(const int r, const int g, const int b);
     QColor color() const { return m_color; }
 
-    void setSpeedAndAngle(int angle, int speed);
+    void setSpeedAndAngle(int speed, int angle);
 
     void setSpeed(int speed) { setSpeedAndAngle(speed, m_angle); }
     void setAngle(int angle);
+    void brake();
     int speed() const { return m_speed; }
     int angle() const { return m_angle; }
 
@@ -102,6 +114,8 @@ public:
     void faceForward();
     void boost(const int angle, int duration);
 
+    PowerState powerState() const { return m_powerState; }
+
 signals:
     void connectedChanged();
     void rssiChanged();
@@ -113,6 +127,8 @@ signals:
     void speedChanged();
     void autoStabilizeChanged();
     void detectCollisionsChanged();
+
+    void powerChanged();
 
 public slots:
     void disconnectFromRobot();
@@ -175,6 +191,9 @@ private:
 
     QMap<uint8_t, QPair<uint8_t, uint8_t>> m_pendingSyncRequests;
     uint8_t m_nextSequenceNumber = 0;
+
+    PowerState m_powerState = UnknownPowerState;
+
 };
 
 using RobotType = SpheroHandler::RobotType;

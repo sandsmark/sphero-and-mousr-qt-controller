@@ -33,7 +33,7 @@ public:
         Ack = 0x00,
         GeneralError = 0x01,
         ChecksumFailure = 0x02,
-        FragmentReceived = 0x3,
+        SensorData = 0x3,
         UnknownCommandId = 0x04,
         UnsupportedCommand = 0x05,
         BadMessageFormat = 0x06,

@@ -167,6 +167,7 @@ void SpheroHandler::disconnectFromRobot()
         return;
     }
 
+    brake();
     setAutoStabilize(false);
     goToSleep();
 
@@ -213,7 +214,7 @@ void SpheroHandler::setColor(const int r, const int g, const int b)
     }
 }
 
-void SpheroHandler::setSpeedAndAngle(int angle, int speed)
+void SpheroHandler::setSpeedAndAngle(int speed, int angle)
 {
     while (angle < 0) {
         angle += 360;
@@ -244,6 +245,11 @@ void SpheroHandler::setAngle(int angle)
         m_angle = angle;
         emit angleChanged();
     }
+}
+
+void SpheroHandler::brake()
+{
+    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
 }
 
 void SpheroHandler::setAutoStabilize(const bool enabled)
@@ -419,11 +425,17 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
 
     qDebug() << " - Successfully connected";
 
-    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::GetPwrState);
-    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetRGBLed);
-//    sendCommand(CommandPacketHeader::Hardware, CommandPacketHeader::SetDataStreaming ); -> gives us a fragment
+    sendCommand(v1::SetPowerNotifyCommandPacket{1});
+    sendCommand(v1::SetNonPersistentOptionsPacket{v1::SetNonPersistentOptionsPacket::StopOnDisconnect});
+//    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::);
+//    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetRGBLed);
+//    sendCommand(v1::DataStreamingCommandPacket());
 //    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetBtName);
-    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::GetAutoReconnect);
+//    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::GetAutoReconnect);
+    setAutoStabilize(true);
+    setDetectCollisions(true);
+
+    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::SetDataStreaming, v1::DataStreamingCommandPacket::create(1) );
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
@@ -585,7 +597,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     switch(header.type) {
     case ResponsePacketHeader::Response: {
         qDebug() << " - ack response" << ResponsePacketHeader::PacketType(header.packetType);
-        if (header.packetType == ResponsePacketHeader::PacketType::FragmentReceived) {
+        if (header.packetType == ResponsePacketHeader::PacketType::SensorData) {
             qDebug() << "Received first fragment, should we ack or something?";
         }
         qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
@@ -641,59 +653,45 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
                 emit colorChanged();
                 break;
             }
+            case v1::CommandPacketHeader::SetDataStreaming: {
+                qDebug() << "Data streaming enabled";
+                setSpeedAndAngle(128, 10);
+//                faceLeft();
+                break;
+            }
             default:
                 qWarning() << "unhandled hardware response" << v1::CommandPacketHeader::HardwareCommand(responseToCommand.second);
                 break;
             }
+            break;
         }
         default:
             qWarning() << "unhandled command target" << responseToCommand.first;
         }
-
-//        case AckResponsePacket::Level1Diagnostic: {
-//            qDebug() << " ? Got level 1 diagnostic";
-//            break;
-//        }
-//        case AckResponsePacket::SensorStream: {
-//            qDebug() << " ? Got sensor data streaming";
-//            break;
-//        }
-//        case AckResponsePacket::ConfigBlock: {
-//            qDebug() << " ? Got config block";
-//            break;
-//        }
-//        case AckResponsePacket::SleepingIn10Sec: {
-//            qDebug() << " ? Got notification that it is going to sleep in 10 seconds";
-//            break;
-//        }
-//        case AckResponsePacket::MacroMarkers: {
-//            qDebug() << " ? Got macro markers";
-//            break;
-//        }
-//        case AckResponsePacket::Collision: {
-//            qDebug() << " ? Got collision notification";
-//            break;
-//        }
-//        case LocatorResponse: {
-//            if (size_t(contents.length()) < sizeof(LocatorPacket)) {
-//                qWarning() << "Locator response too small" << contents.length();
-//                return;
-//            }
-//            contents = contents.mid(4);
-//            qDebug() << "Locator size" << sizeof(LocatorPacket) << "Locatorconf" << contents.size();
-//            const LocatorPacket *location = reinterpret_cast<const LocatorPacket*>(contents.data());
-//            qDebug() << "tilt" << location->tilt << "position" << location->position.x << location->position.y << (location->flags ? "calibrated" : "not calibrated");
-
-//        }
-//        default:
-//            qWarning() << " !!!!!!!!!!!!!!!!!! Unhandled ack response" << AckResponsePacket::ResponseType(int(contents[0])) << uint(contents[0]) << header.packetType;
-//            break;
-//        }
-
         break;
     }
     case ResponsePacketHeader::Notification:
         qDebug() << " - data notification" << header.packetType;
+        switch(header.packetType) {
+        case ResponsePacketHeader::PowerNotification:
+            if (contents.size() != 1) {
+                qWarning() << "Invalid size of power notification";
+                return;
+            }
+            const uint8_t state = contents[0];
+            if (state > 4) {
+                qWarning() << "Invalid reported state";
+                return;
+            }
+            if (state == m_powerState) {
+                return;
+            }
+            m_powerState = PowerState(state);
+            qDebug() << "new power state" << m_powerState;
+            emit powerChanged();
+            return;
+        }
+
         break;
     default:
         qWarning() << " ! unhandled type" << header.type;
@@ -701,6 +699,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     }
 
 //    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetDataStreaming, DataStreamingCommandPacket::create(1));
+//    sendCommand(v1::SetPowerNotifyCommandPacket{1});
 
     if (header.type != ResponsePacketHeader::Response) {
         qWarning() << " ! not a simple response" << header.type;

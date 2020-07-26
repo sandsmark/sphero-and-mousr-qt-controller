@@ -12,8 +12,8 @@ Window {
     flags: Qt.FramelessWindowHint | Qt.Dialog
     visible: true
 
-    width: 750
-    height: 500
+    width: 1024
+    height: 768
 
     MouseArea {
         anchors.fill: parent
