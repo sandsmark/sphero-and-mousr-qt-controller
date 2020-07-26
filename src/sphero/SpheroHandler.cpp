@@ -270,7 +270,7 @@ void SpheroHandler::goToDeepSleep()
     // Not sure if this is necessary first
 //    sendCommand(GoToSleepPacket());
 
-    sendRadioControlCommand(Characteristics::Radio::BB8::deepSleep, "011i3");
+    sendRadioControlCommand(Characteristics::Radio::V1::deepSleep, "011i3");
 }
 
 void SpheroHandler::enablePowerNotifications()
@@ -346,7 +346,7 @@ void SpheroHandler::onServiceDiscoveryFinished()
     }
 #endif
 
-    m_radioService = m_deviceController->createServiceObject(Services::BB8::radio, this);
+    m_radioService = m_deviceController->createServiceObject(Services::V1::radio, this);
     if (!m_radioService) {
         qWarning() << " ! Failed to get radio service";
         return;
@@ -367,7 +367,7 @@ void SpheroHandler::onServiceDiscoveryFinished()
         return;
     }
 
-    m_mainService = m_deviceController->createServiceObject(Services::BB8::main, this);
+    m_mainService = m_deviceController->createServiceObject(Services::V1::main, this);
     if (!m_mainService) {
         qWarning() << " ! no main service";
         return;
@@ -402,13 +402,13 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         return;
     }
 
-    m_commandsCharacteristic = m_mainService->characteristic(Characteristics::Main::BB8::commands);
+    m_commandsCharacteristic = m_mainService->characteristic(Characteristics::Main::V1::commands);
     if (!m_commandsCharacteristic.isValid()) {
         qWarning() << "Commands characteristic invalid";
         return;
     }
 
-    const QLowEnergyCharacteristic responseCharacteristic = m_mainService->characteristic(Characteristics::Main::BB8::response);
+    const QLowEnergyCharacteristic responseCharacteristic = m_mainService->characteristic(Characteristics::Main::V1::response);
     if (!responseCharacteristic.isValid()) {
         qWarning() << "response characteristic invalid";
         return;
@@ -472,7 +472,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         return;
     }
 
-    if (characteristic.uuid() == Characteristics::Radio::BB8::rssi) {
+    if (characteristic.uuid() == Characteristics::Radio::V1::rssi) {
         m_rssi = data[0];
         emit rssiChanged();
         return;
@@ -483,7 +483,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         return;
     }
 
-    if (characteristic.uuid() != Characteristics::Main::BB8::response) {
+    if (characteristic.uuid() != Characteristics::Main::V1::response) {
         qWarning() << " ? Changed from unexpected characteristic" << characteristic.name() << characteristic.uuid() << data;
         return;
     }
@@ -776,15 +776,15 @@ void SpheroHandler::onRadioServiceChanged(QLowEnergyService::ServiceState newSta
     // 3. write main:main notification
     // 4. write main service (wake from sleep packet): 0000   8d 0a 13 0d 00 d5 d8                              .......
 
-    if (!sendRadioControlCommand(Characteristics::Radio::BB8::antiDos, "011i3") ||
-        !sendRadioControlCommand(Characteristics::Radio::BB8::transmitPower, "\x7") ||
-        !sendRadioControlCommand(Characteristics::Radio::BB8::wake, "\x1")) {
+    if (!sendRadioControlCommand(Characteristics::Radio::V1::antiDos, "011i3") ||
+        !sendRadioControlCommand(Characteristics::Radio::V1::transmitPower, "\x7") ||
+        !sendRadioControlCommand(Characteristics::Radio::V1::wake, "\x1")) {
         qWarning() << " ! Init sequence failed";
         emit disconnected();
         emit statusMessageChanged(tr("Sphero Init sequence failed"));
         return;
     }
-    const QLowEnergyCharacteristic rssiCharacteristic = m_radioService->characteristic(Characteristics::Radio::BB8::rssi);
+    const QLowEnergyCharacteristic rssiCharacteristic = m_radioService->characteristic(Characteristics::Radio::V1::rssi);
     m_radioService->writeDescriptor(rssiCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), QByteArray::fromHex("0100"));
 
     qDebug() << " - Init sequence done";
@@ -946,11 +946,11 @@ RobotDefinition::RobotDefinition(const RobotType type)
 
         // Tested
     case RobotType::BB8:
-        mainService = Services::BB8::main;
-        batteryService = Services::BB8::battery;
-        radioService = Services::BB8::radio;
+        mainService = Services::V1::main;
+        batteryService = Services::V1::battery;
+        radioService = Services::V1::radio;
 
-        commandsCharacteristic = Characteristics::Main::BB8::commands;
+        commandsCharacteristic = Characteristics::Main::V1::commands;
 
         radioPassword = "011i3";
         break;
@@ -962,11 +962,11 @@ RobotDefinition::RobotDefinition(const RobotType type)
         // These I have
     case RobotType::BB9E:
     case RobotType::R2D2:
-        mainService = Services::main;
-        batteryService = Services::battery;
-        radioService = Services::radio;
+        mainService = Services::V2::main;
+        batteryService = Services::V2::battery;
+        radioService = Services::V2::radio;
 
-        commandsCharacteristic = Characteristics::Main::commands;
+        commandsCharacteristic = Characteristics::Main::V2::commands;
 
         radioPassword = "usetheforce...band";
         break;
