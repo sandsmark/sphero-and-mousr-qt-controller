@@ -37,8 +37,12 @@ RobotType typeFromName(const QString &name)
         {"SM", RobotType::SpheroMini},
         {"1C", RobotType::WeBall},
     };
+    const QString prefix = name.left(2);
+    if (!prefixes.contains(prefix)) {
+        return RobotType::Unknown;
+    }
 
-    return prefixes[name.left(2)];
+    return prefixes[prefix];
 }
 
 QString displayName(const QString &id)
