@@ -19,6 +19,20 @@ QByteArray packetToByteArray(const PACKET &packet)
     return ret;
 }
 
+template <typename PACKET>
+PACKET byteArrayToPacket(const QByteArray &data, bool *ok)
+{
+    if (size_t(data.size()) < sizeof(PACKET)) {
+        qWarning() << "Invalid packet size, need" << sizeof(PACKET) << "but got" << data.size();
+        *ok = false;
+        return {};
+    }
+    PACKET ret;
+    memcpy(&ret, data.data(), sizeof(PACKET));
+    *ok = true;
+    return ret;
+}
+
 static constexpr char Escape = 0xAB;
 static constexpr char EscapedEscape = 0x23;
 static constexpr char StartOfPacket = 0x8D;
@@ -29,47 +43,50 @@ static constexpr char EscapedEndOfPacket = 0x50;
 template <typename PACKET>
 QByteArray encode(const PACKET &packet)
 {
-    QByteArray data(1, StartOfPacket);
-    for (const char c : packetToByteArray(packet)) {
+    QByteArray raw = packetToByteArray(packet);
+    uint8_t checksum = 0;
+    for (const char c : raw) {
+        checksum += c;
+    }
+    raw.append(checksum xor 0xFF);
+
+    QByteArray encoded(1, StartOfPacket);
+    for (const char c : raw) {
         switch(c) {
         case Escape:
-            data.append(Escape);
-            data.append(EscapedEscape);
+            encoded.append(Escape);
+            encoded.append(EscapedEscape);
             break;
         case StartOfPacket:
-            data.append(Escape);
-            data.append(EscapedStartOfPacket);
+            encoded.append(Escape);
+            encoded.append(EscapedStartOfPacket);
             break;
         case EndOfPacket:
-            data.append(Escape);
-            data.append(EscapedEndOfPacket);
+            encoded.append(Escape);
+            encoded.append(EscapedEndOfPacket);
             break;
         default:
-            data.append(c);
+            encoded.append(c);
             break;
         }
     }
 
 
-    uint8_t checksum = 0;
-    for (int i=2; i<data.size(); i++) {
-        checksum += data[i];
-    }
 
-    data.append(checksum xor 0xFF);
-    data.append(EndOfPacket);
+    encoded.append(EndOfPacket);
 
     qDebug() << " + Packet:";
-    qDebug() << "  ] Device id:" << packet.deviceId;
-    qDebug() << "  ] command id:" << packet.commandId;
+    qDebug() << "  ] Device id:" << packet.deviceID;
+    qDebug() << "  ] command id:" << packet.commandID;
 
-    return data;
+    return encoded;
 }
 template <typename PACKET>
-PACKET decode(const QByteArray &input)
+PACKET decode(const QByteArray &input, bool *ok)
 {
     if (!input.startsWith(StartOfPacket) || !input.endsWith(EndOfPacket)) {
         qWarning() << "invalid start or end";
+        *ok = false;
         return {};
     }
 
@@ -92,13 +109,27 @@ PACKET decode(const QByteArray &input)
             decoded.append(EndOfPacket);
             break;
         default:
+            *ok = false;
             qWarning() << "Invalid escape sequence" << c << input[i];
-            decoded.append(input[i]);
-            break;
+            qDebug() << input.toHex(':');
+            return;
         }
     }
-// blahlah re-use the bytes-to-struct thing
 
+    uint8_t checksum = 0;
+    for (int i=0; i<decoded.size() - 1; i++) {
+        checksum += decoded[i];
+    }
+
+    if (!decoded.endsWith(checksum)) {
+        qWarning() <<  "invalid checksum" << decoded.back() << "expected" << checksum;
+        *ok = false;
+        return {};
+    }
+
+    decoded.chop(1); // remove the checksum at the end
+
+    return byteArrayToPacket<PACKET>(decoded, ok);
 }
 
 #pragma pack(push,1)
