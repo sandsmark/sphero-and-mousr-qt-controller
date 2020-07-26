@@ -205,7 +205,7 @@ public:
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::Roll:
-                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::Asynchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::SetStabilization:
@@ -213,7 +213,7 @@ public:
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::SetHeading:
-                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::Asynchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::SetRotationRate:
