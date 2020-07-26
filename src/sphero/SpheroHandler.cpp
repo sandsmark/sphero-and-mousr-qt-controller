@@ -8,6 +8,8 @@
 #include "v1/ResponsePackets.h"
 #include "v1/CommandPackets.h"
 
+#include "v2/Packets.h"
+
 #include <QLowEnergyController>
 #include <QLowEnergyConnectionParameters>
 #include <QTimer>
