@@ -14,6 +14,7 @@ template <typename PACKET>
 QByteArray packetToByteArray(const PACKET &packet)
 {
     QByteArray ret(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
+//    qToLittleEndian<char>(ret.data(), sizeof(PACKET), ret.data());
     qToBigEndian<char>(ret.data(), sizeof(PACKET), ret.data());
     return ret;
 }
@@ -148,7 +149,7 @@ public:
         uint8_t flags = 0xFC;
         switch(deviceID) {
         case CommandPacketHeader::Internal:
-            qDebug() << "Sending" << CommandPacketHeader::InternalCommand(m_commandID);
+            qDebug() << " > Sending internal command" << CommandPacketHeader::InternalCommand(m_commandID);
             switch(m_commandID) {
             case CommandPacketHeader::GetPwrState:
                 flags |= CommandPacketHeader::Synchronous;
@@ -177,7 +178,7 @@ public:
 
             break;
         case CommandPacketHeader::HardwareControl:
-            qDebug() << "Sending" << CommandPacketHeader::HardwareCommand(m_commandID);
+            qDebug() << " > Sending hardware command" << CommandPacketHeader::HardwareCommand(m_commandID);
             switch(m_commandID) {
             case CommandPacketHeader::GetRGBLed:
                 flags |= CommandPacketHeader::Synchronous;
@@ -212,15 +213,19 @@ public:
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::SetHeading:
-                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::Synchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             case CommandPacketHeader::SetRotationRate:
                 flags |= CommandPacketHeader::Asynchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
+            case CommandPacketHeader::SetNonPersistentOptionFlags:
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
             default:
-                qWarning() << "Unhandled packet hardware command" << m_commandID;
+                qWarning() << " !!!!!!!!!!!!!!! Unhandled packet hardware command" << m_commandID;
                 flags |= CommandPacketHeader::Synchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
@@ -496,7 +501,7 @@ struct RollCommandPacket
     enum Type : uint8_t {
         Brake = 0,
         Roll = 1,
-        Fast = 2
+        Calibrate = 2
     };
 
     uint8_t speed = 0;

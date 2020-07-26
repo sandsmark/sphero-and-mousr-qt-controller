@@ -98,17 +98,29 @@ Rectangle {
 
     focus: true
     Keys.onLeftPressed: {
-        device.angle += 10
-    }
-    Keys.onRightPressed: {
         device.angle -= 10
     }
-    Keys.onUpPressed: {
-        device.speed = 128
+    Keys.onRightPressed: {
+        device.angle += 10
+    }
+    Keys.onPressed: {
+        if (event.isAutoRepeat) {
+//            console.log("SKipping auto repeat")
+            return
+        }
+
+        if (event.key === Qt.Key_Up) {
+            device.speed = 128
+        }
     }
 
-    Keys.onReleased:
-        if (event.key === Qt.Key_Up) {
-            device.brake()
+    Keys.onReleased: {
+        if (event.isAutoRepeat) {
+//            console.warn("what the fuck qt, auto repeat release events???")
+            return
         }
+        if (event.key === Qt.Key_Up) {
+            device.speed = 0
+        }
+    }
 }
