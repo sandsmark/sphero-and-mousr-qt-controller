@@ -17,38 +17,9 @@ namespace sphero {
 
 // BB-8 at least
 static constexpr int manufacturerID = 12339;
-
-enum class RobotType {
-    Unknown,
-    BB8,
-    ForceBand,
-    LMQ,
-    Ollie,
-    SPRK,
-    R2D2,
-    R2Q5,
-    BB9E,
-    SpheroMini,
-    WeBall,
-};
-
-RobotType typeFromName(const QString &name);
 bool isValidRobot(const QString &name, const QString &address);
 
 QString displayName(const QString &id);
-
-struct RobotDefinition {
-    RobotDefinition() = default;
-    explicit RobotDefinition(const RobotType type);
-
-    QBluetoothUuid mainService;
-    QBluetoothUuid radioService;
-    QBluetoothUuid batteryService;
-
-    QBluetoothUuid commandsCharacteristic;
-
-    QByteArray radioPassword;
-};
 
 class SpheroHandler : public QObject
 {
@@ -72,6 +43,19 @@ class SpheroHandler : public QObject
     Q_PROPERTY(bool detectCollisions READ detectCollisions WRITE setDetectCollisions NOTIFY detectCollisionsChanged)
 
 public:
+    enum class RobotType {
+        Unknown,
+        BB8,
+        ForceBand,
+        LMQ,
+        Ollie,
+        SPRK,
+        R2D2,
+        R2Q5,
+        BB9E,
+        SpheroMini,
+        WeBall,
+    };
     Q_ENUM(RobotType)
 
 public:
@@ -174,10 +158,26 @@ private:
 
     QColor m_color;
 
+    struct RobotDefinition {
+        RobotDefinition() = default;
+        explicit RobotDefinition(const RobotType type);
+
+        QBluetoothUuid mainService;
+        QBluetoothUuid radioService;
+        QBluetoothUuid batteryService;
+
+        QBluetoothUuid commandsCharacteristic;
+
+        QByteArray radioPassword;
+    };
+
     RobotType m_robotType = RobotType::Unknown;
 
     QMap<uint8_t, QPair<uint8_t, uint8_t>> m_pendingSyncRequests;
     uint8_t m_nextSequenceNumber = 0;
 };
+
+using RobotType = SpheroHandler::RobotType;
+RobotType typeFromName(const QString &name);
 
 } // namespace sphero

@@ -72,7 +72,7 @@ Rectangle {
         fillMode: Image.PreserveAspectFit
 
         source: {
-            if (device.robotType == SpheroHandler.Bb8) {
+            if (device.robotType == SpheroHandler.BB8) {
                 return "qrc:images/bb8.png"
             }
         }

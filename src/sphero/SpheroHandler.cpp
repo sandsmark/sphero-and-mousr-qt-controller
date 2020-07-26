@@ -834,7 +834,7 @@ void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID,
     m_mainService->writeCharacteristic(m_commandsCharacteristic, toSend);
 }
 
-RobotDefinition::RobotDefinition(const RobotType type)
+SpheroHandler::RobotDefinition::RobotDefinition(const RobotType type)
 {
     switch (type) {
     // I think so from random googling, but I don't have one so not tested
