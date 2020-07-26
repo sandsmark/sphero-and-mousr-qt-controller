@@ -2,11 +2,13 @@
 
 #include "BasicTypes.h"
 
+#include <QDebug>
 #include <QObject>
 #include <QtEndian>
 #include <cstdint>
 
 namespace sphero {
+namespace v1 {
 
 template <typename PACKET>
 QByteArray packetToByteArray(const PACKET &packet)
@@ -139,14 +141,153 @@ public:
     };
     Q_ENUM(SoulCommands)
 
-    const uint8_t magic = 0xFF;
-    uint8_t flags = 0xFC;
+    CommandPacketHeader(const uint8_t deviceID, const uint8_t commandID) :
+        m_deviceID(deviceID),
+        m_commandID(commandID)
+    {
+        uint8_t flags = 0xFC;
+        switch(deviceID) {
+        case CommandPacketHeader::Internal:
+            qDebug() << "Sending" << CommandPacketHeader::InternalCommand(m_commandID);
+            switch(m_commandID) {
+            case CommandPacketHeader::GetPwrState:
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::SetPwrNotify:
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::Sleep:
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::GetAutoReconnect:
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            default:
+                qWarning() << "Unhandled packet internal command" << m_commandID;
+                return;
+            }
 
-    uint8_t deviceID = 0;
-    uint8_t commandID = 0;
-    uint8_t sequenceNumber = 0;
-    uint8_t dataLength = 0;
+            break;
+        case CommandPacketHeader::HardwareControl:
+            qDebug() << "Sending" << CommandPacketHeader::HardwareCommand(m_commandID);
+            switch(m_commandID) {
+            case CommandPacketHeader::GetRGBLed:
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::GetLocatorData:
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::SetDataStreaming:
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::ConfigureCollisionDetection:
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::SetRGBLed:
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::SetBackLED:
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::Roll:
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::SetStabilization:
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::SetHeading:
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            case CommandPacketHeader::SetRotationRate:
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            default:
+                qWarning() << "Unhandled packet hardware command" << m_commandID;
+                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
+                break;
+            }
+
+            break;
+        default:
+            qWarning() << "Unhandled device id" << deviceID;
+            m_flags |= CommandPacketHeader::Synchronous;
+            m_flags |= CommandPacketHeader::ResetTimeout;
+            break;
+        }
+
+        m_flags = flags;
+
+        qDebug() << " + Packet:";
+        qDebug() << "  ] Device id:" << m_deviceID;
+        qDebug() << "  ] command id:" << m_commandID;
+        qDebug() << "  ] seq number:" << m_sequenceNumber;
+
+    }
+
+    bool isValid() const {
+        return m_flags != 0;
+    }
+
+    bool isSynchronous() const {
+        return m_flags & Synchronous;
+    }
+
+    void setSequenceNumber(const uint8_t number) {
+        m_sequenceNumber = number;
+    }
+
+    QByteArray encode(const QByteArray &data) {
+        if (m_flags == 0) {
+            qWarning() << "Can't encode invalid packet";
+            return {};
+        }
+
+        m_dataLength = data.size() + 1; // + 1 for checksum
+
+        QByteArray headerBuffer(sizeof(CommandPacketHeader), 0); // + 1 for checksum
+        qToBigEndian<uint8_t>(this, sizeof(CommandPacketHeader), headerBuffer.data());
+
+        QByteArray toSend = headerBuffer;
+        toSend.append(data);
+
+        uint8_t checksum = 0;
+        for (int i=2; i<toSend.size(); i++) {
+            checksum += toSend[i];
+        }
+
+        toSend.append(checksum xor 0xFF);
+
+        qDebug() << " - Writing command" << toSend.toHex();
+
+        return toSend;
+    }
+
+private:
+    const uint8_t m_magic = 0xFF;
+    uint8_t m_flags = 0;
+
+    uint8_t m_deviceID = -1;
+    uint8_t m_commandID = -1;
+    uint8_t m_sequenceNumber = 0;
+    uint8_t m_dataLength = 0;
 };
+
+static_assert(sizeof(CommandPacketHeader) == 6);
 
 struct RotateCommandPacket
 {
@@ -444,8 +585,8 @@ struct SetPIDCommandPacket
     // not sure what the P, I and D parameters are, probably uint8_t?
 };
 
-static_assert(sizeof(CommandPacketHeader) == 6);
 
 #pragma pack(pop)
 
+} // namespace v1
 } // namespace sphero

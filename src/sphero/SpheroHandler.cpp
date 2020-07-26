@@ -5,8 +5,8 @@
 #include "utils.h"
 #include "Uuids.h"
 
-#include "ResponsePackets.h"
-#include "CommandPackets.h"
+#include "v1/ResponsePackets.h"
+#include "v1/CommandPackets.h"
 
 #include <QLowEnergyController>
 #include <QLowEnergyConnectionParameters>
@@ -204,7 +204,7 @@ QString SpheroHandler::statusString()
 
 void SpheroHandler::setColor(const int r, const int g, const int b)
 {
-    sendCommand(SetColorsCommandPacket(r, g, b, SetColorsCommandPacket::Temporary));
+    sendCommand(v1::SetColorsCommandPacket(r, g, b, v1::SetColorsCommandPacket::Temporary));
 
     const QColor color = QColor::fromRgb(r, g, b);
     if (color != m_color) {
@@ -221,7 +221,7 @@ void SpheroHandler::setSpeedAndAngle(int angle, int speed)
     angle %= 360;
     speed = qBound(0, speed, 255);
 
-    sendCommand(RollCommandPacket({uint8_t(speed), uint16_t(angle), RollCommandPacket::Roll}));
+    sendCommand(v1::RollCommandPacket({uint8_t(speed), uint16_t(angle), v1::RollCommandPacket::Roll}));
 
     if (m_speed != speed) {
         m_speed = speed;
@@ -239,7 +239,7 @@ void SpheroHandler::setAngle(int angle)
         angle += 360;
     }
     angle %= 360;
-    sendCommand(SetHeadingPacket({uint16_t(angle % 360)}));
+    sendCommand(v1::SetHeadingPacket({uint16_t(angle % 360)}));
     if (m_angle != angle) {
         m_angle = angle;
         emit angleChanged();
@@ -248,7 +248,7 @@ void SpheroHandler::setAngle(int angle)
 
 void SpheroHandler::setAutoStabilize(const bool enabled)
 {
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::SetStabilization, QByteArray(enabled ? "\x1" : "\x0", 1));
+    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::SetStabilization, QByteArray(enabled ? "\x1" : "\x0", 1));
     if (enabled != m_autoStabilize) {
         m_autoStabilize = enabled;
         emit autoStabilizeChanged();
@@ -257,12 +257,12 @@ void SpheroHandler::setAutoStabilize(const bool enabled)
 
 void SpheroHandler::setDetectCollisions(const bool enabled)
 {
-    sendCommand(EnableCollisionDetectionPacket(enabled));
+    sendCommand(v1::EnableCollisionDetectionPacket(enabled));
 }
 
 void SpheroHandler::goToSleep()
 {
-    sendCommand(GoToSleepPacket());
+    sendCommand(v1::GoToSleepPacket());
 }
 
 void SpheroHandler::goToDeepSleep()
@@ -275,27 +275,27 @@ void SpheroHandler::goToDeepSleep()
 
 void SpheroHandler::enablePowerNotifications()
 {
-    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::SetPwrNotify, QByteArray("\x1", 1));
+    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::SetPwrNotify, QByteArray("\x1", 1));
 }
 
 void SpheroHandler::setEnableAsciiShell(const bool enabled)
 {
-    sendCommand(SetUserHackModePacket({enabled}));
+    sendCommand(v1::SetUserHackModePacket({enabled}));
 }
 
 void SpheroHandler::faceLeft()
 {
-    sendCommand(RollCommandPacket({uint8_t(0), uint16_t(270), RollCommandPacket::Brake}));
+    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(270), v1::RollCommandPacket::Brake}));
 }
 
 void SpheroHandler::faceRight()
 {
-    sendCommand(RollCommandPacket({uint8_t(0), uint16_t(90), RollCommandPacket::Brake}));
+    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(90), v1::RollCommandPacket::Brake}));
 }
 
 void SpheroHandler::faceForward()
 {
-    sendCommand(RollCommandPacket({uint8_t(0), uint16_t(0), RollCommandPacket::Brake}));
+    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
 }
 
 void SpheroHandler::boost(int angle, int duration)
@@ -305,7 +305,7 @@ void SpheroHandler::boost(int angle, int duration)
     }
     angle %= 360;
 
-    sendCommand(BoostCommandPacket({uint8_t(qBound(0, duration, 255)), uint16_t(angle)}));
+    sendCommand(v1::BoostCommandPacket({uint8_t(qBound(0, duration, 255)), uint16_t(angle)}));
 
     if (m_angle != angle) {
         m_angle = angle;
@@ -419,11 +419,11 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
 
     qDebug() << " - Successfully connected";
 
-    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetPwrState);
-    sendCommand(CommandPacketHeader::HardwareControl, CommandPacketHeader::GetRGBLed);
+    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::GetPwrState);
+    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetRGBLed);
 //    sendCommand(CommandPacketHeader::Hardware, CommandPacketHeader::SetDataStreaming ); -> gives us a fragment
 //    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetBtName);
-    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetAutoReconnect);
+    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::GetAutoReconnect);
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
@@ -523,7 +523,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         return;
     }
 
-    if (m_receiveBuffer.size() < int(sizeof(CommandPacketHeader))) {
+    if (m_receiveBuffer.size() < int(sizeof(v1::CommandPacketHeader))) {
         qDebug() << " - Not a full header" << m_receiveBuffer.size();
         return;
     }
@@ -554,9 +554,9 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
     qDebug() << " - sequence num" << header.sequenceNumber;
     qDebug() << " - data length" << header.dataLength;
 
-    if (m_receiveBuffer.size() != sizeof(CommandPacketHeader) + header.dataLength - 1) {
+    if (m_receiveBuffer.size() != sizeof(v1::CommandPacketHeader) + header.dataLength - 1) {
         qWarning() << " ! Packet size wrong" << m_receiveBuffer.size();
-        qDebug() << "  > Expected" << sizeof(CommandPacketHeader) << "+" << header.dataLength;
+        qDebug() << "  > Expected" << sizeof(v1::CommandPacketHeader) << "+" << header.dataLength;
         return;
     }
 
@@ -608,9 +608,9 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         const QPair<uint8_t, uint8_t> responseToCommand = m_pendingSyncRequests.take(header.sequenceNumber);
         // TODO separate function
         switch(responseToCommand.first) {
-        case CommandPacketHeader::Internal:
+        case v1::CommandPacketHeader::Internal:
             switch(responseToCommand.second) {
-            case CommandPacketHeader::GetPwrState: {
+            case v1::CommandPacketHeader::GetPwrState: {
                 bool ok;
                 PowerStatePacket response = byteArrayToPacket<PowerStatePacket>(contents, &ok);
                 if (!ok) {
@@ -625,13 +625,13 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
                 break;
             }
             default:
-                qWarning() << "unhandled internal response" << CommandPacketHeader::InternalCommand(responseToCommand.second);
+                qWarning() << "unhandled internal response" << v1::CommandPacketHeader::InternalCommand(responseToCommand.second);
                 break;
             }
             break;
-        case CommandPacketHeader::HardwareControl: {
+        case v1::CommandPacketHeader::HardwareControl: {
             switch(responseToCommand.second) {
-            case CommandPacketHeader::GetRGBLed: {
+            case v1::CommandPacketHeader::GetRGBLed: {
                 bool ok;
                 RgbPacket resp = byteArrayToPacket<RgbPacket>(contents, &ok);
                 if (!ok) {
@@ -642,7 +642,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
                 break;
             }
             default:
-                qWarning() << "unhandled hardware response" << CommandPacketHeader::HardwareCommand(responseToCommand.second);
+                qWarning() << "unhandled hardware response" << v1::CommandPacketHeader::HardwareCommand(responseToCommand.second);
                 break;
             }
         }
@@ -808,132 +808,29 @@ bool SpheroHandler::sendRadioControlCommand(const QBluetoothUuid &characteristic
 
 void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data)
 {
-    CommandPacketHeader header;
-
-    AckResponsePacket::ResponseType expectedResponse = AckResponsePacket::Invalid;
-
-    switch(deviceId) {
-    case CommandPacketHeader::Internal:
-        qDebug() << "Sending" << CommandPacketHeader::InternalCommand(commandID);
-        switch(commandID) {
-        case CommandPacketHeader::GetPwrState:
-            header.flags |= CommandPacketHeader::Synchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::SetPwrNotify:
-            header.flags |= CommandPacketHeader::Asynchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::Sleep:
-            header.flags |= CommandPacketHeader::Synchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::GetAutoReconnect:
-            header.flags |= CommandPacketHeader::Synchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        default:
-            qWarning() << "Unhandled packet internal command" << commandID;
-            return;
-        }
-
-        break;
-    case CommandPacketHeader::HardwareControl:
-        qDebug() << "Sending" << CommandPacketHeader::HardwareCommand(commandID);
-        switch(commandID) {
-        case CommandPacketHeader::GetRGBLed:
-            header.flags |= CommandPacketHeader::Synchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::GetLocatorData:
-            header.flags |= CommandPacketHeader::Synchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::SetDataStreaming:
-            header.flags |= CommandPacketHeader::Synchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::ConfigureCollisionDetection:
-            header.flags |= CommandPacketHeader::Asynchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::SetRGBLed:
-            header.flags |= CommandPacketHeader::Asynchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::SetBackLED:
-            header.flags |= CommandPacketHeader::Asynchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::Roll:
-            header.flags |= CommandPacketHeader::Asynchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::SetStabilization:
-            header.flags |= CommandPacketHeader::Asynchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::SetHeading:
-            header.flags |= CommandPacketHeader::Asynchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        case CommandPacketHeader::SetRotationRate:
-            header.flags |= CommandPacketHeader::Asynchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        default:
-            qWarning() << "Unhandled packet hardware command" << commandID;
-            header.flags |= CommandPacketHeader::Synchronous;
-            header.flags |= CommandPacketHeader::ResetTimeout;
-            break;
-        }
-
-        break;
-    default:
-        qWarning() << "Unhandled device id" << deviceId;
-        header.flags |= CommandPacketHeader::Synchronous;
-        header.flags |= CommandPacketHeader::ResetTimeout;
-        break;
+    v1::CommandPacketHeader packet(deviceId, commandID);
+    if (!packet.isValid()) {
+        return;
     }
 
-    header.dataLength = data.size() + 1; // + 1 for checksum
-
-    if (header.flags & CommandPacketHeader::Synchronous) {
+    if (packet.isSynchronous()) {
         if (m_pendingSyncRequests.contains(m_nextSequenceNumber)) {
             qWarning() << "We have outstanding requests, overflow?";
             qWarning() << "Next request:" << m_nextSequenceNumber;
             return;
         }
-        if (expectedResponse == AckResponsePacket::Invalid) {
-            qWarning() << "No expected response set for" << deviceId << commandID;
-        }
-        header.sequenceNumber = m_nextSequenceNumber++;
-        m_pendingSyncRequests.insert(header.sequenceNumber, {deviceId, commandID});
+
+        packet.setSequenceNumber(m_nextSequenceNumber);
+        m_pendingSyncRequests.insert(m_nextSequenceNumber, {deviceId, commandID});
+
+        m_nextSequenceNumber++;
     }
 
-    header.commandID = commandID;
-    header.deviceID = deviceId;
-    qDebug() << " + Packet:";
-    qDebug() << "  ] Device id:" << header.deviceID;
-    qDebug() << "  ] command id:" << header.commandID;
-    qDebug() << "  ] seq number:" << header.sequenceNumber;
-
-    QByteArray headerBuffer(sizeof(CommandPacketHeader), 0); // + 1 for checksum
-    qToBigEndian<uint8_t>(&header, sizeof(CommandPacketHeader), headerBuffer.data());
-    qDebug() << " - " << uchar(headerBuffer[0]);
-    qDebug() << " - " << uchar(headerBuffer[1]);
-
-    QByteArray toSend;
-    toSend.append(headerBuffer);
-    toSend.append(data);
-
-    uint8_t checksum = 0;
-    for (int i=2; i<toSend.size(); i++) {
-        checksum += toSend[i];
+    const QByteArray toSend = packet.encode(data);
+    if (toSend.isEmpty()) {
+        return;
     }
-    toSend.append(checksum xor 0xFF);
 
-    qDebug() << " - Writing command" << toSend.toHex();
     m_mainService->writeCharacteristic(m_commandsCharacteristic, toSend);
 }
 
