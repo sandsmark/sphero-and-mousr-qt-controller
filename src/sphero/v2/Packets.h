@@ -113,7 +113,7 @@ PACKET decode(const QByteArray &input, bool *ok)
 
 #pragma pack(push,1)
 
-struct BasePacket {
+struct Packet {
     uint8_t m_flags = 0xff;
 
     // These are only used on the big robot I don't remember the name of
@@ -122,8 +122,8 @@ struct BasePacket {
     uint8_t sourceID = 0;
     uint8_t targetID = 0;
 
-    uint8_t m_deviceID = 0;
-    uint8_t m_commandID = 0;
+    uint8_t m_deviceID;
+    uint8_t m_commandID;
 
     uint8_t m_sequenceNumber = 0;
 
@@ -149,9 +149,9 @@ public:
 
         PingPong = 0x10,
         Info = 0x11,
-        LimbControl = 0x12,
-        Battery = 0x13,
-        MotorControl = 0x16,
+        DrivingSystem = 0x12,
+        MainSystem = 0x13,
+        CarControl = 0x16,
         AnimationControl = 0x17,
         Sensors = 0x18,
         AVControl = 0x1a,
@@ -181,13 +181,6 @@ public:
     };
     Q_ENUM(SoulCommands)
 
-    BasePacket(const uint8_t deviceID, const uint8_t commandID) :
-        m_deviceID(deviceID),
-        m_commandID(commandID)
-    {
-
-    }
-
     bool isValid() const {
         return m_flags != 0;
     }
@@ -199,8 +192,148 @@ public:
     void setSequenceNumber(const uint8_t number) {
         m_sequenceNumber = number;
     }
+
+protected:
+    Packet(const uint8_t deviceID, const uint8_t commandID) :
+        m_deviceID(deviceID),
+        m_commandID(commandID)
+    {}
 };
 
+struct RequestBatteryVoltagePacket : public Packet {
+    static constexpr uint8_t id = 0x3;
+
+    RequestBatteryVoltagePacket() : Packet(Packet::MainSystem, id) {}
+};
+
+struct GoToSleepPacket : public Packet {
+    static constexpr uint8_t id = 0x1;
+
+    GoToSleepPacket() : Packet(Packet::MainSystem, id) {}
+};
+
+struct WakePacket : public Packet {
+    static constexpr uint8_t id = 0x0d;
+
+    WakePacket() : Packet(Packet::MainSystem, id) {}
+};
+
+struct DrivePacket : public Packet {
+    static constexpr uint8_t id = 0x07;
+
+    DrivePacket(uint8_t speed, uint16_t heading, uint8_t flags = 0) : Packet(Packet::DrivingSystem, id),
+        m_speed(speed),
+        m_heading(heading),
+        m_flags(flags)
+    {}
+
+    enum Flag : uint8_t {
+        Reverse = 1 << 0,
+        Boost = 1 << 1,
+        FastTurn = 1 << 2,
+        ReverseLeftMotor = 1 << 3,
+        ReverseRightMotor = 1 << 4,
+    };
+
+    uint8_t m_speed = 0;
+    uint16_t m_heading = 0;
+    uint8_t m_flags = 0;
+};
+
+struct RCDrivePacket : public Packet {
+    static constexpr uint8_t id = 0x02;
+
+    RCDrivePacket(const float heading, const float speed) : Packet(Packet::CarControl, id),
+        m_heading(heading),
+        m_speed(speed)
+    {}
+
+    float m_heading = 0.f;
+    float m_speed = 0.f;
+};
+
+struct SetStancePacket : public Packet {
+    static constexpr uint8_t id = 0x0d;
+
+    enum Stance : uint8_t {
+        Tripod,
+        Bipod
+    };
+
+    SetStancePacket(const Stance stance) : Packet(Packet::AVControl, id),
+        m_stance(stance)
+    {}
+
+    Stance m_stance;
+};
+
+struct PlayAnimationPacket : public Packet {
+    static constexpr uint8_t id = 0x05;
+    PlayAnimationPacket(const uint8_t animation) : Packet(Packet::AVControl, id),
+        m_animation(animation)
+    {}
+
+    enum Animation : uint16_t {
+        Yes = 0x41,
+        No = 0x3f,
+
+        Alarm = 0x17,
+        Angry = 0x18,
+        Annoyed = 0x19,
+//        IonBlast = 0x1a,
+//        Sad = 0x1c,
+        Scared = 0x1d,
+        Chatty = 0x17,
+        Confident = 0x18,
+        Excited = 0x19,
+
+        Happy = 0x1a,
+        Laugh = 0x1B,
+        Surprise = 0x1C,
+    };
+
+    uint16_t m_animation;
+};
+
+struct SetMainLEDColor : public Packet {
+    static constexpr uint8_t id = 0xe;
+    SetMainLEDColor(const uint8_t red, const uint8_t green, const uint8_t blue) :
+        Packet(Packet::AVControl, id),
+        m_red(red),
+        m_green(green),
+        m_blue(blue)
+    {}
+
+    enum Color : uint16_t {
+        Red = 1 << 4, // not tested
+        Green = 1 << 5, // not tested
+        Blue = 1 << 6, // not tested
+    };
+
+    const uint16_t colorsMask = Red | Green | Blue; // idk, makes sense?
+
+    uint8_t m_red = 0;
+    uint8_t m_green = 0;
+    uint8_t m_blue = 0;
+};
+
+struct SetLEDIntensity : public Packet {
+    enum LED : uint16_t {
+        Back = 1 << 0,
+        FrontRed = 1 << 1,
+        FrontGreen = 1 << 2,
+        FrontBlue = 1 << 3,
+    };
+
+    static constexpr uint8_t id = 0xe;
+    SetLEDIntensity(const LED led, uint8_t intensity) : Packet(Packet::AVControl, id),
+        m_led(led),
+        m_intensity(intensity)
+    {}
+
+    uint16_t m_led = 0;
+    uint8_t m_intensity = 0;
+};
 
 #pragma pack(pop)
 

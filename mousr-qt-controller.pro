@@ -25,6 +25,7 @@ HEADERS += \
     src/mousr/AutoplayConfig.h \
     src/sphero/v1/CommandPackets.h \
     src/sphero/v1/ResponsePackets.h \
+    src/sphero/v2/Constants.h \
     src/sphero/v2/Packets.h \
     src/sphero/SpheroHandler.h \
     src/sphero/Uuids.h \
