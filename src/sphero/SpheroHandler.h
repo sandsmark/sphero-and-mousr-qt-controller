@@ -149,6 +149,7 @@ private slots:
 private:
     bool sendRadioControlCommand(const QBluetoothUuid &characteristicUuid, const QByteArray &data);
     void sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data = QByteArray());
+    void parsePacketV1(const QByteArray &data);
 
     template<typename PACKET> void sendCommand(const PACKET &packet) {
         sendCommand(PACKET::deviceId, PACKET::commandId, packetToByteArray(packet));
@@ -177,6 +178,11 @@ private:
     QColor m_color;
 
     struct RobotDefinition {
+        enum APIVersion {
+            V1,
+            V2
+        };
+
         RobotDefinition() = default;
         explicit RobotDefinition(const RobotType type);
 
@@ -187,6 +193,7 @@ private:
         QBluetoothUuid commandsCharacteristic;
 
         QByteArray radioPassword;
+        APIVersion api;
     };
 
     RobotType m_robotType = RobotType::Unknown;
@@ -196,6 +203,7 @@ private:
 
     PowerState m_powerState = UnknownPowerState;
 
+    RobotDefinition m_robot;
 };
 
 using RobotType = SpheroHandler::RobotType;
