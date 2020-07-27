@@ -19,14 +19,9 @@ static constexpr char EscapedStartOfPacket = 0x03;
 static constexpr char EndOfPacket = 0xD8;
 static constexpr char EscapedEndOfPacket = 0x50;
 
-static uint8_t s_sequenceNumber = 0;
 template <typename PACKET>
-QByteArray encode(PACKET packet)
+QByteArray encode(const PACKET &packet)
 {
-//    static uint8_t seq = 0;
-//    packet.m_sequenceNumber = s_sequenceNumber++;
-//    qDebug() << "squence number" << packet.m_sequenceNumber;
-
     QByteArray raw = packetToByteArray(packet);
     uint8_t checksum = 0;
     for (const char c : raw) {
@@ -149,6 +144,9 @@ struct Packet {
     uint8_t m_commandID;
 
     uint8_t m_sequenceNumber = 0;
+
+    // Only if flag is set
+//    uint8_t errorCode = 0;
 
     Q_GADGET
 public:
@@ -322,30 +320,28 @@ struct PlayAnimationPacket : public Packet {
 };
 
 struct SetMainLEDColor : public Packet {
-    static constexpr uint8_t id = 0x0e;
+    static constexpr uint8_t id = 14;
     SetMainLEDColor(const uint8_t red, const uint8_t green, const uint8_t blue) :
         Packet(Packet::AVControl, id),
         m_red(red),
         m_green(green),
         m_blue(blue)
-    {
-//        m_sequenceNumber = 0x1c;
-    }
-//    const uint8_t foo = 0;
-//    const uint8_t mask = 0x70;
+    {}
+    const uint8_t mask = 0x70;
 
-//    enum Color : uint16_t {
-//        Red = 1 << 0, // not tested
-//        Green = 1 << 1, // not tested
-//        Blue = 1 << 2, // not tested
-//    };
-    enum Color : uint16_t {
-        Red = 1 << 4, // not tested
-        Green = 1 << 5, // not tested
-        Blue = 1 << 6, // not tested
+    enum LED : uint8_t {
+        FrontRed = 1 << 0,
+        FrontGreen = 1 << 1,
+        FrontBlue = 1 << 2,
+
+        FrontLED = FrontRed | FrontGreen | FrontBlue,
+
+        BackRed = 1 << 3,
+        BackGreen = 1 << 4,
+        BackBlue = 1 << 5,
+
+        BackLED = BackRed | BackGreen | BackBlue,
     };
-
-//    const uint8_t colorsMask = 0;// Red | Green | Blue; // idk, makes sense?
 
     uint8_t m_red = 0;
     uint8_t m_green = 0;
@@ -354,21 +350,27 @@ struct SetMainLEDColor : public Packet {
 
 struct SetLEDIntensity : public Packet {
     static constexpr uint8_t id = 0xe;
-    enum LED : uint16_t {
-        Back = 1 << 0,
-        FrontRed = 1 << 1,
-        FrontGreen = 1 << 2,
-        FrontBlue = 1 << 3,
+
+    enum LED : uint8_t {
+        BackLED = 0x1,
+        MainRedLED = 0x2,
+        MainGreenLED = 0x4,
+        MainBlueLED = 0x8,
+
     };
 
-    SetLEDIntensity(const LED led, uint8_t intensity) : Packet(Packet::AVControl, id),
-        m_led(led),
+    SetLEDIntensity(const uint8_t led, uint8_t intensity) : Packet(Packet::AVControl, id),
+//        m_led(led),
         m_intensity(intensity)
     {}
-
-    const uint8_t foo = 0;
-    uint8_t m_led = 0;
+//    const uint8_t unknown1 = 0x1c;
+    const uint8_t unknown2 = 0x0;
+    const uint8_t unknown3 = 0x80;
     uint8_t m_intensity = 0;
+
+//    const uint8_t unknown = 0;
+//    uint16_t m_led = 0;
+//    uint8_t m_intensity = 0;
 };
 
 #pragma pack(pop)

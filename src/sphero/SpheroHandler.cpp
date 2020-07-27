@@ -220,6 +220,7 @@ void SpheroHandler::setColor(const int r, const int g, const int b)
     case RobotDefinition::V2:
 //        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::PingPacket()));
         m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetMainLEDColor(r, g, b)));
+//        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetMainLEDColor(0xff, 0xff, 0xff)));
 //        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetLEDIntensity(v2::SetLEDIntensity::FrontRed, 128)));
         break;
     default:
@@ -604,7 +605,8 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         qWarning() << "Unhandled API version";
         return;
     }
-    setColor(Qt::green);
+    m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetLEDIntensity(v2::SetLEDIntensity::BackLED, 255)));
+//    setColor(Qt::green);
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
