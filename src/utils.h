@@ -1,6 +1,8 @@
 #pragma once
 
+#include <QDebug>
 #include <QMetaEnum>
+#include <QtEndian>
 
 namespace EnumHelper {
 
@@ -32,4 +34,27 @@ static inline void setBytes(char **data, const T val)
 {
     memcpy(reinterpret_cast<void*>(*data), reinterpret_cast<const char*>(&val), sizeof(T));
     *data += sizeof(T);
+}
+
+template <typename PACKET>
+QByteArray packetToByteArray(const PACKET &packet)
+{
+    QByteArray ret(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
+    qToBigEndian<char>(ret.data(), sizeof(PACKET), ret.data());
+    return ret;
+}
+
+// data needs to have correct endinanness before calling this cuz im lazy
+template <typename PACKET>
+PACKET byteArrayToPacket(const QByteArray &data, bool *ok)
+{
+    if (size_t(data.size()) < sizeof(PACKET)) {
+        qWarning() << "Invalid packet size, need" << sizeof(PACKET) << "but got" << data.size();
+        *ok = false;
+        return {};
+    }
+    PACKET ret;
+    memcpy(&ret, data.data(), sizeof(PACKET));
+    *ok = true;
+    return ret;
 }

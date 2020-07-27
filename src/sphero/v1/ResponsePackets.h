@@ -2,27 +2,13 @@
 
 #include "BasicTypes.h"
 
+#include "utils.h"
+
 #include <QObject>
 #include <QtEndian>
 #include <QDebug>
 
 namespace sphero {
-
-// data needs to have correct endinanness
-template <typename PACKET>
-PACKET byteArrayToPacket(const QByteArray &data, bool *ok)
-{
-    if (size_t(data.size()) < sizeof(PACKET)) {
-        qWarning() << "Invalid packet size, need" << sizeof(PACKET) << "but got" << data.size();
-        *ok = false;
-        return {};
-    }
-    PACKET ret;
-    memcpy(&ret, data.data(), sizeof(PACKET));
-    *ok = true;
-    return ret;
-}
-
 
 #pragma pack(push,1)
 

@@ -2,6 +2,8 @@
 
 #include "BasicTypes.h"
 
+#include "utils.h"
+
 #include <QDebug>
 #include <QObject>
 #include <QtEndian>
@@ -9,29 +11,6 @@
 
 namespace sphero {
 namespace v2 {
-
-template <typename PACKET>
-QByteArray packetToByteArray(const PACKET &packet)
-{
-    QByteArray ret(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
-//    qToLittleEndian<char>(ret.data(), sizeof(PACKET), ret.data());
-    qToBigEndian<char>(ret.data(), sizeof(PACKET), ret.data());
-    return ret;
-}
-
-template <typename PACKET>
-PACKET byteArrayToPacket(const QByteArray &data, bool *ok)
-{
-    if (size_t(data.size()) < sizeof(PACKET)) {
-        qWarning() << "Invalid packet size, need" << sizeof(PACKET) << "but got" << data.size();
-        *ok = false;
-        return {};
-    }
-    PACKET ret;
-    memcpy(&ret, data.data(), sizeof(PACKET));
-    *ok = true;
-    return ret;
-}
 
 static constexpr char Escape = 0xAB;
 static constexpr char EscapedEscape = 0x23;

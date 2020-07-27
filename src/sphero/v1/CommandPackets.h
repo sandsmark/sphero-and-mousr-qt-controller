@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BasicTypes.h"
+#include "utils.h"
 
 #include <QDebug>
 #include <QObject>
@@ -9,15 +10,6 @@
 
 namespace sphero {
 namespace v1 {
-
-template <typename PACKET>
-QByteArray packetToByteArray(const PACKET &packet)
-{
-    QByteArray ret(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
-//    qToLittleEndian<char>(ret.data(), sizeof(PACKET), ret.data());
-    qToBigEndian<char>(ret.data(), sizeof(PACKET), ret.data());
-    return ret;
-}
 
 #pragma pack(push,1)
 

@@ -2,6 +2,8 @@
 
 #include "BasicTypes.h"
 
+#include "utils.h"
+
 #include <QObject>
 #include <QPointer>
 #include <QBluetoothUuid>
