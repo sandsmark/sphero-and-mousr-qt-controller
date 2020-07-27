@@ -19,9 +19,14 @@ static constexpr char EscapedStartOfPacket = 0x03;
 static constexpr char EndOfPacket = 0xD8;
 static constexpr char EscapedEndOfPacket = 0x50;
 
+static uint8_t s_sequenceNumber = 0;
 template <typename PACKET>
-QByteArray encode(const PACKET &packet)
+QByteArray encode(PACKET packet)
 {
+//    static uint8_t seq = 0;
+//    packet.m_sequenceNumber = s_sequenceNumber++;
+//    qDebug() << "squence number" << packet.m_sequenceNumber;
+
     QByteArray raw = packetToByteArray(packet);
     uint8_t checksum = 0;
     for (const char c : raw) {
@@ -58,10 +63,10 @@ QByteArray encode(const PACKET &packet)
     qDebug() << "  ] Flags:" << packet.m_flags;
     qDebug() << "  ] Device ID:" << packet.m_deviceID;
     qDebug() << "  ] Command ID:" << packet.m_commandID;
-    qDebug() << "  ] Sequence number:" << packet.m_sequenceNumber;
+//    qDebug() << "  ] Sequence number:" << packet.m_sequenceNumber;
 //    qDebug() << "  ] Source:" << packet.sourceID;
 //    qDebug() << "  ] Target:" << packet.targetID;
-    qDebug() << "  ] Error code:" << packet.errorCode;
+//    qDebug() << "  ] Error code:" << packet.errorCode;
 
     return encoded;
 }
@@ -96,16 +101,17 @@ PACKET decode(const QByteArray &input, bool *ok)
             *ok = false;
             qWarning() << "Invalid escape sequence" << c << input[i];
             qDebug() << input.toHex(':');
-            return;
+            return {};
         }
     }
+    qDebug() << "decoded" << decoded.toHex(':');
 
     uint8_t checksum = 0;
     for (int i=0; i<decoded.size() - 1; i++) {
         checksum += decoded[i];
     }
 
-    if (!decoded.endsWith(checksum)) {
+    if (!decoded.endsWith(checksum xor 0xff)) {
         qWarning() <<  "invalid checksum" << decoded.back() << "expected" << checksum;
         *ok = false;
         return {};
@@ -131,7 +137,7 @@ struct Packet {
         TwoByteFlags = 1 << 7,
     };
 
-    uint8_t m_flags = Synchronous;
+    uint8_t m_flags = Synchronous | ResetTimeout;
 
     // These are only used on the big robot I don't remember the name of
     // The Mini etc. don't have several systems so they don't need this
@@ -144,11 +150,9 @@ struct Packet {
 
     uint8_t m_sequenceNumber = 0;
 
-    // Only if flag is set
-    uint8_t errorCode = 0;
-
     Q_GADGET
 public:
+    Packet() = default;
 
     enum CommandTarget : uint8_t {
         Internal = 0x00,
@@ -196,7 +200,7 @@ public:
     }
 
     void setSequenceNumber(const uint8_t number) {
-        m_sequenceNumber = number;
+//        m_sequenceNumber = number;
     }
 
 protected:
@@ -206,22 +210,38 @@ protected:
     {}
 };
 
+struct ResponsePacket: public Packet {
+    uint8_t errorCode = 0;
+
+    ResponsePacket() = default;
+
+    ResponsePacket(const Packet::CommandTarget target, const uint8_t commandID) :
+        Packet(target, commandID) {}
+};
+
 struct RequestBatteryVoltagePacket : public Packet {
     static constexpr uint8_t id = 0x3;
 
     RequestBatteryVoltagePacket() : Packet(Packet::MainSystem, id) {}
 };
 
-struct GoToSleepPacket : public Packet {
+struct GoToLightSleep : public Packet {
     static constexpr uint8_t id = 0x1;
 
-    GoToSleepPacket() : Packet(Packet::MainSystem, id) {}
+//    const uint8_t unknown = 0x17;
+
+    GoToLightSleep() : Packet(Packet::MainSystem, id) {}
 };
 
 struct WakePacket : public Packet {
     static constexpr uint8_t id = 0xd;
 
-    WakePacket() : Packet(Packet::Info, id) {}
+    WakePacket() : Packet(Packet::MainSystem, id) {}
+};
+
+struct PingPacket : public Packet {
+    static constexpr uint8_t id = 0;
+    PingPacket() : Packet(Packet::PingPong, id) {}
 };
 
 struct DrivePacket : public Packet {
@@ -302,21 +322,30 @@ struct PlayAnimationPacket : public Packet {
 };
 
 struct SetMainLEDColor : public Packet {
-    static constexpr uint8_t id = 0xe;
+    static constexpr uint8_t id = 0x0e;
     SetMainLEDColor(const uint8_t red, const uint8_t green, const uint8_t blue) :
         Packet(Packet::AVControl, id),
         m_red(red),
         m_green(green),
         m_blue(blue)
-    {}
+    {
+//        m_sequenceNumber = 0x1c;
+    }
+//    const uint8_t foo = 0;
+//    const uint8_t mask = 0x70;
 
+//    enum Color : uint16_t {
+//        Red = 1 << 0, // not tested
+//        Green = 1 << 1, // not tested
+//        Blue = 1 << 2, // not tested
+//    };
     enum Color : uint16_t {
         Red = 1 << 4, // not tested
         Green = 1 << 5, // not tested
         Blue = 1 << 6, // not tested
     };
 
-    const uint16_t colorsMask = Red | Green | Blue; // idk, makes sense?
+//    const uint8_t colorsMask = 0;// Red | Green | Blue; // idk, makes sense?
 
     uint8_t m_red = 0;
     uint8_t m_green = 0;
@@ -324,6 +353,7 @@ struct SetMainLEDColor : public Packet {
 };
 
 struct SetLEDIntensity : public Packet {
+    static constexpr uint8_t id = 0xe;
     enum LED : uint16_t {
         Back = 1 << 0,
         FrontRed = 1 << 1,
@@ -331,13 +361,13 @@ struct SetLEDIntensity : public Packet {
         FrontBlue = 1 << 3,
     };
 
-    static constexpr uint8_t id = 0xe;
     SetLEDIntensity(const LED led, uint8_t intensity) : Packet(Packet::AVControl, id),
         m_led(led),
         m_intensity(intensity)
     {}
 
-    uint16_t m_led = 0;
+    const uint8_t foo = 0;
+    uint8_t m_led = 0;
     uint8_t m_intensity = 0;
 };
 

@@ -217,6 +217,11 @@ void SpheroHandler::setColor(const int r, const int g, const int b)
     case RobotDefinition::V1:
         sendCommandV1(v1::SetColorsCommandPacket(r, g, b, v1::SetColorsCommandPacket::Temporary));
         break;
+    case RobotDefinition::V2:
+//        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::PingPacket()));
+        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetMainLEDColor(r, g, b)));
+//        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetLEDIntensity(v2::SetLEDIntensity::FrontRed, 128)));
+        break;
     default:
         qWarning() << "TODO setcolor";
         break;
@@ -382,6 +387,9 @@ void SpheroHandler::goToSleep()
     switch(m_robot.api) {
     case RobotDefinition::V1:
         sendCommandV1(v1::GoToSleepPacket());
+        break;
+    case RobotDefinition::V2:
+        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::GoToLightSleep()));
         break;
     default:
         qWarning() << "TODO gotosleep";
@@ -587,7 +595,6 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         sendCommandV1(v1::SetNonPersistentOptionsPacket{v1::SetNonPersistentOptionsPacket::StopOnDisconnect});
         setAutoStabilize(true);
         setDetectCollisions(true);
-        setColor(Qt::green);
         sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::SetDataStreaming, v1::DataStreamingCommandPacket::create(1) );
         break;
     case RobotDefinition::V2:
@@ -597,6 +604,7 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         qWarning() << "Unhandled API version";
         return;
     }
+    setColor(Qt::green);
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
@@ -640,7 +648,6 @@ void SpheroHandler::onServiceError(QLowEnergyService::ServiceError error)
 
 void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
 {
-    qDebug() << "main characteristic changed";
 
     if (data.isEmpty()) {
         qWarning() << " ! " << characteristic.uuid() << "got empty data";
@@ -655,6 +662,7 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     switch(m_robot.api) {
     case RobotDefinition::V1:
+        qDebug() << "main characteristic changed";
         if (characteristic.uuid() == Characteristics::Radio::V1::rssi) {
             m_rssi = data[0];
             emit rssiChanged();
@@ -670,12 +678,60 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
         break;
 
     case RobotDefinition::V2:
+        parsePacketV2(data);
+        break;
     default:
         qWarning() << " !!!!! Unhandled API version";
         qDebug() << "characteristic" << characteristic.uuid();
         qDebug() << "DatA:" << data.toHex(':');
         break;
 
+    }
+}
+
+void SpheroHandler::parsePacketV2(const QByteArray &data)
+{
+    if (data.startsWith(v2::StartOfPacket)) {
+        m_receiveBuffer = data;
+    } else if (!m_receiveBuffer.isEmpty()) {
+        m_receiveBuffer.append(data);
+    } else {
+        qWarning() << " ! Got data but without correct start";
+        qDebug() << data.toHex(':');
+        const int startOfData = data.indexOf(v2::StartOfPacket);
+        if (startOfData < 0) {
+            qWarning() << " ! Contains nothing useful";
+            m_receiveBuffer.clear();
+            return;
+        }
+        m_receiveBuffer = data.mid(startOfData);
+    }
+
+    int end = m_receiveBuffer.indexOf(v2::EndOfPacket);
+    while (end != -1) {
+        const QByteArray packetData = m_receiveBuffer.mid(0, end + 1);
+        m_receiveBuffer = m_receiveBuffer.mid(end + 1);
+        end = m_receiveBuffer.indexOf(v2::EndOfPacket);
+
+        qDebug() << "Decoding" << packetData.toHex(':');
+        if (size_t(packetData.size()) < sizeof(v2::Packet)) {
+            qWarning() << "not enough data" << packetData.size();
+            qDebug() << packetData.toHex(':');
+            continue;
+        }
+        bool ok;
+        const v2::Packet base = v2::decode<v2::Packet>(packetData, &ok);
+        if (!ok) {
+            qWarning() << "Failed to decode" << packetData.toHex(':');
+        }
+        if (base.m_flags & v2::Packet::HasErrorCode) {
+            const v2::ResponsePacket response = v2::decode<v2::ResponsePacket>(packetData, &ok);
+            qWarning() << "Got error code" << v2::Packet::Error(response.errorCode);
+            qDebug() << "for" << v2::Packet::CommandTarget(base.m_deviceID) << base.m_commandID;
+            continue;
+        }
+
+//        qDebug() << "Got data for" << v2::Packet::CommandTarget(base.m_deviceID) << base.;
     }
 }
 
