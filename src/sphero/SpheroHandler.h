@@ -148,11 +148,11 @@ private slots:
 
 private:
     bool sendRadioControlCommand(const QBluetoothUuid &characteristicUuid, const QByteArray &data);
-    void sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data = QByteArray());
+    void sendCommandV1(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data = QByteArray());
     void parsePacketV1(const QByteArray &data);
 
-    template<typename PACKET> void sendCommand(const PACKET &packet) {
-        sendCommand(PACKET::deviceId, PACKET::commandId, packetToByteArray(packet));
+    template<typename PACKET> void sendCommandV1(const PACKET &packet) {
+        sendCommandV1(PACKET::deviceId, PACKET::commandId, packetToByteArray(packet));
     }
 
 
@@ -191,6 +191,7 @@ private:
         QBluetoothUuid batteryService;
 
         QBluetoothUuid commandsCharacteristic;
+        QBluetoothUuid passwordCharacteristic;
 
         QByteArray radioPassword;
         APIVersion api;

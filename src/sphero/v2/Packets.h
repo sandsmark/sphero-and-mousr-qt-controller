@@ -55,8 +55,13 @@ QByteArray encode(const PACKET &packet)
     encoded.append(EndOfPacket);
 
     qDebug() << " + Packet:";
-    qDebug() << "  ] Device id:" << packet.deviceID;
-    qDebug() << "  ] command id:" << packet.commandID;
+    qDebug() << "  ] Flags:" << packet.m_flags;
+    qDebug() << "  ] Device ID:" << packet.m_deviceID;
+    qDebug() << "  ] Command ID:" << packet.m_commandID;
+    qDebug() << "  ] Sequence number:" << packet.m_sequenceNumber;
+//    qDebug() << "  ] Source:" << packet.sourceID;
+//    qDebug() << "  ] Target:" << packet.targetID;
+    qDebug() << "  ] Error code:" << packet.errorCode;
 
     return encoded;
 }
@@ -114,24 +119,6 @@ PACKET decode(const QByteArray &input, bool *ok)
 #pragma pack(push,1)
 
 struct Packet {
-    uint8_t m_flags = 0xff;
-
-    // These are only used on the big robot I don't remember the name of
-    // The Mini etc. don't have several systems so they don't need this
-    // They are unset/unused unless the appropriate flags are set
-    uint8_t sourceID = 0;
-    uint8_t targetID = 0;
-
-    uint8_t m_deviceID;
-    uint8_t m_commandID;
-
-    uint8_t m_sequenceNumber = 0;
-
-    // Only if flag is set
-    uint8_t errorCode = 0;
-
-    Q_GADGET
-public:
     // TODO: share with v1 (mostly compatible, ish)
     enum Flags {
         HasErrorCode = 1 << 0,
@@ -143,6 +130,25 @@ public:
         Reserved = 1 << 6,
         TwoByteFlags = 1 << 7,
     };
+
+    uint8_t m_flags = Synchronous;
+
+    // These are only used on the big robot I don't remember the name of
+    // The Mini etc. don't have several systems so they don't need this
+    // They are unset/unused unless the appropriate flags are set
+//    uint8_t sourceID = 0;
+//    uint8_t targetID = 0;
+
+    uint8_t m_deviceID;
+    uint8_t m_commandID;
+
+    uint8_t m_sequenceNumber = 0;
+
+    // Only if flag is set
+    uint8_t errorCode = 0;
+
+    Q_GADGET
+public:
 
     enum CommandTarget : uint8_t {
         Internal = 0x00,
@@ -213,9 +219,9 @@ struct GoToSleepPacket : public Packet {
 };
 
 struct WakePacket : public Packet {
-    static constexpr uint8_t id = 0x0d;
+    static constexpr uint8_t id = 0xd;
 
-    WakePacket() : Packet(Packet::MainSystem, id) {}
+    WakePacket() : Packet(Packet::Info, id) {}
 };
 
 struct DrivePacket : public Packet {
@@ -224,7 +230,7 @@ struct DrivePacket : public Packet {
     DrivePacket(uint8_t speed, uint16_t heading, uint8_t flags = 0) : Packet(Packet::DrivingSystem, id),
         m_speed(speed),
         m_heading(heading),
-        m_flags(flags)
+        m_driveFlags(flags)
     {}
 
     enum Flag : uint8_t {
@@ -237,7 +243,7 @@ struct DrivePacket : public Packet {
 
     uint8_t m_speed = 0;
     uint16_t m_heading = 0;
-    uint8_t m_flags = 0;
+    uint8_t m_driveFlags = 0;
 };
 
 struct RCDrivePacket : public Packet {

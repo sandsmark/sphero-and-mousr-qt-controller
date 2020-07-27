@@ -213,7 +213,14 @@ QString SpheroHandler::statusString()
 
 void SpheroHandler::setColor(const int r, const int g, const int b)
 {
-    sendCommand(v1::SetColorsCommandPacket(r, g, b, v1::SetColorsCommandPacket::Temporary));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::SetColorsCommandPacket(r, g, b, v1::SetColorsCommandPacket::Temporary));
+        break;
+    default:
+        qWarning() << "TODO setcolor";
+        break;
+    }
 
     const QColor color = QColor::fromRgb(r, g, b);
     if (color != m_color) {
@@ -234,7 +241,14 @@ void SpheroHandler::setSpeedAndAngle(int speed, int angle)
         return;
     }
 
-    sendCommand(v1::RollCommandPacket({uint8_t(speed), qbswap<quint16>(uint16_t(angle)), v1::RollCommandPacket::Roll}));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::RollCommandPacket({uint8_t(speed), qbswap<quint16>(uint16_t(angle)), v1::RollCommandPacket::Roll}));
+        break;
+    default:
+        qWarning() << "TODO setspeedandangle";
+        break;
+    }
 
     if (m_speed != speed) {
         m_speed = speed;
@@ -273,70 +287,144 @@ void SpheroHandler::setAngle(int angle)
     }
 
     // why the fuck do I need to swap the angle bytes?
-    sendCommand(v1::RollCommandPacket({uint8_t(m_speed), qbswap<quint16>(uint16_t(angle)), v1::RollCommandPacket::Brake}));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::RollCommandPacket({uint8_t(m_speed), qbswap<quint16>(uint16_t(angle)), v1::RollCommandPacket::Brake}));
+        break;
+    default:
+        qWarning() << "TODO setangle";
+        break;
+    }
+
     m_angle = angle;
     emit angleChanged();
 }
 
 void SpheroHandler::brake()
 {
-    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
+        break;
+    default:
+        qWarning() << "TODO brake";
+        break;
+    }
 }
 
 void SpheroHandler::faceLeft()
 {
-//    setAngle(270);
-//    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(270), v1::RollCommandPacket::Brake}));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::RollCommandPacket({uint8_t(0), uint16_t(270), v1::RollCommandPacket::Brake}));
+        break;
+    default:
+        qWarning() << "TODO faceleft";
+        break;
+    }
 }
 
 void SpheroHandler::faceRight()
 {
-//    setAngle(90);
-    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(90), v1::RollCommandPacket::Brake}));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::RollCommandPacket({uint8_t(0), uint16_t(90), v1::RollCommandPacket::Brake}));
+        break;
+    default:
+        qWarning() << "TODO faceleft";
+        break;
+    }
 }
 
 void SpheroHandler::faceForward()
 {
-//    setAngle(0);
-    sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
+        break;
+    default:
+        qWarning() << "TODO faceforward";
+        break;
+    }
 }
 
 
 void SpheroHandler::setAutoStabilize(const bool enabled)
 {
-    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::SetStabilization, QByteArray(enabled ? "\x1" : "\x0"));
-    if (enabled != m_autoStabilize) {
-        m_autoStabilize = enabled;
-        emit autoStabilizeChanged();
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::SetStabilization, QByteArray(enabled ? "\x1" : "\x0"));
+        if (enabled != m_autoStabilize) {
+            m_autoStabilize = enabled;
+            emit autoStabilizeChanged();
+        }
+        break;
+    default:
+        qWarning() << "TODO setautostabilize";
+        break;
     }
 }
 
 void SpheroHandler::setDetectCollisions(const bool enabled)
 {
-    sendCommand(v1::EnableCollisionDetectionPacket(enabled));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::EnableCollisionDetectionPacket(enabled));
+        break;
+    default:
+        qWarning() << "TODO set detect collisions";
+        break;
+    }
 }
 
 void SpheroHandler::goToSleep()
 {
-    sendCommand(v1::GoToSleepPacket());
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::GoToSleepPacket());
+        break;
+    default:
+        qWarning() << "TODO gotosleep";
+        break;
+    }
 }
 
 void SpheroHandler::goToDeepSleep()
 {
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
     // Not sure if this is necessary first
 //    sendCommand(GoToSleepPacket());
-
-    sendRadioControlCommand(Characteristics::Radio::V1::deepSleep, "011i3");
+        sendRadioControlCommand(Characteristics::Radio::V1::deepSleep, "011i3");
+        break;
+    default:
+        qWarning() << "TODO gotodeepsleep";
+        break;
+    }
 }
 
 void SpheroHandler::enablePowerNotifications()
 {
-    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::SetPwrNotify, QByteArray("\x1", 1));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::SetPwrNotify, QByteArray("\x1", 1));
+        break;
+    default:
+        qWarning() << "TODO enable power notifications";
+        break;
+    }
 }
 
 void SpheroHandler::setEnableAsciiShell(const bool enabled)
 {
-    sendCommand(v1::SetUserHackModePacket({enabled}));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::SetUserHackModePacket({enabled}));
+        break;
+    default:
+        qWarning() << "TODO enable ascii shell";
+        break;
+    }
 }
 
 void SpheroHandler::boost(int angle, int duration)
@@ -346,7 +434,14 @@ void SpheroHandler::boost(int angle, int duration)
     }
     angle %= 360;
 
-    sendCommand(v1::BoostCommandPacket({uint8_t(qBound(0, duration, 255)), uint16_t(angle)}));
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::BoostCommandPacket({uint8_t(qBound(0, duration, 255)), uint16_t(angle)}));
+        break;
+    default:
+        qWarning() << "TODO boost";
+        break;
+    }
 
     if (m_angle != angle) {
         m_angle = angle;
@@ -413,6 +508,14 @@ void SpheroHandler::onServiceDiscoveryFinished()
         qWarning() << " ! no main service";
         return;
     }
+
+    connect(m_mainService, &QLowEnergyService::descriptorWritten, this, [](const QLowEnergyDescriptor  &info, const QByteArray &value) {
+        qDebug() << "main descriptor write" << value;
+    });
+    connect(m_mainService, &QLowEnergyService::descriptorRead, this, [](const QLowEnergyDescriptor  &info, const QByteArray &value) {
+        qDebug() << "main descriptor read" << value;
+    });
+
     connect(m_mainService, &QLowEnergyService::characteristicChanged, this, &SpheroHandler::onCharacteristicChanged);
     connect(m_mainService, QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error), this, &SpheroHandler::onServiceError);
     connect(m_mainService, &QLowEnergyService::characteristicWritten, this, [](const QLowEnergyCharacteristic &info, const QByteArray &value) {
@@ -443,6 +546,10 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         return;
     }
 
+    for (const QLowEnergyCharacteristic &characteristic : m_mainService->characteristics()) {
+        qDebug() << "service has char" << characteristic.uuid() << characteristic.name();
+    }
+
     m_commandsCharacteristic = m_mainService->characteristic(m_robot.commandsCharacteristic);
     if (!m_commandsCharacteristic.isValid()) {
         qWarning() << " ! Commands characteristic invalid";
@@ -453,10 +560,6 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
     switch(m_robot.api) {
     case RobotDefinition::V1:
         responseCharacteristic = m_mainService->characteristic(Characteristics::Main::V1::response);
-        if (!responseCharacteristic.isValid()) {
-            qWarning() << " ! response characteristic invalid";
-            return;
-        }
         break;
     case RobotDefinition::V2:
         responseCharacteristic = m_commandsCharacteristic;
@@ -465,26 +568,35 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         qWarning() << "Unhandled API version";
         return;
     }
+    if (!responseCharacteristic.isValid()) {
+        qWarning() << " ! response characteristic invalid";
+        return;
+    }
 
 
     // Enable notifications
     m_mainService->writeDescriptor(responseCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), QByteArray::fromHex("0100"));
+    m_mainService->writeDescriptor(m_mainService->characteristic(Characteristics::Main::V2::unknown1).descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), QByteArray::fromHex("0100"));
 
     qDebug() << " - Successfully connected";
 
-    sendCommand(v1::SetPowerNotifyCommandPacket{0});
-    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::Ping, {});
-    sendCommand(v1::SetNonPersistentOptionsPacket{v1::SetNonPersistentOptionsPacket::StopOnDisconnect});
-//    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::);
-//    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetRGBLed);
-//    sendCommand(v1::DataStreamingCommandPacket());
-//    sendCommand(CommandPacketHeader::Internal, CommandPacketHeader::GetBtName);
-//    sendCommand(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::GetAutoReconnect);
-    setAutoStabilize(true);
-    setDetectCollisions(true);
-    setColor(Qt::green);
-
-    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::SetDataStreaming, v1::DataStreamingCommandPacket::create(1) );
+    switch(m_robot.api) {
+    case RobotDefinition::V1:
+        sendCommandV1(v1::SetPowerNotifyCommandPacket{0});
+        sendCommandV1(v1::CommandPacketHeader::Internal, v1::CommandPacketHeader::Ping, {});
+        sendCommandV1(v1::SetNonPersistentOptionsPacket{v1::SetNonPersistentOptionsPacket::StopOnDisconnect});
+        setAutoStabilize(true);
+        setDetectCollisions(true);
+        setColor(Qt::green);
+        sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::SetDataStreaming, v1::DataStreamingCommandPacket::create(1) );
+        break;
+    case RobotDefinition::V2:
+        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::WakePacket()));
+        break;
+    default:
+        qWarning() << "Unhandled API version";
+        return;
+    }
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
@@ -528,6 +640,8 @@ void SpheroHandler::onServiceError(QLowEnergyService::ServiceError error)
 
 void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &data)
 {
+    qDebug() << "main characteristic changed";
+
     if (data.isEmpty()) {
         qWarning() << " ! " << characteristic.uuid() << "got empty data";
         return;
@@ -557,7 +671,9 @@ void SpheroHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &char
 
     case RobotDefinition::V2:
     default:
-        qWarning() << "Unhandled API version";
+        qWarning() << " !!!!! Unhandled API version";
+        qDebug() << "characteristic" << characteristic.uuid();
+        qDebug() << "DatA:" << data.toHex(':');
         break;
 
     }
@@ -668,11 +784,11 @@ void SpheroHandler::parsePacketV1(const QByteArray &data)
                     qDebug() << " ! hardware command" << v1::CommandPacketHeader::HardwareCommand(responseToCommand.second);
 
                     if (responseToCommand.second != v1::CommandPacketHeader::GetLocatorData) {
-                        sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
+                        sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
                     }
                 } else if (responseToCommand.first == v1::CommandPacketHeader::Internal) {
                     qDebug() << " ! internal command" << v1::CommandPacketHeader::InternalCommand(responseToCommand.second);
-                    sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
+                    sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
                 } else {
                     qDebug() << " ! invalid command target" << responseToCommand;
                 }
@@ -765,8 +881,8 @@ void SpheroHandler::parsePacketV1(const QByteArray &data)
 //                faceLeft();
 //                setAngle(180);
 //                setSpeedAndAngle(0, 180);
-                sendCommand(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Calibrate}));
-                sendCommand(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
+                sendCommandV1(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Calibrate}));
+                sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
 //                faceRight();
                 break;
             }
@@ -876,17 +992,14 @@ void SpheroHandler::onRadioServiceChanged(QLowEnergyService::ServiceState newSta
         return;
     }
 
-    // TODO: R2D2:
-    // 1. Antidos
-    // 2. write dfu handle request notification
-    // 2. read DFU:handle, receive: 0000   0b 00 01 00 04 00 02 02                           ........
-    // 3. write main:main notification
-    // 4. write main service (wake from sleep packet): 0000   8d 0a 13 0d 00 d5 d8                              .......
+    if (!sendRadioControlCommand(m_robot.passwordCharacteristic, m_robot.radioPassword)) {
+        qWarning() << "Failed to send unlock password";
+        return;
+    }
 
     switch(m_robot.api) {
     case RobotDefinition::V1: {
-        if (!sendRadioControlCommand(Characteristics::Radio::V1::antiDos, "011i3") ||
-            !sendRadioControlCommand(Characteristics::Radio::V1::transmitPower, "\x7") ||
+        if (!sendRadioControlCommand(Characteristics::Radio::V1::transmitPower, "\x7") ||
             !sendRadioControlCommand(Characteristics::Radio::V1::wake, "\x1")) {
             qWarning() << " ! Init sequence failed";
             emit disconnected();
@@ -897,7 +1010,19 @@ void SpheroHandler::onRadioServiceChanged(QLowEnergyService::ServiceState newSta
         m_radioService->writeDescriptor(rssiCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), QByteArray::fromHex("0100"));
         break;
     }
-    case RobotDefinition::V2:
+    case RobotDefinition::V2: {
+        // TODO: R2D2:
+        // 1. Antidos
+        // 2. write dfu handle request notification
+        // 2. read DFU:handle, receive: 0000   0b 00 01 00 04 00 02 02                           ........
+        // 3. write main:main notification
+        // 4. write main service (wake from sleep packet): 0000   8d 0a 13 0d 00 d5 d8                              .......
+
+        const QLowEnergyCharacteristic rssiCharacteristic = m_radioService->characteristic(Characteristics::Radio::V2::write); // idk??
+        m_radioService->writeDescriptor(rssiCharacteristic.descriptor(QBluetoothUuid::ClientCharacteristicConfiguration), QByteArray::fromHex("0100"));
+
+        break;
+    }
     default:
         qWarning() << "unhandled robot api";
         return;
@@ -922,7 +1047,7 @@ bool SpheroHandler::sendRadioControlCommand(const QBluetoothUuid &characteristic
     return true;
 }
 
-void SpheroHandler::sendCommand(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data)
+void SpheroHandler::sendCommandV1(const uint8_t deviceId, const uint8_t commandID, const QByteArray &data)
 {
     v1::CommandPacketHeader packet(deviceId, commandID);
     if (!packet.isValid()) {
@@ -971,6 +1096,7 @@ SpheroHandler::RobotDefinition::RobotDefinition(const RobotType type)
         commandsCharacteristic = Characteristics::Main::V1::commands;
 
         radioPassword = "011i3";
+        passwordCharacteristic = Characteristics::Radio::V1::antiDos;
 
         api = V1;
         break;
@@ -989,6 +1115,7 @@ SpheroHandler::RobotDefinition::RobotDefinition(const RobotType type)
         commandsCharacteristic = Characteristics::Main::V2::commands;
 
         radioPassword = "usetheforce...band";
+        passwordCharacteristic = Characteristics::Radio::V2::antiDos;
 
         api = V2;
         break;
