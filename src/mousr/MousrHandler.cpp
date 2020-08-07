@@ -401,7 +401,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         break;
 
     case FirmwareVersion: {
-        m_version = response.firmwareVersion.version;
+        m_version = response.firmwareVersion;
 
         qDebug() << "Firmware mode:" << m_version.firmwareType;
         qDebug().noquote() << "Version" << (QByteArray::number(m_version.major) + "." + QByteArray::number(m_version.minor) + "." + QByteArray::number(m_version.commitNumber) + "-" + QByteArray(m_version.commitHash, 4).toHex());

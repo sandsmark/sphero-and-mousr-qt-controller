@@ -292,7 +292,6 @@ private:
     };
     static_assert(sizeof(Version) == 19);
 
-    Version m_version;
     struct BatteryVoltageResponse {
         uint8_t voltage;
         bool isBatteryLow;
@@ -361,8 +360,8 @@ private:
             AnalyticsBeginResponse analyticsBegin;
             AutoPlayConfigResponse autoPlay{};
             IsSensorDirtyResponse sensorDirty;
-            FirmwareVersionResponse firmwareVersion;
-            NackResponse nack;
+            Version firmwareVersion;
+            CommandResult commandResult;
         };
     };
     static_assert(sizeof(ResponsePacket) == 20);
@@ -407,6 +406,7 @@ private:
     QString m_name;
 
     AutoplayConfig m_autoplay;
+    Version m_version;
 };
 
 QDebug operator<<(QDebug debug, const AutoplayConfig &c);
