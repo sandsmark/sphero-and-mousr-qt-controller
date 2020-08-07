@@ -155,10 +155,8 @@ public: // enums
         HardwareVersion = 29,
         InitDone = 30,
 
-//        AutoAckSuccess = 48,
         DeviceOrientation = 48,
-//        AutoAckReport = 49,
-//        ResetTailReport = 50,
+        AutoAckReport = 49,
         ResetTailFailInfo = 50,
 
         SensorDirty = 64, // sensor dirty
@@ -178,7 +176,7 @@ public: // enums
         RobotStopped = 99,
         RcStuck = 100,
 
-        Nack = 255
+        CommandCompleted = 255
     };
     Q_ENUM(ResponseType)
 
@@ -338,18 +336,18 @@ private:
 
         char padding[18];
     };
-    struct FirmwareVersionResponse {
-        Version version;
-    };
-    struct NackResponse {
-        CommandType command;
-        uint8_t unknown1;
+    static_assert(sizeof(IsSensorDirtyResponse) == 19);
+
+    struct CommandResult {
+        CommandType commandType;
+        int8_t resultCode;
         uint32_t currentApiVersion;
         uint32_t minimumApiVersion;
         uint32_t maximumApiVersion;
 
         uint8_t padding[4];
     };
+    static_assert(sizeof(CommandResult) == 19);
 
     struct ResponsePacket {
         ResponseType type;

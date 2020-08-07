@@ -408,15 +408,35 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         qDebug() << "Mousr version" << m_version.mousrVersion << "hardware version" << m_version.hardwareVersion << "bootloader version" << m_version.bootloaderVersion;
         break;
     }
-    case Nack: {
-        CommandType command = response.nack.command;
-        uint32_t currentApiVer = response.nack.currentApiVersion;
-        uint32_t minApiVer = response.nack.minimumApiVersion;
-        uint32_t maxApiVer = response.nack.maximumApiVersion;
-        qWarning() << "!! Got NACK for command" << command;
-        qDebug() << "unknown num:" << response.nack.unknown1;
-        qDebug() << "Api version current:" << currentApiVer << "min:" << minApiVer << "max:" << maxApiVer;
-        qDebug() << "unknowns" << response.nack.unknown2[0] <<  response.nack.unknown2[1] <<  response.nack.unknown2[2] <<  response.nack.unknown2[3];
+    case CommandCompleted: {
+        qDebug() << sizeof(CommandResult) << data.size();
+        const CommandType command = response.commandResult.commandType;
+        const uint32_t currentApiVer = response.commandResult.currentApiVersion;
+        const uint32_t minApiVer = response.commandResult.minimumApiVersion;
+        const uint32_t maxApiVer = response.commandResult.maximumApiVersion;
+        switch(response.commandResult.commandType) {
+        case CommandType::InitializeDevice:
+            break;
+        case CommandType::EraseAnalyticsRecords:
+            switch(response.commandResult.resultCode) {
+            case 0:
+                qDebug() << "Analytics erase succeeded";
+                break;
+            case -1:
+                qWarning() << "Analytics erase failed";
+                break;
+            default:
+                qWarning() << "unknown result code for erasing analytics" << response.commandResult.resultCode;
+            }
+
+            break;
+        default:
+            qWarning() << "!! Got NACK for command" << command;
+            qDebug() << "unknown num:" << response.commandResult.resultCode;
+            qDebug() << "Api version current:" << currentApiVer << "min:" << minApiVer << "max:" << maxApiVer;
+            break;
+        }
+
         break;
     }
     default:
