@@ -290,6 +290,7 @@ private:
         uint32_t hardwareVersion;
         uint32_t bootloaderVersion;
     };
+    static_assert(sizeof(Version) == 19);
 
     Version m_version;
     struct BatteryVoltageResponse {
@@ -302,6 +303,7 @@ private:
 
         uint8_t padding[12];
     };
+    static_assert(sizeof(BatteryVoltageResponse) == 19);
 
     struct DeviceOrientationResponse {
         static_assert(sizeof(float) == 4);
@@ -311,26 +313,31 @@ private:
 
         uint8_t padding[6];
     };
+    static_assert(sizeof(DeviceOrientationResponse) == 19);
 
     struct CrashLogStringResponse {
         QString message() const { return QString::fromUtf8(m_string, sizeof(m_string)); }
     private:
         char m_string [19];
     };
+    static_assert(sizeof(CrashLogStringResponse) == 19);
 
     struct AnalyticsBeginResponse {
         uint8_t numberOfEntries;
-        char unknown[18];
+        char padding[18];
     };
+    static_assert(sizeof(AnalyticsBeginResponse) == 19);
+
     struct AutoPlayConfigResponse {
         AutoplayConfig config;
-        uint32_t unknown;
-//        char unknown[4];
+        char padding[4];
     };
+    static_assert(sizeof(AutoPlayConfigResponse) == 19);
+
     struct IsSensorDirtyResponse {
         bool isDirty;
 
-        char unknown[18];
+        char padding[18];
     };
     struct FirmwareVersionResponse {
         Version version;
@@ -342,7 +349,7 @@ private:
         uint32_t minimumApiVersion;
         uint32_t maximumApiVersion;
 
-        uint8_t unknown2[4];
+        uint8_t padding[4];
     };
 
     struct ResponsePacket {
@@ -358,6 +365,7 @@ private:
             NackResponse nack;
         };
     };
+    static_assert(sizeof(ResponsePacket) == 20);
 
     struct CommandPacket {
         CommandPacket(const CommandType command) : vector3D({}), // we have to initialize ourselves, so idk initialize the 3d vector
@@ -370,6 +378,8 @@ private:
         };
         CommandType m_command = CommandType::Invalid;
     };
+    static_assert(sizeof(CommandPacket) == 15);
+
     #pragma pack(pop)
 
     bool sendCommandPacket(const CommandPacket &packet);

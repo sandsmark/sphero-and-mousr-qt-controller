@@ -48,9 +48,7 @@ bool MousrHandler::sendCommand(const CommandType command, const float arg1, cons
 
 bool MousrHandler::sendCommand(const CommandType command, const uint32_t arg1, const uint32_t arg2)
 {
-    static_assert(sizeof(CommandPacket) == 15);
-
-    qDebug() << " + Sending" << command;
+    qDebug() << " + Sending command with int args" << command;
     if (!isConnected()) {
         qWarning() << "trying to send when unconnected";
         return false;
@@ -81,10 +79,6 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     QObject(parent),
     m_name(deviceInfo.name())
 {
-    static_assert(sizeof(AutoplayConfig) == 15);
-
-    static_assert(sizeof(Version) == 19);
-
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
 
     connect(m_deviceController, &QLowEnergyController::connected, m_deviceController, &QLowEnergyController::discoverServices);
