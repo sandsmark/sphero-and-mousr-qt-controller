@@ -15,7 +15,7 @@ namespace mousr {
 
 bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
 {
-    qDebug() << " + Sending" << packet.m_command;
+    qDebug() << " + Sending packet" << packet.m_command;
     if (!isConnected()) {
         qWarning() << "trying to send when unconnected";
         return false;
@@ -23,6 +23,7 @@ bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
     QByteArray buffer(sizeof(CommandPacket), Qt::Uninitialized);
     qToLittleEndian<char>(&packet, sizeof(CommandPacket), buffer.data());
 
+    qDebug() << "Writing" << buffer.toHex(':');
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
 
     return true;
@@ -30,7 +31,7 @@ bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
 
 bool MousrHandler::sendCommand(const CommandType command, const float arg1, const float arg2, const float arg3)
 {
-    qDebug() << " + Sending" << command;
+    qDebug() << " + Sending command with float args" << command;
     if (!isConnected()) {
         qWarning() << "trying to send when unconnected";
         return false;
@@ -324,7 +325,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         qDebug() << response.type << data;
         return;
     }
-//    qDebug() << "Got response" << ResponseType(response.type);
+    qDebug() << "Got response" << ResponseType(response.type);
 
 
     switch(response.type){
