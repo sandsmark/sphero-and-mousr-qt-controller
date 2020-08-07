@@ -57,8 +57,8 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
 
             RotationAnimation on rotation {
-                running: sideImage.rotation != device.xRotation
-                to: device.xRotation
+                running: sideImage.rotation != device.yRotation
+                to: device.yRotation
             }
         }
     }
