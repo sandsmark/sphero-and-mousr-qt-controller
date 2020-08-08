@@ -9,6 +9,7 @@
 #include <QLowEnergyCharacteristic>
 #include <QLowEnergyController>
 #include <QTimer>
+#include <QElapsedTimer>
 
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
@@ -71,6 +72,7 @@ class MousrHandler : public QObject
     Q_PROPERTY(float angle READ angle WRITE setAngle NOTIFY inputChanged)
     Q_PROPERTY(float speed READ speed WRITE setSpeed NOTIFY inputChanged)
     Q_PROPERTY(bool controlsPressed READ isControlsPressed WRITE setControlsPressed NOTIFY inputChanged)
+    Q_PROPERTY(bool driverAssistEnabled READ isDriverAssistEnabled WRITE setDriverAssistEnabled NOTIFY driverAssistChanged)
 
     Q_PROPERTY(int memory READ memory NOTIFY powerChanged)
     Q_PROPERTY(int voltage READ voltage NOTIFY powerChanged)
@@ -92,6 +94,7 @@ class MousrHandler : public QObject
     Q_PROPERTY(bool isFlipped READ isFlipped NOTIFY orientationChanged)
 
     Q_PROPERTY(bool sensorDirty READ sensorDirty NOTIFY sensorDirtyChanged)
+    Q_PROPERTY(bool stuck READ isStuck NOTIFY stuckChanged)
 
     Q_PROPERTY(bool soundVolume READ soundVolume NOTIFY soundVolumeChanged)
 
@@ -215,6 +218,12 @@ public:
     };
     Q_ENUM(AnalyticsEvent)
 
+    enum LeftOrRight {
+        Left,
+        Right
+    };
+    Q_ENUM(LeftOrRight)
+
 public:
     static QString deviceType() { return "Mousr"; }
 
@@ -223,8 +232,11 @@ public:
     float speed() const { return m_newInput.speed; }
     bool isControlsPressed() const { return !qFuzzyIsNull(m_newInput.held); }
     void setAngle(const float angle) { m_newInput.angle = angle; emit inputChanged(); }
-    void setSpeed(const float speed) { m_newInput.speed = speed; emit inputChanged(); }
-    void setControlsPressed(const bool held) { m_newInput.held = held ? 1.f : 0.f; emit inputChanged(); }
+    void setSpeed(const float speed) { m_newInput.speed = qMin(speed, 1.f); emit inputChanged(); }
+    void setControlsPressed(const bool held) { if (held == isControlsPressed()) return;  m_newInput.held = held ? 1.f : 0.f; emit inputChanged(); m_lastRotationTimer.invalidate(); }
+
+    void setDriverAssistEnabled(const bool enabled) { m_driverAssistMode.enabled = enabled ? 1 : 0; emit driverAssistChanged(); }
+    bool isDriverAssistEnabled() const { return m_driverAssistMode.enabled != 0; }
 
     // System stuff
     int memory() const { return m_memory; }
@@ -242,6 +254,7 @@ public:
     bool isFlipped() const { return m_isFlipped; }
 
     bool sensorDirty() const { return m_sensorDirty; }
+    bool isStuck() const { return m_isStuck; }
 
     const uint32_t mbApiVersion = 3u;
 
@@ -263,15 +276,20 @@ signals:
     void autoRunningChanged();
     void orientationChanged();
     void sensorDirtyChanged();
+    void stuckChanged();
     void soundVolumeChanged();
     void autoPlayChanged();
     void inputChanged();
+    void driverAssistChanged();
     void initComplete();
 
 public slots:
     void chirp();
     void pause();
     void resetHeading();
+    void stop();
+    void resetTail();
+    void rotate(const LeftOrRight direction);
 
 private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);
@@ -284,6 +302,7 @@ private slots:
     void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
     void sendInput();
+    void sendDriverAssistConfig();
 
 private:
     bool sendCommand(const CommandType command, float arg1, const float arg2, const float arg3);
@@ -330,7 +349,13 @@ private:
     static_assert(sizeof(DeviceOrientationResponse) == 19);
 
     struct CrashLogStringResponse {
-        QString message() const { return QString::fromUtf8(m_string, sizeof(m_string)); }
+        QString message() const {
+            if (memchr(m_string, '\0', sizeof(m_string))) {
+                return QString::fromUtf8(m_string);
+            } else {
+                return QString::fromUtf8(m_string, sizeof(m_string));
+            }
+        }
     private:
         char m_string [19];
     };
@@ -352,6 +377,13 @@ private:
 
     struct IsSensorDirtyResponse {
         bool isDirty;
+
+        char padding[18];
+    };
+    static_assert(sizeof(IsSensorDirtyResponse) == 19);
+
+    struct RcStuckResponse {
+        uint8_t stuckType;
 
         char padding[18];
     };
@@ -379,20 +411,27 @@ private:
             IsSensorDirtyResponse sensorDirty;
             Version firmwareVersion;
             CommandResult commandResult;
+            RcStuckResponse stuck;
         };
     };
     static_assert(sizeof(ResponsePacket) == 20);
 
     struct InputState {
         float speed = 0.f;
-        float angle = 0.f;
         float held = 0.f;
+        float angle = 0.f;
 
         void reset() {
             speed = 0.f;
             angle = 0.f;
             held = 0.f;
         }
+    };
+    struct DriverAssistMode {
+        uint8_t enabled = 0;
+
+        // TODO: move out of autoplayconfig
+        AutoplayConfig::Surface surface = AutoplayConfig::Carpet;
     };
 
     struct CommandPacket {
@@ -405,6 +444,7 @@ private:
             Vector3D<uint32_t> vector2D;
             InputState input;
             AutoplayConfig autoPlayConfig;
+            DriverAssistMode driverAssistMode;
         };
         const CommandType m_command = CommandType::Invalid;
     };
@@ -433,6 +473,7 @@ private:
     bool m_isFlipped = false;
 
     bool m_sensorDirty = false;
+    bool m_isStuck = false;
 
     QString m_name;
 
@@ -441,6 +482,9 @@ private:
     bool m_isAutoActive = false;
     Version m_version;
     QTimer m_sendInputTimer; // so we can batch up input updates
+    DriverAssistMode m_driverAssistMode;
+    QElapsedTimer m_lastRotationTimer;
+    bool m_waitingForOrientationChange = true;
 };
 
 QDebug operator<<(QDebug debug, const AutoplayConfig &c);

@@ -23,7 +23,7 @@ bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
     QByteArray buffer(sizeof(CommandPacket), Qt::Uninitialized);
     qToLittleEndian<char>(&packet, sizeof(CommandPacket), buffer.data());
 
-    qDebug() << "Writing" << buffer.toHex(':');
+    qDebug() << "  - Writing" << buffer.toHex(':');
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
 
     return true;
@@ -75,8 +75,45 @@ bool MousrHandler::sendCommand(const CommandType command)
     return true;
 }
 
+void MousrHandler::rotate(const LeftOrRight direction)
+{
+    if (m_waitingForOrientationChange) {
+        return;
+    }
+
+    float rotation = 45.f;
+    if (!m_lastRotationTimer.isValid()) {
+        m_lastRotationTimer.start();
+    } else if (m_lastRotationTimer.elapsed() < 10) {
+        return;
+    } else {
+        const float duration = m_lastRotationTimer.elapsed();
+        const float delta = qAbs(m_currentInput.angle - m_newInput.angle);
+        rotation = 360 * duration / 1000.f; // max one full per second
+        rotation = qMin(rotation, 45.f);
+    }
+    m_waitingForOrientationChange = true;
+
+    if (rotation <= 0) {
+        return;
+    }
+
+    m_lastRotationTimer.restart();
+    if (direction == Left) {
+        rotation *= -1;
+    }
+
+    setAngle(angle() + rotation);
+}
+
 void MousrHandler::sendInput()
 {
+    // Extremely inefficient way to do it
+    while (m_newInput.angle < 0) {
+        m_newInput.angle += 360;
+    }
+    m_newInput.angle = int(qRound(m_newInput.angle)) % 360;
+
     const bool angleChanged = !qFuzzyCompare(m_currentInput.angle, m_newInput.angle);
     const bool speedChanged = !qFuzzyCompare(m_currentInput.speed, m_newInput.speed);
     const bool heldChanged = !qFuzzyCompare(m_currentInput.held, m_newInput.held);
@@ -84,23 +121,21 @@ void MousrHandler::sendInput()
         qDebug() << " ! Nothing in the input changed";
         return;
     }
-    qDebug() << " + Sending updated input";
 
-    const bool isMoving = !qFuzzyIsNull(m_newInput.speed);
+    if (1) {
+        qDebug() << " + Sending updated input";
+        qDebug() << "  - Previous:";
+        if (angleChanged) qDebug() << "   - angle:" << m_currentInput.angle;
+        if (speedChanged) qDebug() << "   - speed:" << m_currentInput.speed;
+        if (heldChanged) qDebug() << "   - held:" << m_currentInput.held;
 
-    CommandType command = CommandType::Stop;
-    if (isMoving) {
-        // should this be ReverseSignal if speed < 0?
-        command = CommandType::Move;
-    } else if (angleChanged) {
-        command = CommandType::Spin;
-    } else {
-        m_currentInput.reset();
-        sendCommand(CommandType::Stop);
-        return;
+        qDebug() << "  - New:";
+        if (angleChanged) qDebug() << "   - angle:" << m_newInput.angle;
+        if (speedChanged) qDebug() << "   - speed:" << m_newInput.speed;
+        if (heldChanged) qDebug() << "   - held:" << m_newInput.held;
     }
 
-    CommandPacket packet(command);
+    CommandPacket packet(CommandType::Move);
     packet.input = m_newInput;
     m_currentInput = m_newInput;
     sendCommandPacket(packet);
@@ -110,6 +145,13 @@ void MousrHandler::sendAutoplay()
 {
     CommandPacket packet(CommandType::ConfigAutoMode);
     packet.autoPlayConfig = m_newAutoConfig;
+    sendCommandPacket(packet);
+}
+
+void MousrHandler::sendDriverAssistConfig()
+{
+    CommandPacket packet(CommandType::ConfigDriverAssist);
+    packet.driverAssistMode = m_driverAssistMode;
     sendCommandPacket(packet);
 }
 
@@ -124,6 +166,29 @@ void MousrHandler::resetHeading()
     sendCommandPacket(packet);
 }
 
+void MousrHandler::stop()
+{
+    m_sendInputTimer.stop();
+
+    m_newInput.speed = 0.f;
+
+    m_currentInput = m_newInput;
+
+    CommandPacket packet(CommandType::Stop);
+    packet.input = m_newInput;
+    sendCommandPacket(packet);
+
+    emit inputChanged();
+}
+
+void MousrHandler::resetTail()
+{
+    if (m_isAutoActive) {
+        return;
+    }
+    sendCommand(CommandType::TailCalibSignal);
+}
+
 MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent) :
     QObject(parent),
     m_name(deviceInfo.name())
@@ -136,6 +201,9 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
             m_sendInputTimer.start();
         }
     });
+    connect(&m_sendInputTimer, &QTimer::timeout, this, &MousrHandler::sendInput);
+
+    connect(this, &MousrHandler::driverAssistChanged, this, &MousrHandler::sendDriverAssistConfig);
 
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
 
@@ -158,6 +226,8 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
 
     connect(m_deviceController, &QLowEnergyController::stateChanged, this, &MousrHandler::onControllerStateChanged);
     connect(this, &MousrHandler::initComplete, this, &MousrHandler::resetHeading);
+    connect(this, &MousrHandler::initComplete, this, &MousrHandler::sendDriverAssistConfig);
+    connect(this, &MousrHandler::initComplete, this, &MousrHandler::resetTail);
 
     m_deviceController->connectToDevice();
 
@@ -170,7 +240,7 @@ MousrHandler::~MousrHandler()
 {
     qDebug() << "mousr handler dead";
     if (!m_isAutoActive) {
-        sendCommand(CommandType::Stop);
+        stop();
     }
 
     if (m_deviceController) {
@@ -386,12 +456,15 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         qDebug() << response.type << data;
         return;
     }
-    qDebug() << "Got response" << ResponseType(response.type);
+    //qDebug() << "Got response" << ResponseType(response.type);
 
 
     switch(response.type){
     case DeviceOrientation: {
+        m_waitingForOrientationChange = false;
         if (!fuzzyVectorsEqual(response.orientation.rotation, m_rotation)) {
+            qDebug() << " + Orientation change:";
+            qDebug() << "   - x:" << m_rotation.x << "y:" << m_rotation.y << "z:" << m_rotation.z;
             m_rotation = response.orientation.rotation;
             emit orientationChanged();
         }
@@ -404,6 +477,8 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
     }
     case BatteryVoltage:{
         if (response.battery.isAutoMode != m_isAutoActive) {
+            qDebug() << " + Auto status changed:";
+            qDebug() << "  - New:" << response.battery.isAutoMode;
             m_isAutoActive = response.battery.isAutoMode;
             emit autoRunningChanged();
         }
@@ -416,6 +491,14 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
                 response.battery.memory != m_memory;
 
         if (differentValues) {
+            qDebug() << " + Battery changed";
+            qDebug() << "  - New:";
+            qDebug() << "    - voltage:" << response.battery.voltage;
+            qDebug() << "    - battery low:" << response.battery.isBatteryLow;
+            qDebug() << "    - isCharging:" << response.battery.isCharging;
+            qDebug() << "    - isFullyCharged:" << response.battery.isFullyCharged;
+            qDebug() << "    - memory:" << response.battery.memory;
+
             // Voltage seems to be percent? wtf
             m_voltage = response.battery.voltage;
             m_batteryLow = response.battery.isBatteryLow;
@@ -423,12 +506,14 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
             m_fullyCharged = response.battery.isFullyCharged;
             m_memory = response.battery.memory;
             emit powerChanged();
+
         }
 
         break;
     }
     case CrashLogString: {
         const QString crashLog = response.crashString.message();
+        qDebug() << " + Crash log string:" << crashLog;
         if (crashLog != "No crash log.") {
             qDebug() << " Crash log string:" << crashLog;
         }
@@ -439,7 +524,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         break;
     case AnalyticsBegin: {
         int numberOfEntries = response.analyticsBegin.numberOfEntries;
-        qDebug() << "Number of analytics entries:" << numberOfEntries;
+        qDebug() << " + Number of analytics entries:" << numberOfEntries;
         break;
     }
     case SensorDirty: {
@@ -447,10 +532,23 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         emit sensorDirtyChanged();
         break;
     }
+    case RcStuck: {
+        m_isStuck = response.stuck.stuckType != 0 ? true : false;
+        emit stuckChanged();
+        qDebug() << " ! Device stuck";
+        qDebug() << "  - unknown stuckType:" << AnalyticsEvent(response.stuck.stuckType) << CommandType(response.stuck.stuckType);
+        qDebug() << "  - data: " << response.type << data.mid(1).toHex(':');
+        break;
+    }
+    case RobotStopped: {
+        m_currentInput.speed = 0;
+        emit inputChanged();
+        break;
+    }
     case AutoModeChanged: {
-        qDebug() << "auto mode changed";
+        qDebug() << " + Auto mode changed";
         m_currentAutoConfig = std::move(response.autoPlay.config);
-        qDebug() << m_currentAutoConfig;
+        qDebug() << "   - " <<  m_currentAutoConfig;
         emit autoPlayChanged();
         break;
     }
@@ -470,9 +568,10 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
     case FirmwareVersion: {
         m_version = response.firmwareVersion;
 
-        qDebug() << "Firmware mode:" << m_version.firmwareType;
-        qDebug().noquote() << "Version" << (QByteArray::number(m_version.major) + "." + QByteArray::number(m_version.minor) + "." + QByteArray::number(m_version.commitNumber) + "-" + QByteArray(m_version.commitHash, 4).toHex());
-        qDebug() << "Mousr version" << m_version.mousrVersion << "hardware version" << m_version.hardwareVersion << "bootloader version" << m_version.bootloaderVersion;
+        qDebug() << " + Firmware version response";
+        qDebug() << "   - Firmware mode:" << m_version.firmwareType;
+        qDebug().noquote() << "  - Version" << (QByteArray::number(m_version.major) + "." + QByteArray::number(m_version.minor) + "." + QByteArray::number(m_version.commitNumber) + "-" + QByteArray(m_version.commitHash, 4).toHex());
+        qDebug() << "  - Mousr version" << m_version.mousrVersion << "hardware version" << m_version.hardwareVersion << "bootloader version" << m_version.bootloaderVersion;
         break;
     }
     case CommandCompleted: {
@@ -508,7 +607,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         break;
     }
     default:
-        qWarning() << "Unhandled response" << response.type << data;
+        qWarning() << "Unhandled response" << response.type << data.toHex(':');
     }
 }
 

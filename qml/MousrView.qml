@@ -9,7 +9,7 @@ import "." as Lol
 
 Rectangle {
     id: robotView
-    property DeviceHandler device
+    property MousrHandler device
     readonly property int margins: 10
     anchors.fill: parent
 
@@ -125,7 +125,7 @@ Rectangle {
             width: parent.width
             height: errorText.height + robotView.margins
 
-            visible: device.sensorDirty
+            visible: device.sensorDirty || device.stuck
             color: "red"
 
             SequentialAnimation on color {
@@ -137,7 +137,15 @@ Rectangle {
             Text {
                 id: errorText
                 anchors.centerIn: parent
-                text: qsTr("Sensor is dirty\nPlease clean sensor")
+                text: {
+                    if (device.stuck) {
+                        return qsTr("Device is stuck!")
+                    } else if (device.sensorDirty) {
+                        return qsTr("Sensor is dirty\nPlease clean sensor")
+                    } else {
+                        return qsTr("Unknown error")
+                    }
+                }
                 horizontalAlignment: Text.AlignHCenter
             }
         }
@@ -172,6 +180,14 @@ Rectangle {
             id: chirpButton
             onClicked: device.chirp()
             text: qsTr("Chirp")
+        }
+
+        CheckBox {
+            text: qsTr("Driver assist")
+            checked: device.driverAssistEnabled
+            onCheckedStateChanged: {
+                device.driverAssistEnabled = checkedState === Qt.Checked
+            }
         }
 
         GroupBox {
@@ -213,5 +229,46 @@ Rectangle {
             }
         }
 
+    }
+
+    Component.onCompleted: forceActiveFocus()
+
+    Keys.enabled: !device.isAutoRunning
+    focus: true
+
+    Keys.onLeftPressed: {
+        device.rotate(MousrHandler.Left);
+    }
+    Keys.onRightPressed: {
+        device.rotate(MousrHandler.Right);
+    }
+    Keys.onPressed: {
+        if (event.isAutoRepeat) {
+            //if (event.key === Qt.Key_Up) {
+//            console.log("SKipping auto repeat")
+            return
+        }
+
+        if (event.key === Qt.Key_Up) {
+            device.speed = 0.5;
+        } else if (event.key === Qt.Key_Down) {
+            device.speed = -0.5;
+        } else {
+            return;
+        }
+        device.controlsPressed = true;
+    }
+
+    Keys.onReleased: {
+        if (event.isAutoRepeat) {
+//            console.warn("what the fuck qt, auto repeat release events???")
+            return
+        }
+        device.controlsPressed = false;
+
+        if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+            device.speed = 0;
+            device.stop()
+        }
     }
 }
