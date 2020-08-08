@@ -170,6 +170,7 @@ Rectangle {
         y: robotView.margins
         spacing: robotView.margins
         width: parent.width / 3 - margins * 2
+        enabled: !device.isCharging
 
         anchors {
             margins: robotView.margins
