@@ -8,6 +8,7 @@
 #include <QLowEnergyService>
 #include <QLowEnergyCharacteristic>
 #include <QLowEnergyController>
+#include <QTimer>
 
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
@@ -67,8 +68,11 @@ class MousrHandler : public QObject
 
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectedChanged)
 
-    Q_PROPERTY(int memory READ memory NOTIFY powerChanged)
+    Q_PROPERTY(float angle READ angle WRITE setAngle NOTIFY inputChanged)
+    Q_PROPERTY(float speed READ speed WRITE setSpeed NOTIFY inputChanged)
+    Q_PROPERTY(bool controlsPressed READ isControlsPressed WRITE setControlsPressed NOTIFY inputChanged)
 
+    Q_PROPERTY(int memory READ memory NOTIFY powerChanged)
     Q_PROPERTY(int voltage READ voltage NOTIFY powerChanged)
     Q_PROPERTY(bool isCharging READ isCharging NOTIFY powerChanged)
     Q_PROPERTY(bool isBatteryLow READ isBatteryLow NOTIFY powerChanged)
@@ -91,24 +95,24 @@ class MousrHandler : public QObject
 
     Q_PROPERTY(bool soundVolume READ soundVolume NOTIFY soundVolumeChanged)
 
-public: // enums
-    AutoplayConfig::Surface autoplaySurface() const { return m_autoplay.surface(); }
-    AutoplayConfig::TailType autoplayTailType() const { return m_autoplay.tailType(); }
-    int autoplayPauseTime() const { return m_autoplay.pauseTime(); }
+public:
+    AutoplayConfig::Surface autoplaySurface() const { return m_currentAutoConfig.surface(); }
+    AutoplayConfig::TailType autoplayTailType() const { return m_currentAutoConfig.tailType(); }
+    int autoplayPauseTime() const { return m_currentAutoConfig.pauseTime(); }
 
-    AutoplayConfig::GameMode autoplayGameMode() const { return m_autoplay.gameMode(); }
-    void setAutoplayGameMode(const AutoplayConfig::GameMode mode) { m_autoplay.setGameMode(mode); emit autoPlayChanged(); }
+    AutoplayConfig::GameMode autoplayGameMode() const { return m_currentAutoConfig.gameMode(); }
+    void setAutoplayGameMode(const AutoplayConfig::GameMode mode) { m_newAutoConfig.setGameMode(mode); emit autoPlayChanged(); sendAutoplay(); }
     Q_INVOKABLE QStringList autoplayGameModeNames() const { return AutoplayConfig::gameModeNames(); }
 
-    AutoplayConfig::DrivingMode autoplayDrivingMode() const { return m_autoplay.drivingMode(); }
-    void setAutoplayDrivingMode(const AutoplayConfig::DrivingMode mode) { m_autoplay.setDrivingMode(mode); emit autoPlayChanged(); }
+    AutoplayConfig::DrivingMode autoplayDrivingMode() const { return m_currentAutoConfig.drivingMode(); }
+    void setAutoplayDrivingMode(const AutoplayConfig::DrivingMode mode) { m_newAutoConfig.setDrivingMode(mode); emit autoPlayChanged(); sendAutoplay(); }
     Q_INVOKABLE QStringList autoplayDrivingModeNames() const { return AutoplayConfig::drivingModeNames(); }
 
-    void setAutoplaySurface(const AutoplayConfig::Surface surface) { m_autoplay.setSurface(surface); emit autoPlayChanged(); }
-    void setAutoplayTailType(const AutoplayConfig::TailType tailType) { m_autoplay.setTailType(tailType); emit autoPlayChanged(); }
-    void setAutoplayPauseTime(const int time) { m_autoplay.setPauseTime(time); emit autoPlayChanged(); }
+    void setAutoplaySurface(const AutoplayConfig::Surface surface) { m_newAutoConfig.setSurface(surface); emit autoPlayChanged(); sendAutoplay(); }
+    void setAutoplayTailType(const AutoplayConfig::TailType tailType) { m_newAutoConfig.setTailType(tailType); emit autoPlayChanged(); sendAutoplay(); }
+    void setAutoplayPauseTime(const int time) { m_newAutoConfig.setPauseTime(time); emit autoPlayChanged(); sendAutoplay(); }
 
-//    AutoplayConfig::Surface autoplayPreset() const { return m_autoplay.preset(); }
+//    AutoplayConfig::Surface autoplayPreset() const { return m_currentAutoConfig.preset(); }
 
     enum class CommandType : uint16_t {
         Stop = 0,
@@ -214,15 +218,23 @@ public: // enums
 public:
     static QString deviceType() { return "Mousr"; }
 
-    int memory() const { return m_memory; }
 
-    // Power stuff
+    float angle() const { return m_newInput.angle; }
+    float speed() const { return m_newInput.speed; }
+    bool isControlsPressed() const { return !qFuzzyIsNull(m_newInput.held); }
+    void setAngle(const float angle) { m_newInput.angle = angle; emit inputChanged(); }
+    void setSpeed(const float speed) { m_newInput.speed = speed; emit inputChanged(); }
+    void setControlsPressed(const bool held) { m_newInput.held = held ? 1.f : 0.f; emit inputChanged(); }
+
+    // System stuff
+    int memory() const { return m_memory; }
     int voltage() const { return m_voltage; }
     bool isCharging() const { return m_charging; }
     bool isBatteryLow() const { return m_batteryLow; }
     bool isFullyCharged() const { return m_fullyCharged; }
 
-    bool isAutoRunning() const { return m_autoRunning; }
+    bool isAutoRunning() const { return m_isAutoActive; }
+    void setAutoPlay(const bool enabled);
 
     float xRotation() const { return m_rotation.x; }
     float yRotation() const { return m_rotation.y; }
@@ -253,11 +265,13 @@ signals:
     void sensorDirtyChanged();
     void soundVolumeChanged();
     void autoPlayChanged();
+    void inputChanged();
+    void initComplete();
 
 public slots:
     void chirp();
     void pause();
-    void resume();
+    void resetHeading();
 
 private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);
@@ -269,10 +283,13 @@ private slots:
 
     void onCharacteristicChanged(const QLowEnergyCharacteristic &characteristic, const QByteArray &newValue);
 
+    void sendInput();
+
 private:
     bool sendCommand(const CommandType command, float arg1, const float arg2, const float arg3);
     bool sendCommand(const CommandType command, const uint32_t arg1, const uint32_t arg2 = 0);
     bool sendCommand(const CommandType command);
+    void sendAutoplay();
 
     #pragma pack(push,1)
     static_assert(sizeof(bool) == 1);
@@ -327,7 +344,9 @@ private:
 
     struct AutoPlayConfigResponse {
         AutoplayConfig config;
-        char padding[4];
+        char unknown[3];
+        uint8_t responseTo; // ?
+        char padding[5];
     };
     static_assert(sizeof(AutoPlayConfigResponse) == 19);
 
@@ -364,6 +383,18 @@ private:
     };
     static_assert(sizeof(ResponsePacket) == 20);
 
+    struct InputState {
+        float speed = 0.f;
+        float angle = 0.f;
+        float held = 0.f;
+
+        void reset() {
+            speed = 0.f;
+            angle = 0.f;
+            held = 0.f;
+        }
+    };
+
     struct CommandPacket {
         CommandPacket(const CommandType command) : vector3D({}), // we have to initialize ourselves, so idk initialize the 3d vector
             m_command(command) {}
@@ -372,8 +403,10 @@ private:
         union {
             Vector3D<float> vector3D;
             Vector3D<uint32_t> vector2D;
+            InputState input;
+            AutoplayConfig autoPlayConfig;
         };
-        CommandType m_command = CommandType::Invalid;
+        const CommandType m_command = CommandType::Invalid;
     };
     static_assert(sizeof(CommandPacket) == 15);
 
@@ -392,9 +425,9 @@ private:
     int m_voltage = 0, m_memory = 0;
     int m_volume = 0; // todo: read this from device
     bool m_batteryLow = false, m_charging = false, m_fullyCharged = false;
-    bool m_autoRunning = false;
 
-    float m_speed = 0.f, m_held = 0.f, m_angle = 0.f;
+    InputState m_currentInput;
+    InputState m_newInput;
 
     Vector3D<int> m_rotation{};
     bool m_isFlipped = false;
@@ -403,8 +436,11 @@ private:
 
     QString m_name;
 
-    AutoplayConfig m_autoplay;
+    AutoplayConfig m_currentAutoConfig;
+    AutoplayConfig m_newAutoConfig;
+    bool m_isAutoActive = false;
     Version m_version;
+    QTimer m_sendInputTimer; // so we can batch up input updates
 };
 
 QDebug operator<<(QDebug debug, const AutoplayConfig &c);

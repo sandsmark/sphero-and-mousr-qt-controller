@@ -67,7 +67,6 @@ public:
     };
     Q_ENUM(GameMode)
 
-
     static QStringList gameModeNames() {
         return {
             "Off",
@@ -104,15 +103,6 @@ public:
     // Values used for pause time; 3, 6, 10, 15, 20, 0 (all day mode)
     uint8_t pauseLengthOrBackUp = 0; // 8
     uint8_t allDay = 0; // 9
-
-    uint8_t unknown1 = 0; // 10
-    uint8_t unknown2 = 0; // 11
-    uint8_t unknown3 = 0; // 12
-
-    //Response response = Response::Nack;
-    uint8_t m_responseTo = 0; // 13
-
-    uint8_t unknown4 = 0; // 14
 
     uint8_t pauseTime() const {
         switch(m_gameMode) {
@@ -192,7 +182,7 @@ public:
     TailType tailType() const { return TailType(tail); }
 
 } __attribute__((packed));
-static_assert(sizeof(AutoplayConfig) == 15);
+static_assert(sizeof(AutoplayConfig) == 10);
 
 inline QDebug operator<<(QDebug debug, const AutoplayConfig &c) {
     QDebugStateSaver saver(debug);
@@ -222,11 +212,6 @@ inline QDebug operator<<(QDebug debug, const AutoplayConfig &c) {
         break;
     }
     debug.nospace() << "AllDay2: " << c.allDay << ", "
-                    << "Unknown1: " << c.unknown1 << ", "
-                    << "Unknown2: " << c.unknown2 << ", "
-                    << "Unknown3: " << c.unknown3 << ", "
-                    << "ResponseTo: " << c.m_responseTo << ", "
-                    << "Unknown4: " << c.unknown4 << ", "
                     << ")";
 
     return debug.maybeSpace();

@@ -75,10 +75,68 @@ bool MousrHandler::sendCommand(const CommandType command)
     return true;
 }
 
+void MousrHandler::sendInput()
+{
+    const bool angleChanged = !qFuzzyCompare(m_currentInput.angle, m_newInput.angle);
+    const bool speedChanged = !qFuzzyCompare(m_currentInput.speed, m_newInput.speed);
+    const bool heldChanged = !qFuzzyCompare(m_currentInput.held, m_newInput.held);
+    if (!angleChanged && !speedChanged && !heldChanged) {
+        qDebug() << " ! Nothing in the input changed";
+        return;
+    }
+    qDebug() << " + Sending updated input";
+
+    const bool isMoving = !qFuzzyIsNull(m_newInput.speed);
+
+    CommandType command = CommandType::Stop;
+    if (isMoving) {
+        // should this be ReverseSignal if speed < 0?
+        command = CommandType::Move;
+    } else if (angleChanged) {
+        command = CommandType::Spin;
+    } else {
+        m_currentInput.reset();
+        sendCommand(CommandType::Stop);
+        return;
+    }
+
+    CommandPacket packet(command);
+    packet.input = m_newInput;
+    m_currentInput = m_newInput;
+    sendCommandPacket(packet);
+}
+
+void MousrHandler::sendAutoplay()
+{
+    CommandPacket packet(CommandType::ConfigAutoMode);
+    packet.autoPlayConfig = m_newAutoConfig;
+    sendCommandPacket(packet);
+}
+
+void MousrHandler::resetHeading()
+{
+    m_sendInputTimer.stop();
+    m_currentInput.reset();
+    m_newInput.reset();
+
+    CommandPacket packet(CommandType::ResetHeading);
+    packet.input = m_newInput;
+    sendCommandPacket(packet);
+}
+
 MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent) :
     QObject(parent),
     m_name(deviceInfo.name())
 {
+    // In case the UI asks us to update more than 100 times a second
+    m_sendInputTimer.setInterval(10);
+    m_sendInputTimer.setSingleShot(true);
+    connect(this, &MousrHandler::inputChanged, &m_sendInputTimer, [this]() {
+        if (!m_sendInputTimer.isActive()) {
+            m_sendInputTimer.start();
+        }
+    });
+
     m_deviceController = QLowEnergyController::createCentral(deviceInfo, this);
 
     connect(m_deviceController, &QLowEnergyController::connected, m_deviceController, &QLowEnergyController::discoverServices);
@@ -99,6 +157,7 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     connect(m_deviceController, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error), this, &MousrHandler::onControllerError);
 
     connect(m_deviceController, &QLowEnergyController::stateChanged, this, &MousrHandler::onControllerStateChanged);
+    connect(this, &MousrHandler::initComplete, this, &MousrHandler::resetHeading);
 
     m_deviceController->connectToDevice();
 
@@ -110,6 +169,10 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
 MousrHandler::~MousrHandler()
 {
     qDebug() << "mousr handler dead";
+    if (!m_isAutoActive) {
+        sendCommand(CommandType::Stop);
+    }
+
     if (m_deviceController) {
         m_deviceController->disconnectFromDevice();
     } else {
@@ -245,11 +308,6 @@ void MousrHandler::pause()
     }
 }
 
-void MousrHandler::resume()
-{
-    sendCommand(CommandType::Stop, m_speed, m_held, m_angle);
-}
-
 void MousrHandler::setSoundVolume(const int volumePercent)
 {
     if (volumePercent < 0 || volumePercent > 100) {
@@ -261,6 +319,15 @@ void MousrHandler::setSoundVolume(const int volumePercent)
         m_volume = volumePercent;
     }
     emit soundVolumeChanged();
+}
+
+void MousrHandler::setAutoPlay(const bool enabled)
+{
+    if (enabled == m_isAutoActive) {
+        qWarning() << "already same state!" << enabled << m_currentAutoConfig << m_isAutoActive;
+    }
+    m_newAutoConfig.enabled = enabled ? 1 : 0;
+    sendAutoplay();
 }
 
 void MousrHandler::onControllerStateChanged(QLowEnergyController::ControllerState state)
@@ -336,8 +403,8 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         break;
     }
     case BatteryVoltage:{
-        if (response.battery.isAutoMode != m_autoRunning) {
-            m_autoRunning = response.battery.isAutoMode;
+        if (response.battery.isAutoMode != m_isAutoActive) {
+            m_isAutoActive = response.battery.isAutoMode;
             emit autoRunningChanged();
         }
 
@@ -382,8 +449,8 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
     }
     case AutoModeChanged: {
         qDebug() << "auto mode changed";
-        m_autoplay = std::move(response.autoPlay.config);
-        qDebug() << m_autoplay;
+        m_currentAutoConfig = std::move(response.autoPlay.config);
+        qDebug() << m_currentAutoConfig;
         emit autoPlayChanged();
         break;
     }
@@ -416,6 +483,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         const uint32_t maxApiVer = response.commandResult.maximumApiVersion;
         switch(response.commandResult.commandType) {
         case CommandType::InitializeDevice:
+            emit initComplete();
             break;
         case CommandType::EraseAnalyticsRecords:
             switch(response.commandResult.resultCode) {

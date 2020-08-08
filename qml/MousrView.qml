@@ -185,7 +185,7 @@ Rectangle {
                     text: qsTr("Enabled")
                     checked: device.isAutoRunning
                     onCheckedStateChanged: {
-                        console.log("Disable or enable, what u want", checkedState)
+                        device.isAutoRunning = checkedState === Qt.Checked
                     }
                 }
 
