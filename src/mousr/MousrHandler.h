@@ -164,7 +164,7 @@ public:
 
         DeviceOrientation = 48,
         AutoAckReport = 49,
-        ResetTailFailInfo = 50,
+        TailStateUpdated = 50,
 
         SensorDirty = 64, // sensor dirty
 
@@ -282,6 +282,7 @@ signals:
     void inputChanged();
     void driverAssistChanged();
     void initComplete();
+    void tailFailed();
 
 public slots:
     void chirp();
@@ -290,6 +291,7 @@ public slots:
     void stop();
     void resetTail();
     void rotate(const LeftOrRight direction);
+    void flickTail();
 
 private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);
@@ -400,6 +402,12 @@ private:
     };
     static_assert(sizeof(CommandResult) == 19);
 
+    struct TailStateResponse {
+        bool failState;
+        uint8_t padding[18];
+    };
+    static_assert(sizeof(TailStateResponse) == 19);
+
     struct ResponsePacket {
         ResponseType type;
         union {
@@ -412,6 +420,7 @@ private:
             Version firmwareVersion;
             CommandResult commandResult;
             RcStuckResponse stuck;
+            TailStateResponse tail;
         };
     };
     static_assert(sizeof(ResponsePacket) == 20);
@@ -434,6 +443,10 @@ private:
         AutoplayConfig::Surface surface = AutoplayConfig::Carpet;
     };
 
+    struct FlickTailRequest {
+        AutoplayConfig::TailType tail;
+    };
+
     struct CommandPacket {
         CommandPacket(const CommandType command) : vector3D({}), // we have to initialize ourselves, so idk initialize the 3d vector
             m_command(command) {}
@@ -445,6 +458,8 @@ private:
             InputState input;
             AutoplayConfig autoPlayConfig;
             DriverAssistMode driverAssistMode;
+            //FlickTailRequest flick;
+            AutoplayConfig::TailType flick;
         };
         const CommandType m_command = CommandType::Invalid;
     };

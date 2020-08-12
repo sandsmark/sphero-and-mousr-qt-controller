@@ -88,7 +88,6 @@ void MousrHandler::rotate(const LeftOrRight direction)
         return;
     } else {
         const float duration = m_lastRotationTimer.elapsed();
-        const float delta = qAbs(m_currentInput.angle - m_newInput.angle);
         rotation = 360 * duration / 1000.f; // max one full per second
         rotation = qMin(rotation, 45.f);
     }
@@ -187,6 +186,17 @@ void MousrHandler::resetTail()
         return;
     }
     sendCommand(CommandType::TailCalibSignal);
+}
+
+void MousrHandler::flickTail()
+{
+    m_sendInputTimer.stop();
+    m_currentInput.reset();
+    m_newInput.reset();
+
+    CommandPacket packet(CommandType::FlickSignal);
+    packet.flick = AutoplayConfig::ChaseTail;
+    sendCommandPacket(packet);
 }
 
 MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *parent) :
@@ -538,6 +548,13 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         qDebug() << " ! Device stuck";
         qDebug() << "  - unknown stuckType:" << AnalyticsEvent(response.stuck.stuckType) << CommandType(response.stuck.stuckType);
         qDebug() << "  - data: " << response.type << data.mid(1).toHex(':');
+        break;
+    }
+    case TailStateUpdated: {
+        if (response.tail.failState) {
+            emit tailFailed();
+        }
+        qDebug() << " + Tail state" << (response.tail.failState ? "Fail" : "OK");
         break;
     }
     case RobotStopped: {

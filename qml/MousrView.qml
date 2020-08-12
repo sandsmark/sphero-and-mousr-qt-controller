@@ -269,6 +269,8 @@ Rectangle {
         if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
             device.speed = 0;
             device.stop()
+        } else if (event.key === Qt.Key_Return) {
+            device.flickTail();
         }
     }
 }
