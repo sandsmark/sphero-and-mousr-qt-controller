@@ -213,18 +213,19 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
 #endif
 
     const QString deviceName = device.name();
+    const QString deviceAddress = device.address().toString();
     switch(DeviceDiscoverer::robotType(device)) {
     case Sphero:
-        m_displayNames[deviceName] = sphero::displayName(deviceName);
+        m_displayNames[deviceAddress] = sphero::displayName(deviceName);
         break;
     case Mousr:
-        m_displayNames[deviceName] = deviceName; // todo
+        m_displayNames[deviceAddress] = deviceName; // todo, it has another!
         break;
     case Unknown:
         return;
     }
 
-    m_availableDevices[device.name()] = device;
+    m_availableDevices[deviceAddress] = device;
     emit availableDevicesChanged();
 
     updateRssi(device);
@@ -306,6 +307,11 @@ float DeviceDiscoverer::signalStrength(const QString &name)
     return rssiToStrength(m_availableDevices[name].rssi());
 }
 
+QColor DeviceDiscoverer::displayColor(const QString &name)
+{
+    return QColor::fromHsv(qHash(name) % 360, 255, 255, 32);
+}
+
 QString DeviceDiscoverer::displayName(const QString &name)
 {
     if (!m_displayNames.contains(name)) {
@@ -316,7 +322,7 @@ QString DeviceDiscoverer::displayName(const QString &name)
 
 void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
 {
-    emit signalStrengthChanged(device.name(), rssiToStrength(device.rssi()));
+    emit signalStrengthChanged(device.address().toString(), rssiToStrength(device.rssi()));
 }
 
 DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceInfo &device)

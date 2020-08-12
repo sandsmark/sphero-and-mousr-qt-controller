@@ -155,6 +155,8 @@ Window {
                 model: DeviceDiscoverer.availableDevices
 
                 delegate: Lol.Button {
+                    color: DeviceDiscoverer.displayColor(modelData)
+
                     function updateText(strength) {
                         text = DeviceDiscoverer.displayName(modelData) + " (" + Math.floor(strength * 100) + "%)";
 

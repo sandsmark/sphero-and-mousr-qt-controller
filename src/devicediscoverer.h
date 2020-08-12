@@ -7,6 +7,7 @@
 #include <QPointer>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QColor>
 
 namespace mousr {
 class MousrHandler;
@@ -52,6 +53,7 @@ public slots:
     void connectDevice(const QString &name);
     float signalStrength(const QString &name);
     QString displayName(const QString &name);
+    QColor displayColor(const QString &name);
 
 signals:
     void statusStringChanged();

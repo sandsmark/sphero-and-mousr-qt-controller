@@ -1,8 +1,10 @@
 import QtQuick 2.0
 
-Item {
+Rectangle {
     property string text
     property bool active: true
+
+    color: Qt.transparent
 
     signal clicked()
 
