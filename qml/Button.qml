@@ -4,7 +4,7 @@ Rectangle {
     property string text
     property bool active: true
 
-    color: Qt.transparent
+    color: "transparent"
 
     signal clicked()
 

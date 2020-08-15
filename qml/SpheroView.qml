@@ -110,12 +110,28 @@ Rectangle {
             }
         }
     }
-//    ColorOverlay {
-//        anchors.fill: image
-//        source: image
-//        color: device.color
-//        opacity: 0.3
-//    }
+
+    Lol.ColorSelect {
+        anchors {
+            right: parent.right
+            bottom: parent.bottom
+        }
+        width: 200
+        height: 220
+        color: device.color
+        onColorSelected:{
+            device.color = selected
+        }
+
+        Text {
+            anchors {
+                bottom: parent.top
+                horizontalCenter: parent.horizontalCenter
+            }
+
+            text: "Main color"
+        }
+    }
 
     Text {
         id: signalStrength

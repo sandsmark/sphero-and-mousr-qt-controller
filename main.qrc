@@ -18,5 +18,6 @@
         <file>images/corners.svg</file>
         <file>images/end.svg</file>
         <file>qml/Button.qml</file>
+        <file>qml/ColorSelect.qml</file>
     </qresource>
 </RCC>

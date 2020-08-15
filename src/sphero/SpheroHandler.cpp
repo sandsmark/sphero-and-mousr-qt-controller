@@ -236,7 +236,7 @@ void SpheroHandler::setColor(const int r, const int g, const int b)
 
         if (bodyLED != v2::InvalidLED) {
             // Set the body to green
-            m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetLED(bodyLED, 0, 255, 0)));
+            m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetLED(bodyLED, r, g, b)));
         }
         break;
     }
