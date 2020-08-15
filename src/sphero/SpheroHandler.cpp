@@ -1166,6 +1166,7 @@ SpheroHandler::RobotDefinition::RobotDefinition(const RobotType type)
         // These I have
     case RobotType::BB9E:
     case RobotType::R2D2:
+    case RobotType::R2Q5:
         mainService = Services::V2::main;
         batteryService = Services::V2::battery;
         radioService = Services::V2::radio;

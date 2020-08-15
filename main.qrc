@@ -13,6 +13,7 @@
         <file>qml/SpheroView.qml</file>
         <file>images/bb8.png</file>
         <file>images/bb9e.png</file>
+        <file>images/r2-q5.png</file>
         <file>images/corners.svg</file>
         <file>images/end.svg</file>
         <file>qml/Button.qml</file>

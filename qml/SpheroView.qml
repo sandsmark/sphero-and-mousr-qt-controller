@@ -78,6 +78,9 @@ Rectangle {
             if (device.robotType == SpheroHandler.BB9E) {
                 return "qrc:images/bb9e.png"
             }
+            if (device.robotType == SpheroHandler.R2Q5) {
+                return "qrc:images/r2-q5.png"
+            }
         }
     }
 //    ColorOverlay {
