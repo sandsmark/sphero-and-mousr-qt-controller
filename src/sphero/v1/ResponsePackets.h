@@ -37,6 +37,7 @@ public:
     Q_ENUM(PacketType)
 
     enum NotificationType : uint8_t {
+        Invalid = 0x0,
         PowerNotification = 0x01,
         Level1Diagnostic = 0x02,
         SensorStream = 0x03,
@@ -44,6 +45,7 @@ public:
         SleepingIn10Sec = 0x05,
         MacroMarkers = 0x06,
         Collision = 0x07,
+        OrbPrint = 0x08,
         OrbBasicErrorASCII = 0x09,
         OrbBasicErrorBinary = 0x0A,
         SelfLevelComplete = 0x0B,
@@ -52,10 +54,76 @@ public:
         SoulLevelUpNotification = 0x0E,
         SoulShieldNotification = 0x0F,
         BoostNotification = 0x11,
+        // Oval is some programming stuff
+        OvalError = 0x12, // base64 encoded string
+        OvalDev = 0x13,
+        Sleep = 0x14,
         SoulBlockData = 0x20,
         XPUpdateEvent = 0x21
     };
-    Q_ENUM(NotificationType)
+    Q_ENUM(NotificationType);
+
+    enum BootloaderType : uint8_t {
+        BeginReflash = 2,
+        HereIsPage = 3,
+        JumpToMain = 4,
+        IsPageBlank = 5
+    };
+    Q_ENUM(BootloaderType);
+
+    enum CoreType : uint8_t {
+        SetBluetoothName = 0x10,
+        SetABluetoothInfo = 0x11,
+        SetAutoReconnect = 0x12,
+        GetAutoReconnect = 0x13,
+        GetBatteryVoltage = 0x14,
+        Ping = 1,
+        GetBatteryVoltageAlt = 0x20,
+        SetPowerNotify = 0x21,
+        GetSleepAndDisconnectFlag = 0x22,
+        SetInactiveTimeout = 0x25,
+        GetChargerState = 0x26,
+        GetConfigBlockCRC = 0x27
+    };
+    Q_ENUM(CoreType);
+
+    enum SpheroType : uint8_t {
+        SetHeading = 1,
+        SetStabilize = 2,
+        SetRotate = 3,
+        GetChassisID = 7,
+        SelfLevel = 9,
+        Sensor = 0x11,
+        ConfigCollisionDetection = 0x12,
+        ConfigLocator = 0x13,
+        GetTemperature = 0x16,
+        SetLED = 0x20,
+        SetBackLed = 0x21,
+        AppendOVM = 0x80,
+        ResetOVM = 0x81,
+        OVMVersion = 0x82,
+        Roll = 0x30,
+        Boost = 0x31,
+        RawMotor = 0x33,
+        SetMotorTimeout = 0x34,
+        SetPersOptFlags = 0x35,
+        GetOptFlags = 0x36,
+        GetTemporaryOptFlags = 0x38,
+        SetTemporaryOptFlags = 0x37,
+        GetSKU = 0x3a,
+        GetAutonomyOptionsFlag = 0x3f,
+        SetDevMode = 0x42,
+        GetDevMode = 0x44,
+        RunMacro = 0x50,
+        SaveTempMacro = 0x51,
+        SaveMacro = 0x52,
+        InitMacroExec = 0x54,
+        InitMacroExecAlt = 0x55,
+        ControlSysPreset = 0x74,
+        AppendOVMAlt = 0x83,
+
+    };
+    Q_ENUM(SpheroType);
 
     enum Type {
         Response = 0xFF,
@@ -95,6 +163,7 @@ public:
         SleepingIn10Sec = 0x05,
         MacroMarkers = 0x06,
         Collision = 0x07,
+        OrbPrint = 0x08,
         OrbBasicErrorASCII = 0x09,
         OrbBasicErrorBinary = 0x0A,
         SelfLevelComplete = 0x0B,
@@ -103,6 +172,10 @@ public:
         SoulLevelUpNotification = 0x0E,
         SoulShieldNotification = 0x0F,
         BoostNotification = 0x11,
+        // Oval is some programming stuff
+        OvalError = 0x12, // base64 encoded string
+        OvalDev = 0x13,
+        Sleep = 0x14,
         SoulBlockData = 0x20,
         XPUpdateEvent = 0x21
     };

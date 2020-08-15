@@ -81,6 +81,7 @@ public:
         ConfigureCollisionDetection = 0x12,
         ConfigureLocator = 0x13,
         GetLocatorData = 0x15,
+        GetTemperature = 0x16,
         SetRGBLed = 0x20,
         SetBackLED = 0x21,
         GetRGBLed = 0x22,

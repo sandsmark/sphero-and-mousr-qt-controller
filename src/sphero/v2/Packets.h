@@ -9,6 +9,8 @@
 #include <QtEndian>
 #include <cstdint>
 
+// TODO: the audio upload stuff, don't know the command IDs
+
 namespace sphero {
 namespace v2 {
 
@@ -163,7 +165,8 @@ public:
         AnimationControl = 0x17,
         Sensors = 0x18,
         AVControl = 0x1a,
-        Unknown = 0x1f,
+        AVFlashControl = 0x1b,
+        QASystem = 0x1f,
         InvalidTarget = 0xFF
     };
     Q_ENUM(CommandTarget)
@@ -197,9 +200,9 @@ public:
         return m_flags & Synchronous;
     }
 
-    void setSequenceNumber(const uint8_t number) {
+    //void setSequenceNumber(const uint8_t number) {
 //        m_sequenceNumber = number;
-    }
+    //}
 
 protected:
     Packet(const uint8_t deviceID, const uint8_t commandID) :
@@ -208,6 +211,242 @@ protected:
     {}
 };
 
+namespace UserIO {
+enum Command {
+    EnableGestureEventNotification = 0,
+    GestureEvent = 1,
+    ButtonEventMaybe = 2,
+    ButtonEvent = 3,
+    SetLED = 4,
+    ReleaseLED = 5,
+    PlayHapticPattern = 6,
+    PlayAudioFile = 7,
+    SetVolume = 8,
+    GetVolume = 9,
+    StopAudio = 0xa,
+    EnableCapacitiveTouch = 0xb,
+    EnableALS = 0xc,
+    SetLEDs = 0xe,
+    Backlight = 0xf,
+    CapacitiveTouchASync = 0x10,
+    EnableDebug = 0x11,
+    HeadLights = 0x13,
+    TailLights = 0x14,
+    PlayTestTone = 0x18,
+    StartIdleLED = 0x19,
+    ToyCommands = 0x20,
+
+    V2Event = 0x21, // ??
+
+    SetUserProfile = 0x22,
+    GetUserProfile = 0x23,
+};
+} // namespace UserIO
+
+namespace Animatronics {
+enum Command {
+    AnimateSuspension = 3,
+    AnimateMouth = 4,
+    ExecuteAnimationProfile = 5,
+    UploadAnimationBundle = 6,
+    UploadAnimationBundleAsyncResult = 9,
+    EnableUserDrive = 0xb,
+    DoShoulder = 0xd,
+    SetHeadPosition = 0xf,
+    ExecuteAnimationBundleCompleteAsync = 0x11,
+    GetHeadPosition = 0x14,
+    SetShoulderCamPosition = 0x15,
+    GetShoulderPosition = 0x16,
+    GetShoulderAction = 0x25,
+    GetShoulderActionAsync = 0x26,
+    SetHeadBehavior = 0x29,
+    EnableShoulderAsync = 0x2a,
+    StopAnimation = 0x2b,
+    GetTrophyMode = 0x2e,
+    GetDroidToDroidMode = 0x30,
+
+
+    HeadResetToZeroAsyncEnable = 0x39,
+    HeadResetToZeroAsync = 0x3a,
+};
+enum ShoulderCamPosition {
+    ThreeLegs = 1,
+    TwoLegs = 2,
+    Waddle = 3, // I think? Not 100%, damn std::string and it's short string optimization
+    Transitioning = 4,
+};
+} // namespace Animatronics
+
+namespace APIProcessor {
+enum Command {
+    Data,
+    Echo
+};
+} // namespace APIProcessor
+
+namespace DrivingSystem {
+enum Response {
+    Ok = 1 // IDK
+};
+} // namespace DrivingSystem
+
+namespace PeerConnection {
+enum Command {
+    EnablePeerConnectionEventNotification = 0,
+    PeerConnectionEvent = 1,
+    GetPeerConnectionState = 2,
+    SetBluetoothName = 3,
+    GetBluetoothName = 4
+};
+} // namespace PeerConnection
+
+namespace Power {
+enum Command {
+    EnterDeepSleep = 0,
+    EnterSoftSleep = 1,
+    GetUSBState = 2,
+    GetBatteryVoltage = 3,
+    GetBatteryState = 4,
+    EnableBatteryStateNotify = 5,
+    BatteryStateChanged = 6,
+    Wake = 0xd,
+    GetBatteryPercent = 0x10,
+    SetPowerOptions = 0x12,
+    GetPowerOptions = 0x13,
+    GetBatteryVoltageState = 0x17,
+    WillSleep = 0x19,
+    Sleep = 0x1a,
+    EnableBatteryVoltageStateChangedAsync = 0x1b,
+    GetBatteryVoltageAlt = 0x1c, // async maybe? complementary bits of the other getbattery voltage at least
+};
+} // namespace Power
+
+namespace Proto {
+enum Command {
+    SetMACTable = 0,
+    GetMACTable = 1,
+    EnableTableRSSI = 2,
+    RSSIReply = 3,
+};
+} // namespace Proto
+
+namespace QASystem {
+enum Command {
+    RunQATest = 0x1F // has one int argument, id
+};
+} // namespace QASystem
+
+namespace AVFlashControl {
+enum Command {
+    WriteData = 2,
+    ReadData = 4,
+    CrcRegion = 6,
+    EraseSectors = 0xa,
+    SpotcheckCrcRegion = 0xf
+};
+} // namespace QASystem
+
+namespace Sensors {
+enum Command {
+    SetSensorAppMask = 0,
+    Sensor = 1,
+    GetSensorAppMask = 2,
+    SetSensorAppMaskExtended = 0xc,
+    GetSensorAppMaskExtended = 0xd,
+    SetGyroMaxNotification = 0xf,
+    GyroMaxNotificationReply = 0x10,
+    ConfigCollisionDetection = 0x11,
+    Collision = 0x12,
+    ResetLocator = 0x13,
+    EnableCollisionDetection = 0x14,
+    SubsscribeManeuverNotification = 0x15,
+    ManeuverDetectionAsync = 0x16,
+    SetLocatorFlags = 0x17,
+    SetAccelerometerActivityThreshold = 0x18,
+    EnableAccelerometerActivityAsync = 0x19,
+    AccelerometerActivityAsync = 0x1a,
+    SetGyroActivityThreshold = 0x1b,
+    EnableGyroActivityAsync = 0x1c,
+    GyroActivityAsync = 0x1d
+};
+} // namespace Sensors
+
+namespace SystemInfo {
+enum Command {
+    GetVersion = 0,
+    GetVersionAlt = 1,
+    GetFirmwareBuildInfoMainApp = 2,
+    GetFirmwareBoardRev = 3,
+    FirmwareConfigWrite = 4,
+    ConfigWriteComplete = 5,
+    GetMACAddress = 6,
+    GetUserConfigBlock = 7,
+    SetUserConfigBlock = 8,
+    SetUserConfigBlockComplete = 9,
+    DisableFactoryMode = 10,
+    GetLogStatus = 0xb,
+    GetLogChunk = 0xc,
+    StClear = 0xd, // statistics?
+    GetTemperature = 0xe,
+    GetModelNumber = 0x12,
+    GetStatisticssID = 0x13,
+    GetSecondaryMCUVersion = 0x17,
+    GetSecondaryMCUVersionAsync = 0x18,
+    GetAnimationVersion = 0x1a,
+    GetAnimationVersionAsync = 0x1a,
+    SetAudioCRC = 0x22,
+    GetAudioCRC = 0x23,
+    Level1Diagnostics = 0x26,
+    Level1DiagnosticsReply = 0x27,
+    GetSKU = 0x28,
+    GetSecondaryMCUStatus = 0x29,
+    GetSecondaryMCUStatusAsync = 0x2a
+};
+} // namespace SystemInfo
+
+namespace SystemMode {
+enum Command {
+    SetPlayMode = 0,
+    GetSystemMode = 1,
+    EnablePlayModeUpdateNotification = 2,
+    SystemModeChanged = 3,
+    SetMaxSpeed = 4,
+    GetMaxSpeed = 5,
+    SetCurrentWeapon = 6,
+    GetCurrentWeapon = 7,
+    SetAimMode = 8,
+    GetPlayModeMask = 9,
+    SetPlayUnlocks = 10,
+    EnablePlayModeUpdateNotificationAlt = 0xb,
+    MenuItemChanged = 0xc,
+    GetWeaponMask = 0xd,
+    SetEnabledWeapons = 0xe,
+    ForcebandGetHolocronCount = 0x10,
+    DecrementHolocronCount = 0x13,
+    ClearHolocronCount = 0x14,
+    FindHolochronNow = 0x15,
+    EnableForceAware = 0x16,
+    ForcebandForceAwarenessEvent = 0x17,
+    SetHolocronCategoryRarity = 0x18, // Guessing
+    ForcebangGetAngleToHolocron = 0x19,
+    DeviceForceAwareTimeout = 0x1a,
+    AUseTHeaderComplete = 0x1b, // ???
+    SetAudioHederEvent = 0x1c,
+    EnableRobotBadApp = 0x20,
+    RobotBadApp = 0x21,
+    GetPendingActions = 0x22,
+    AudioInfo = 0x23
+
+};
+} // namespace SystemMode
+
+namespace WiFi {
+enum Command {
+    PowerOn = 0,
+    PowerOnComplete = 1,
+    GetMAC = 2
+};
+} // namespace WiFi {
 struct ResponsePacket: public Packet {
     uint8_t errorCode = 0;
 
@@ -238,6 +477,11 @@ struct WakePacket : public Packet {
 struct PingPacket : public Packet {
     static constexpr uint8_t id = 0;
     PingPacket() : Packet(Packet::PingPong, id) {}
+};
+
+struct GetTemperaturePacket : public Packet {
+    static constexpr uint8_t id = 0xe;
+    GetTemperaturePacket() : Packet(Packet::Info, id) {}
 };
 
 struct DrivePacket : public Packet {
