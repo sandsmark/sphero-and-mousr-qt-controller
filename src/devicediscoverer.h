@@ -77,9 +77,6 @@ private slots:
     void onRobotStatusChanged(const QString &message);
 
 private:
-    void updateRssi(const QBluetoothDeviceInfo &device);
-
-
     QPointer<QObject> m_device;
 
     QPointer<QBluetoothDeviceDiscoveryAgent> m_discoveryAgent;

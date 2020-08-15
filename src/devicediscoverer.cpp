@@ -213,27 +213,35 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
         return;
     }
 
-#ifndef NDEBUG
-    debugVisibleDevices(device);
-#endif
-
-    const QString deviceName = device.name();
+    QString deviceName = device.name();
     const QString deviceAddress = device.address().toString();
+
+
     switch(DeviceDiscoverer::robotType(device)) {
     case Sphero:
-        m_displayNames[deviceAddress] = sphero::displayName(deviceName);
+        deviceName = sphero::displayName(deviceName);
         break;
     case Mousr:
-        m_displayNames[deviceAddress] = deviceName; // todo, it has another!
+        // TODO: figure out how to get the Real™ name
         break;
     case Unknown:
         return;
     }
 
+    if (m_displayNames.value(deviceAddress) == deviceName) {
+        return;
+    }
+
+    m_displayNames[deviceAddress] = deviceName;
+
     m_availableDevices[deviceAddress] = device;
     emit availableDevicesChanged();
 
-    updateRssi(device);
+    emit signalStrengthChanged(deviceAddress, rssiToStrength(device.rssi()));
+
+#ifndef NDEBUG
+    debugVisibleDevices(device);
+#endif
 }
 
 void DeviceDiscoverer::onDeviceUpdated(const QBluetoothDeviceInfo &device, QBluetoothDeviceInfo::Fields fields)
@@ -247,9 +255,10 @@ void DeviceDiscoverer::onDeviceUpdated(const QBluetoothDeviceInfo &device, QBlue
     if (DeviceDiscoverer::robotType(device) == DeviceDiscoverer::Unknown) {
         return;
     }
+    qDebug() << "device updated" << device.name() << device.address().toString() << device.rssi() << fields;
 
     if (fields & QBluetoothDeviceInfo::Field::RSSI) {
-        updateRssi(device);
+        emit signalStrengthChanged(device.address().toString(), rssiToStrength(device.rssi()));
     }
 }
 
@@ -325,11 +334,6 @@ QString DeviceDiscoverer::displayName(const QString &name)
     return m_displayNames[name];
 }
 
-void DeviceDiscoverer::updateRssi(const QBluetoothDeviceInfo &device)
-{
-    emit signalStrengthChanged(device.address().toString(), rssiToStrength(device.rssi()));
-}
-
 DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceInfo &device)
 {
     const QVector<quint16> manufacturerIds = device.manufacturerIds();
@@ -362,7 +366,7 @@ DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceIn
         return Sphero;
     }
 
-    if (name == QLatin1String("Mousr")) {
+    if (name.contains(QLatin1String("Mousr"))) {
         if (!manufacturerIds.isEmpty()) {
             qDebug() << "unexpected manufacturer ID for mousr:" << manufacturerIds;
         }
