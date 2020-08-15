@@ -448,15 +448,13 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         return;
     }
 
-    if (data.size() != 20) {
-        qWarning() << "invalid packet size" << data.size() << "expected 20";
+    if (data.size() != sizeof(ResponsePacket)) {
+        qWarning() << "invalid packet size" << data.size() << "expected" << sizeof(ResponsePacket);
         return;
     }
 
 
     ResponsePacket response;
-
-    static_assert(sizeof(response) == 20);
     qFromLittleEndian<ResponsePacket>(data.data(), 1, &response);
 
     const QString responseName = EnumHelper::toString(ResponseType(response.type));

@@ -26,6 +26,8 @@ public:
         StationaryCalm = 9,
         StationaryAggressive = 10,
         StationaryCustom = 11,
+
+        StandardGameModeCount = 12
     };
     Q_ENUM(StandardGameModes)
 
