@@ -226,8 +226,6 @@ struct RequestBatteryVoltagePacket : public Packet {
 struct GoToLightSleep : public Packet {
     static constexpr uint8_t id = 0x1;
 
-//    const uint8_t unknown = 0x17;
-
     GoToLightSleep() : Packet(Packet::MainSystem, id) {}
 };
 
@@ -319,58 +317,61 @@ struct PlayAnimationPacket : public Packet {
     uint16_t m_animation;
 };
 
-struct SetMainLEDColor : public Packet {
-    static constexpr uint8_t id = 14;
-    SetMainLEDColor(const uint8_t red, const uint8_t green, const uint8_t blue) :
-        Packet(Packet::AVControl, id),
-        m_red(red),
-        m_green(green),
-        m_blue(blue)
-    {}
-    const uint8_t mask = 0x70;
+enum ColorLED : uint16_t {
+    InvalidLED = 0,
 
-    enum LED : uint8_t {
-        FrontRed = 1 << 0,
-        FrontGreen = 1 << 1,
-        FrontBlue = 1 << 2,
+    BackLED = 0b111 << 12, // 0x1800
 
-        FrontLED = FrontRed | FrontGreen | FrontBlue,
+    R2BodyLED = 0b111 << 8,
 
-        BackRed = 1 << 3,
-        BackGreen = 1 << 4,
-        BackBlue = 1 << 5,
+    // Bit 8, 9 10, and 12
+    // Not sure what the extra bit is for (12)
+    B9BodyLED = 0b10111 << 8, // 0x1700
 
-        BackLED = BackRed | BackGreen | BackBlue,
-    };
-
-    uint8_t m_red = 0;
-    uint8_t m_green = 0;
-    uint8_t m_blue = 0;
+    BB9HeadLED = 1 << 12,
 };
 
-struct SetLEDIntensity : public Packet {
+enum MonoLED : uint16_t {
+    R2LogicDisplayLED = 1 << 11, // 0x800
+    R2HoloProjectorLED = 1 << 15, // 0x8000
+
+    B9BackLED = 0b11 << 11, // 0x1800, bit 11 and 12
+};
+
+struct SetLED : public Packet {
     static constexpr uint8_t id = 0xe;
 
-    enum LED : uint8_t {
-        BackLED = 0x1,
-        MainRedLED = 0x2,
-        MainGreenLED = 0x4,
-        MainBlueLED = 0x8,
-
-    };
-
-    SetLEDIntensity(const uint8_t led, uint8_t intensity) : Packet(Packet::AVControl, id),
-//        m_led(led),
-        m_intensity(intensity)
+    SetLED(const ColorLED led, const uint8_t r, const uint8_t g, const uint8_t b) :
+        Packet(Packet::AVControl, id),
+        m_led(led),
+        m_red(r),
+        m_green(g),
+        m_blue(b)
     {}
-//    const uint8_t unknown1 = 0x1c;
-    const uint8_t unknown2 = 0x0;
-    const uint8_t unknown3 = 0x80;
-    uint8_t m_intensity = 0;
 
-//    const uint8_t unknown = 0;
-//    uint16_t m_led = 0;
-//    uint8_t m_intensity = 0;
+    const uint16_t m_led;
+
+    // I think it is actually sent as an uint32_t, but easier this way with the padding
+    const uint8_t m_red;
+    const uint8_t m_green;
+    const uint8_t m_blue;
+
+    const uint8_t padding = 0xFF;
+
+protected:
+    SetLED(const uint16_t led, const uint8_t r, const uint8_t g, const uint8_t b) :
+        m_led(led),
+        m_red(r),
+        m_green(g),
+        m_blue(b)
+    {}
+};
+
+/// LEDs that only can set brightness
+struct SetLEDIntensity : public SetLED {
+    SetLEDIntensity(const MonoLED led, const uint8_t strength) :
+        SetLED(uint16_t(led), strength, strength, strength)
+    {}
 };
 
 #pragma pack(pop)

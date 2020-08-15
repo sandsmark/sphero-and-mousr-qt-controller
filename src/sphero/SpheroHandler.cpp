@@ -219,12 +219,27 @@ void SpheroHandler::setColor(const int r, const int g, const int b)
     case RobotDefinition::V1:
         sendCommandV1(v1::SetColorsCommandPacket(r, g, b, v1::SetColorsCommandPacket::Temporary));
         break;
-    case RobotDefinition::V2:
-//        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::PingPacket()));
-        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetMainLEDColor(r, g, b)));
-//        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetMainLEDColor(0xff, 0xff, 0xff)));
-//        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetLEDIntensity(v2::SetLEDIntensity::FrontRed, 128)));
+    case RobotDefinition::V2: {
+        v2::ColorLED bodyLED = v2::InvalidLED;
+        switch(m_robotType) {
+        case RobotType::R2D2:
+        case RobotType::R2Q5:
+            bodyLED = v2::R2BodyLED;
+            break;
+        case RobotType::BB9E:
+            bodyLED = v2::B9BodyLED;
+            break;
+        default:
+            qWarning() << "Don't know ID of body led for" << m_robotType;
+            break;
+        }
+
+        if (bodyLED != v2::InvalidLED) {
+            // Set the body to green
+            m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetLED(bodyLED, 0, 255, 0)));
+        }
         break;
+    }
     default:
         qWarning() << "TODO setcolor";
         break;
@@ -607,8 +622,8 @@ void SpheroHandler::onMainServiceChanged(QLowEnergyService::ServiceState newStat
         qWarning() << "Unhandled API version";
         return;
     }
-    m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::SetLEDIntensity(v2::SetLEDIntensity::BackLED, 255)));
-//    setColor(Qt::green);
+
+    setColor(Qt::green);
 
     emit connectedChanged();
     emit statusMessageChanged(statusString());
@@ -1071,7 +1086,7 @@ void SpheroHandler::onRadioServiceChanged(QLowEnergyService::ServiceState newSta
         break;
     }
     case RobotDefinition::V2: {
-        // TODO: R2D2:
+        // DONE (I think): R2D2:
         // 1. Antidos
         // 2. write dfu handle request notification
         // 2. read DFU:handle, receive: 0000   0b 00 01 00 04 00 02 02                           ........
