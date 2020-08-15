@@ -114,7 +114,7 @@ Window {
             anchors.fill: statusBox
             anchors.margins: -8
             border { left: 10; top: 10; right: 10; bottom: 10 }
-            source: "qrc:images/shadow.png"
+            source: "qrc:/images/shadow.png"
         }
 
         Rectangle {
