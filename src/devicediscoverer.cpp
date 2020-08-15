@@ -190,6 +190,7 @@ inline void debugVisibleDevices(const QBluetoothDeviceInfo &device)
         761, // IMAGINATION TECHNOLOGIES LTD
         135, // Garmin International, Inc.
         474, // Logitech International SA
+        335, // B&W Group Ltd.
 
         // Unregistered/illegal
         9474, // 'Expert'
@@ -342,15 +343,24 @@ DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceIn
     }
 
     if (manufacturerIds.contains(mousr::manufacturerID)) {
-        qDebug() << device.name();
-        qDebug() << "discovered" << device.name() << device.address().toString() << device.manufacturerIds() << device.minorDeviceClass() << device.majorDeviceClass() << device.manufacturerData() << device.serviceClasses() << device.rssi();
-
         // It _seems_ like the manufacturer data is the reversed of most of the address, except the last part which is 0xFC in the address and 0x3C in the manufacturer data
-//        QByteArray deviceAddress = QByteArray::fromHex(device.address().toString().toLatin1());
-//        if (!deviceAddress.isEmpty()) {
-//            std::reverse(deviceAddress.begin(), deviceAddress.end());
-//            qDebug() << deviceAddress.toHex(':') << device.manufacturerData(mousr::petronicsManufacturerID).toHex(':').toUpper();
-//        }
+        QByteArray deviceAddress = QByteArray::fromHex(device.address().toString().toLatin1());
+        if (deviceAddress.isEmpty()) {
+            qDebug() << "No device address?";
+            return Unknown;
+        }
+        const QByteArray data = device.manufacturerData(mousr::manufacturerID);
+        if (data.length() != 6) {
+            qWarning() << "Invalid data length" << data.toHex(':') << deviceAddress.toHex(':');
+            return Unknown;
+        }
+//        qDebug() << "dbg" << data.toHex(':') << deviceAddress.toHex(':');
+        std::reverse(deviceAddress.begin(), deviceAddress.end());
+        if (!deviceAddress.startsWith(data.left(5))) {
+            qDebug() << "Invalid manufacturer data" << data.toHex(':') << deviceAddress.toHex(':');
+            return Unknown;
+        }
+
         return Mousr;
     }
 
