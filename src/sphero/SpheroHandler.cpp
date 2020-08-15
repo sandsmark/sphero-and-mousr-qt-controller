@@ -143,6 +143,7 @@ SpheroHandler::SpheroHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pa
     connect(m_deviceController, &QLowEnergyController::disconnected, this, []() {
             qDebug() << " ! controller disconnected";
             });
+    connect(m_deviceController, &QLowEnergyController::disconnected, this, &SpheroHandler::disconnected);
     connect(m_deviceController, &QLowEnergyController::discoveryFinished, this, []() {
             qDebug() << " - controller discovery finished";
             });
@@ -188,6 +189,7 @@ void SpheroHandler::disconnectFromRobot()
     m_deviceController->disconnectFromDevice();
 
     qDebug() << "Disconnected from robot";
+    emit statusMessageChanged("Disconnected");
 }
 
 bool SpheroHandler::isConnected()

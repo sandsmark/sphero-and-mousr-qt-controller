@@ -249,7 +249,7 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
 MousrHandler::~MousrHandler()
 {
     qDebug() << "mousr handler dead";
-    if (!m_isAutoActive) {
+    if (!m_isAutoActive && isConnected()) {
         stop();
     }
 

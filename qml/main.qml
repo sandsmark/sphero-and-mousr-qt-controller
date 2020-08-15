@@ -222,7 +222,7 @@ Window {
 
     Loader {
         id: robotLoader
-        active: DeviceDiscoverer.device !== null && DeviceDiscoverer.device.isConnected
+        active: DeviceDiscoverer.device !== null && DeviceDiscoverer.device !== undefined && DeviceDiscoverer.device.isConnected
 
         anchors.fill: parent
         sourceComponent: {

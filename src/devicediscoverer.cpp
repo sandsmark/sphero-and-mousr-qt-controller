@@ -11,7 +11,11 @@ DeviceDiscoverer::DeviceDiscoverer(QObject *parent) :
     QObject(parent),
     m_scanning(false)
 {
+    QMetaObject::invokeMethod(this, &DeviceDiscoverer::init);
+}
 
+void DeviceDiscoverer::init()
+{
     m_adapter = new QBluetoothLocalDevice(this);
     m_adapter->setHostMode(QBluetoothLocalDevice::HostPoweredOff); // we need to do this because bluez is crap
 
@@ -55,7 +59,7 @@ QString DeviceDiscoverer::statusString()
         }
     }
     if (!m_adapter->isValid()) {
-        return tr("No bluetooth adaptors available");
+        return tr("No bluetooth adaptors available\nPlease start BlueZ if on Linux.");
     }
 
     if (m_adapterError != QBluetoothLocalDevice::NoError) {
@@ -132,6 +136,7 @@ void DeviceDiscoverer::connectDevice(const QString &name)
     emit deviceChanged();
 
     m_availableDevices.clear();
+    m_displayNames.clear();
     emit availableDevicesChanged();
 
 }

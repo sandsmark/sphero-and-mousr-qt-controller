@@ -27,6 +27,13 @@ Rectangle {
         visible: !device.isConnected
     }
 
+    Lol.Button {
+        id: disconnectButton
+        visible: device.isConnected
+        text: "Disconnect"
+        onClicked: device.disconnectFromRobot();
+    }
+
     Text {
         id: statusString
 

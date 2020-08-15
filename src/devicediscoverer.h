@@ -62,6 +62,8 @@ signals:
     void signalStrengthChanged(const QString &deviceName, float strength);
 
 private slots:
+    void init();
+
     void startScanning();
     void stopScanning();
 
