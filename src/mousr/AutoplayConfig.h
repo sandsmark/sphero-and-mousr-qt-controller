@@ -171,6 +171,14 @@ public:
         switch (m_gameMode) {
         case GameMode::OffMode:
             return "Off";
+        case GameMode::OpenWander:
+            return "OpenWander";
+        case GameMode::WallHugger:
+            return "WallHugger";
+        case GameMode::BackAndForth:
+            return "BackAndForth";
+        case GameMode::Stationary:
+            return "Stationary";
         default:
             break;
         }
