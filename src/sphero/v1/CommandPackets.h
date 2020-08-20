@@ -166,6 +166,8 @@ public:
                 break;
             default:
                 qWarning() << "Unhandled packet internal command" << m_commandID;
+                flags |= CommandPacketHeader::Asynchronous;
+                flags |= CommandPacketHeader::ResetTimeout;
                 return;
             }
 
@@ -219,7 +221,7 @@ public:
                 break;
             default:
                 qWarning() << " !!!!!!!!!!!!!!! Unhandled packet hardware command" << m_commandID;
-                flags |= CommandPacketHeader::Synchronous;
+                flags |= CommandPacketHeader::Asynchronous;
                 flags |= CommandPacketHeader::ResetTimeout;
                 break;
             }
@@ -227,7 +229,7 @@ public:
             break;
         default:
             qWarning() << "Unhandled device id" << deviceID;
-            m_flags |= CommandPacketHeader::Synchronous;
+            m_flags |= CommandPacketHeader::Asynchronous;
             m_flags |= CommandPacketHeader::ResetTimeout;
             break;
         }
