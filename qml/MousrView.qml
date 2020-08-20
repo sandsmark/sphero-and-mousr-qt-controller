@@ -197,10 +197,12 @@ Rectangle {
 
             Column {
                 spacing: margins
+                width: parent.width
 
                 CheckBox {
                     text: qsTr("Enabled")
                     checked: device.isAutoRunning
+                    width: parent.width
                     onCheckedStateChanged: {
                         device.isAutoRunning = checkedState === Qt.Checked
                     }
@@ -209,6 +211,7 @@ Rectangle {
                 ComboBox {
                     model: device.autoplayGameModeNames()
                     currentIndex: device.autoplayGameMode
+                    width: parent.width
                     onActivated: {
                         device.autoplayGameMode = index
 
@@ -220,6 +223,7 @@ Rectangle {
                 ComboBox {
                     model: device.autoplayDrivingModeNames()
                     currentIndex: device.autoplayDrivingMode
+                    width: parent.width
                     onActivated: {
                         device.autoplayDrivingMode = index
 
