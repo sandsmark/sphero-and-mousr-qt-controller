@@ -997,6 +997,14 @@ void SpheroHandler::parsePacketV1(const QByteArray &data)
 
             break;
         }
+        case ResponsePacketHeader::SleepingIn10Sec : {
+            qWarning() << "Going to sleep soon";
+            break;
+        }
+        case ResponsePacketHeader::Sleep : {
+            qWarning() << "Gone to sleep";
+            break;
+        }
         default:
             qWarning() << " ! unhandled notification type" << header.packetType;
 
