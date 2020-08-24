@@ -660,6 +660,10 @@ void SpheroHandler::onServiceError(QLowEnergyService::ServiceError error)
     if (error == QLowEnergyService::NoError) {
         return;
     }
+    if (error == QLowEnergyService::OperationError) {
+        qWarning() << "OPeration error";
+        return;
+    }
 
     emit statusMessageChanged(tr("Sphero service connection failed: %1").arg(error));
     emit disconnected();
