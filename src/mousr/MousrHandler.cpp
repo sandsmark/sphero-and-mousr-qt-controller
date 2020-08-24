@@ -203,6 +203,8 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     QObject(parent),
     m_name(deviceInfo.name())
 {
+    m_newAutoConfig = AutoplayConfig::createConfig(AutoplayConfig::OpenWanderAggressive);
+    qDebug() << m_newAutoConfig;
     // In case the UI asks us to update more than 100 times a second
     m_sendInputTimer.setInterval(10);
     m_sendInputTimer.setSingleShot(true);
