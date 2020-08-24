@@ -248,14 +248,12 @@ Rectangle {
         device.rotate(MousrHandler.Right);
     }
     Keys.onPressed: {
-        if (event.isAutoRepeat) {
-            //if (event.key === Qt.Key_Up) {
-//            console.log("SKipping auto repeat")
-            return
-        }
-
         if (event.key === Qt.Key_Up) {
-            device.speed = 0.5;
+            if (event.modifiers == Qt.ShiftModifier) {
+                device.speed = 1.;
+            } else {
+                device.speed = 0.5;
+            }
         } else if (event.key === Qt.Key_Down) {
             device.speed = -0.5;
         } else {
