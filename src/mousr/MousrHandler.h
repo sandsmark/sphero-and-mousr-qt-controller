@@ -232,7 +232,7 @@ public:
     float speed() const { return m_newInput.speed; }
     bool isControlsPressed() const { return !qFuzzyIsNull(m_newInput.held); }
     void setAngle(const float angle) { m_newInput.angle = angle; emit inputChanged(); }
-    void setSpeed(const float speed) { m_newInput.speed = qMin(speed, 1.f); emit inputChanged(); }
+    void setSpeed(const float speed) { if (qFuzzyCompare(m_newInput.speed, speed)) return; m_newInput.speed = qMin(speed, 1.f); emit inputChanged(); }
     void setControlsPressed(const bool held) { if (held == isControlsPressed()) return;  m_newInput.held = held ? 1.f : 0.f; emit inputChanged(); m_lastRotationTimer.invalidate(); }
 
     void setDriverAssistEnabled(const bool enabled) { m_driverAssistMode.enabled = enabled ? 1 : 0; emit driverAssistChanged(); }
