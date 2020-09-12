@@ -63,10 +63,9 @@ Rectangle {
                 source: "qrc:images/mousr-tail.png"
 
                 // no idea why these values work, with rotation nothing makes sense
-                x: parent.width/1.5
-                y: -parent.height/1.5
+                x: parent.width - 30;///1.5
                 transformOrigin: Item.Bottom
-                rotation: device.tailRotation
+                rotation: 90 - device.tailRotation
             }
 
 
