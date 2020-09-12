@@ -29,6 +29,7 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
 
             RotationAnimation on rotation {
+                direction: RotationAnimation.Shortest
                 running: topImage.rotation != device.zRotation
                 to: device.zRotation
             }
@@ -43,6 +44,7 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
 
             RotationAnimation on rotation {
+                direction: RotationAnimation.Shortest
                 running: frontImage.rotation != device.xRotation
                 to: device.xRotation
             }
@@ -57,6 +59,7 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
 
             RotationAnimation on rotation {
+                direction: RotationAnimation.Shortest
                 running: sideImage.rotation != device.yRotation
                 to: device.yRotation
             }
