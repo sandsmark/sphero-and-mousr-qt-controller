@@ -554,7 +554,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
         m_isStuck = response.stuck.stuckType != 0 ? true : false;
         emit stuckChanged();
         qDebug() << " ! Device stuck";
-        qDebug() << "  - unknown stuckType:" << AnalyticsEvent(response.stuck.stuckType) << CommandType(response.stuck.stuckType);
+        qDebug() << "  - unknown stuckType:" << AnalyticsEvent(response.stuck.stuckType) << response.stuck.stuckType;
         qDebug() << "  - data: " << response.type << data.mid(1).toHex(':');
         break;
     }
