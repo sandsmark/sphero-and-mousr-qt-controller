@@ -852,37 +852,33 @@ void SpheroHandler::parsePacketV1(const QByteArray &data)
 
     switch(header.type) {
     case ResponsePacketHeader::Response: {
-        qDebug() << " - ack response" << ResponsePacketHeader::PacketType(header.packetType);
-//        qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
-
-        if (header.packetType == ResponsePacketHeader::InvalidParameter) {
-            qWarning() << " !!!!! We sent an invalid parameter!";
-            if (m_pendingSyncRequests.contains(header.sequenceNumber)) {
-                const QPair<uint8_t, uint8_t> responseToCommand = m_pendingSyncRequests.take(header.sequenceNumber);
-                if (responseToCommand.first == v1::CommandPacketHeader::HardwareControl) {
-                    qDebug() << " ! hardware command" << v1::CommandPacketHeader::HardwareCommand(responseToCommand.second);
-
-                    if (responseToCommand.second != v1::CommandPacketHeader::GetLocatorData) {
-                        sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
-                    }
-                } else if (responseToCommand.first == v1::CommandPacketHeader::Internal) {
-                    qDebug() << " ! internal command" << v1::CommandPacketHeader::InternalCommand(responseToCommand.second);
-                    sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
-                } else {
-                    qDebug() << " ! invalid command target" << responseToCommand;
-                }
-            } else {
-                qDebug() << "unknown request";
-            }
-            break;
-        }
-
         if (!m_pendingSyncRequests.contains(header.sequenceNumber)) {
             qWarning() << " ! this was not an expected response";
             break;
         }
 
         const QPair<uint8_t, uint8_t> responseToCommand = m_pendingSyncRequests.take(header.sequenceNumber);
+
+        qDebug() << " - ack response" << ResponsePacketHeader::PacketType(header.packetType);
+//        qDebug() << "Content length" << contents.length() << "data length" << header.dataLength << "buffer length" << m_receiveBuffer.length() << "locator packet size" << sizeof(LocatorPacket) << "response packet size" << sizeof(ResponsePacketHeader);
+
+        if (header.packetType == ResponsePacketHeader::InvalidParameter) {
+            qWarning() << " !!!!! We sent an invalid parameter!";
+            if (responseToCommand.first == v1::CommandPacketHeader::HardwareControl) {
+                qDebug() << " ! hardware command" << v1::CommandPacketHeader::HardwareCommand(responseToCommand.second);
+
+                if (responseToCommand.second != v1::CommandPacketHeader::GetLocatorData) {
+                    sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
+                }
+            } else if (responseToCommand.first == v1::CommandPacketHeader::Internal) {
+                qDebug() << " ! internal command" << v1::CommandPacketHeader::InternalCommand(responseToCommand.second);
+                sendCommandV1(v1::CommandPacketHeader::HardwareControl, v1::CommandPacketHeader::GetLocatorData, {});
+            } else {
+                qDebug() << " ! invalid command target" << responseToCommand;
+            }
+            break;
+        }
+
         // TODO separate function
         switch(responseToCommand.first) {
         case v1::CommandPacketHeader::Internal:
