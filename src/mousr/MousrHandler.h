@@ -4,7 +4,6 @@
 
 #include <QObject>
 #include <QPointer>
-#include <QBluetoothUuid>
 #include <QLowEnergyService>
 #include <QLowEnergyCharacteristic>
 #include <QLowEnergyController>
@@ -13,6 +12,7 @@
 
 class QLowEnergyController;
 class QBluetoothDeviceInfo;
+class QBluetoothUuid;
 
 namespace mousr {
 

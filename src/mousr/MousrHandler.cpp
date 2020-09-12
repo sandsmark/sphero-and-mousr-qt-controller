@@ -292,15 +292,15 @@ QString MousrHandler::statusString()
 
 void MousrHandler::onServiceDiscovered(const QBluetoothUuid &newService)
 {
-    // 00001801-0000-1000-8000-00805f9b34fb
-    static const QBluetoothUuid genericServiceUuid = QUuid(0x00001801, 0x0000, 0x1000, 0x80, 0x00, 0x00, 0x80, 0x5f, 0x9b, 0x34, 0xfb);
+    static const QBluetoothUuid genericServiceUuid = QUuid("{00001801-0000-1000-8000-00805f9b34fb}");
+    static const QBluetoothUuid dfuServiceUuid     = QUuid("{0000fe59-0000-1000-8000-00805f9b34fb}");
+    static const QBluetoothUuid serviceUuid        = QUuid("{6e400001-b5a3-f393-e0a9-e50e24dcca9e}");
+
     if (newService == genericServiceUuid) {
-        qDebug() << "Got generic service uuid, not sure what this is for" << newService;
+        qDebug() << "Got generic service uuid, for when services change, should probably connect to this to update our connections or something" << newService;
         return;
     }
 
-    // 0000fe59-0000-1000-8000-00805f9b34fb
-    static const QBluetoothUuid dfuServiceUuid = QUuid(0x0000fe59, 0x0000, 0x1000, 0x80, 0x00, 0x00, 0x80, 0x5f, 0x9b, 0x34, 0xfb);
     if (newService == dfuServiceUuid) {
         // Read:         8ec90001-f315-4f60-9fb8-838830daea50
         // Write:        8ec90002-f315-4f60-9fb8-838830daea50
@@ -308,8 +308,6 @@ void MousrHandler::onServiceDiscovered(const QBluetoothUuid &newService)
         return;
     }
 
-    // Service UUID: 6e400001-b5a3-f393-e0a9-e50e24dcca9e
-    static const QBluetoothUuid serviceUuid    = QUuid(0x6e400001, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e);
     if (newService != serviceUuid) {
         qWarning() << "discovered unhandled service" << newService << "expected" << serviceUuid;
         return;
@@ -333,8 +331,8 @@ void MousrHandler::onServiceDiscovered(const QBluetoothUuid &newService)
 
 void MousrHandler::onServiceStateChanged(QLowEnergyService::ServiceState newState)
 {
-    static constexpr QUuid writeUuid      = {0x6e400002, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
-    static constexpr QUuid readUuid       = {0x6e400003, 0xb5a3, 0xf393, 0xe0, 0xa9, 0xe5, 0x0e, 0x24, 0xdc, 0xca, 0x9e};
+    static const QUuid writeUuid = "{6e400002-b5a3-f393-e0a9-e50e24dcca9e}";
+    static const QUuid readUuid  = "{6e400003-b5a3-f393-e0a9-e50e24dcca9e}";
 
     if (newState == QLowEnergyService::InvalidService) {
         qWarning() << "Got invalid service";
