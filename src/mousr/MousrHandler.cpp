@@ -501,11 +501,17 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
 
     switch(response.type){
     case DeviceOrientation: {
+        for (int i=0; i<4; i++) {
+            if (response.orientation.padding[i]) {
+                qDebug() << "orientation padding" << i << int(response.orientation.padding[i]);
+            }
+        }
         m_waitingForOrientationChange = false;
-        if (!fuzzyVectorsEqual(response.orientation.rotation, m_rotation)) {
+        if (!fuzzyVectorsEqual(response.orientation.rotation, m_rotation) || m_tailRotation != response.orientation.tailRotation) {
             //qDebug() << " + Orientation change:";
             //qDebug() << "   - x:" << m_rotation.x << "y:" << m_rotation.y << "z:" << m_rotation.z;
             m_rotation = response.orientation.rotation;
+            m_tailRotation = response.orientation.tailRotation;
             emit orientationChanged();
         }
         if (response.orientation.isFlipped != m_isFlipped) {

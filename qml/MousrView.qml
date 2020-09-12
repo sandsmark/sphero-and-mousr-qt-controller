@@ -50,12 +50,32 @@ Rectangle {
             }
         }
 
-        Image {
+        Item {
             id: sideImage
-            source: "qrc:images/side.png"
+
             width: height
             height: robotView.height / 3
-            fillMode: Image.PreserveAspectFit
+
+            // IDK this looks crap, but close enough
+            Image {
+                id: tailImage
+
+                source: "qrc:images/mousr-tail.png"
+
+                // no idea why these values work, with rotation nothing makes sense
+                x: parent.width/1.5
+                y: -parent.height/1.5
+                transformOrigin: Item.Bottom
+                rotation: device.tailRotation
+            }
+
+
+            Image {
+                source: "qrc:images/side.png"
+                width: height
+                height: robotView.height / 3
+                fillMode: Image.PreserveAspectFit
+            }
 
             RotationAnimation on rotation {
                 direction: RotationAnimation.Shortest

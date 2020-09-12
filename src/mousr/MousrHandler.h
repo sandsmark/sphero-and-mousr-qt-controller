@@ -91,6 +91,7 @@ class MousrHandler : public QObject
     Q_PROPERTY(float xRotation READ xRotation NOTIFY orientationChanged)
     Q_PROPERTY(float yRotation READ yRotation NOTIFY orientationChanged)
     Q_PROPERTY(float zRotation READ zRotation NOTIFY orientationChanged)
+    Q_PROPERTY(float tailRotation READ tailRotation NOTIFY orientationChanged)
     Q_PROPERTY(bool isFlipped READ isFlipped NOTIFY orientationChanged)
 
     Q_PROPERTY(bool sensorDirty READ sensorDirty NOTIFY sensorDirtyChanged)
@@ -251,6 +252,7 @@ public:
     float xRotation() const { return m_rotation.x; }
     float yRotation() const { return m_rotation.y; }
     float zRotation() const { return m_rotation.z; }
+    float tailRotation() const { return (360. * m_tailRotation) / 255.; }
     bool isFlipped() const { return m_isFlipped; }
 
     bool sensorDirty() const { return m_sensorDirty; }
@@ -348,8 +350,12 @@ private:
         Vector3D<float> rotation;
 
         bool isFlipped;
+        uint8_t tailRotation;
 
-        uint8_t padding[6];
+        // tail related?
+        uint8_t zeroOr255;
+
+        uint8_t padding[4];
     };
     static_assert(sizeof(DeviceOrientationResponse) == 19);
 
@@ -488,6 +494,7 @@ private:
     InputState m_newInput;
 
     Vector3D<int> m_rotation{};
+    uint8_t m_tailRotation = 0;
     bool m_isFlipped = false;
 
     bool m_sensorDirty = false;

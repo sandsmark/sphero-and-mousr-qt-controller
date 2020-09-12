@@ -9,6 +9,7 @@
         <file>images/front.png</file>
         <file>images/shadow.png</file>
         <file>images/bg.png</file>
+        <file>images/mousr-tail.png</file>
         <file>qml/Spinner.qml</file>
         <file>qml/SpheroView.qml</file>
         <file>images/bb8.png</file>
