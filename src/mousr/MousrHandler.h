@@ -96,7 +96,7 @@ class MousrHandler : public QObject
     Q_PROPERTY(bool sensorDirty READ sensorDirty NOTIFY sensorDirtyChanged)
     Q_PROPERTY(bool stuck READ isStuck NOTIFY stuckChanged)
 
-    Q_PROPERTY(bool soundVolume READ soundVolume NOTIFY soundVolumeChanged)
+    Q_PROPERTY(int soundVolume READ soundVolume WRITE setSoundVolume NOTIFY soundVolumeChanged)
 
 public:
     AutoplayConfig::Surface autoplaySurface() const { return m_currentAutoConfig.surface(); }
@@ -307,6 +307,8 @@ private slots:
     void sendInput();
     void sendDriverAssistConfig();
 
+    void onInitComplete();
+
 private:
     bool sendCommand(const CommandType command, float arg1, const float arg2, const float arg3);
     bool sendCommand(const CommandType command, const uint32_t arg1, const uint32_t arg2 = 0);
@@ -479,7 +481,7 @@ private:
     QPointer<QLowEnergyService> m_service;
 
     int m_voltage = 0, m_memory = 0;
-    int m_volume = 0; // todo: read this from device
+    int m_volume = 0;
     bool m_batteryLow = false, m_charging = false, m_fullyCharged = false;
 
     InputState m_currentInput;

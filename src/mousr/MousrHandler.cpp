@@ -10,6 +10,7 @@
 #include <QDateTime>
 #include <QtEndian>
 #include <QQmlEngine>
+#include <QSettings>
 
 namespace mousr {
 
@@ -180,6 +181,14 @@ void MousrHandler::stop()
     emit inputChanged();
 }
 
+void MousrHandler::onInitComplete()
+{
+    // We can't read this from the device, so make sure we are in sync by always settings it
+    if (!sendCommand(CommandType::SoundVolume, m_volume)) {
+        qWarning() << "Failed to set sound volume";
+    }
+}
+
 void MousrHandler::resetTail()
 {
     if (m_isAutoActive) {
@@ -211,6 +220,10 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     QObject(parent),
     m_name(deviceInfo.name())
 {
+    QSettings settings;
+    settings.beginGroup("mousr");
+    m_volume = settings.value("volume", 25).toInt();
+
     m_newAutoConfig = AutoplayConfig::createConfig(AutoplayConfig::OpenWanderAggressive);
     qDebug() << m_newAutoConfig;
     // In case the UI asks us to update more than 100 times a second
@@ -248,6 +261,7 @@ MousrHandler::MousrHandler(const QBluetoothDeviceInfo &deviceInfo, QObject *pare
     connect(this, &MousrHandler::initComplete, this, &MousrHandler::resetHeading);
     connect(this, &MousrHandler::initComplete, this, &MousrHandler::sendDriverAssistConfig);
     connect(this, &MousrHandler::initComplete, this, &MousrHandler::resetTail);
+    connect(this, &MousrHandler::initComplete, this, &MousrHandler::onInitComplete);
 
     m_deviceController->connectToDevice();
 
@@ -403,8 +417,18 @@ void MousrHandler::setSoundVolume(const int volumePercent)
         return;
     }
 
+    if (volumePercent == m_volume) {
+        qDebug() << "Tryingto set same value" << volumePercent;
+        return;
+    }
+    qDebug() << "Setting value to" << volumePercent;
+
     if (sendCommand(CommandType::SoundVolume, volumePercent)) {
         m_volume = volumePercent;
+
+        QSettings settings;
+        settings.beginGroup("mousr");
+        settings.setValue("volume", m_volume);
     }
     emit soundVolumeChanged();
 }

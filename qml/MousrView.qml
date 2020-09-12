@@ -50,7 +50,6 @@ Rectangle {
             }
         }
 
-
         Image {
             id: sideImage
             source: "qrc:images/side.png"
@@ -180,6 +179,20 @@ Rectangle {
         anchors {
             margins: robotView.margins
             right: parent.right
+        }
+
+        Slider {
+            width: parent.width - margins
+            minimumValue: 0
+            maximumValue: 100
+            value: device.soundVolume
+            updateValueWhileDragging: false
+            onValueChanged: {
+                device.soundVolume = value;
+
+                // Restore the binding
+                value = Qt.binding(function() { return device.soundVolume; })
+            }
         }
 
         Button {
