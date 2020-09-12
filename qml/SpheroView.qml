@@ -80,13 +80,33 @@ Rectangle {
 
         source: {
             if (device.robotType == SpheroHandler.BB8) {
-                return "qrc:images/bb8.png"
+                if (device.powerState == SpheroHandler.BatteryCharging) {
+                    return "qrc:images/bb8-charging.png"
+                } else {
+                    return "qrc:images/bb8.png"
+                }
             }
+
             if (device.robotType == SpheroHandler.BB9E) {
-                return "qrc:images/bb9e.png"
+                if (device.powerState == SpheroHandler.BatteryCharging) {
+                    return "qrc:images/bb9e-charging.png"
+                } else {
+                    return "qrc:images/bb9e.png"
+                }
             }
             if (device.robotType == SpheroHandler.R2Q5) {
-                return "qrc:images/r2-q5.png"
+                if (device.powerState == SpheroHandler.BatteryCharging) {
+                    return "qrc:images/r2q5-charging.png"
+                } else {
+                    return "qrc:images/r2q5.png"
+                }
+            }
+            if (device.robotType == SpheroHandler.R2D2) {
+                if (device.powerState == SpheroHandler.BatteryCharging) {
+                    return "qrc:images/rd2d-charging.png"
+                } else {
+                    return "qrc:images/rd2d.png"
+                }
             }
         }
     }
