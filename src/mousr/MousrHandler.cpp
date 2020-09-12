@@ -479,8 +479,8 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
     case DeviceOrientation: {
         m_waitingForOrientationChange = false;
         if (!fuzzyVectorsEqual(response.orientation.rotation, m_rotation)) {
-            qDebug() << " + Orientation change:";
-            qDebug() << "   - x:" << m_rotation.x << "y:" << m_rotation.y << "z:" << m_rotation.z;
+            //qDebug() << " + Orientation change:";
+            //qDebug() << "   - x:" << m_rotation.x << "y:" << m_rotation.y << "z:" << m_rotation.z;
             m_rotation = response.orientation.rotation;
             emit orientationChanged();
         }
