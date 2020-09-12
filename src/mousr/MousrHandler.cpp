@@ -188,6 +188,14 @@ void MousrHandler::resetTail()
     sendCommand(CommandType::TailCalibSignal);
 }
 
+void MousrHandler::flip()
+{
+    if (m_isAutoActive) {
+        return;
+    }
+    sendCommand(CommandType::FlipRobot);
+}
+
 void MousrHandler::flickTail()
 {
     m_sendInputTimer.stop();

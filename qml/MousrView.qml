@@ -142,6 +142,8 @@ Rectangle {
                         return qsTr("Device is stuck!")
                     } else if (device.sensorDirty) {
                         return qsTr("Sensor is dirty\nPlease clean sensor")
+                    } else if (device.isFlipped) {
+                        return qsTr("Device is flipped!\nPress Space or flip manually.")
                     } else {
                         return qsTr("Unknown error")
                     }
@@ -274,6 +276,8 @@ Rectangle {
             device.stop()
         } else if (event.key === Qt.Key_Return) {
             device.flickTail();
+        } else if (event.key === Qt.Key_Space) {
+            device.flip();
         }
     }
 }

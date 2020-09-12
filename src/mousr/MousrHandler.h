@@ -292,6 +292,7 @@ public slots:
     void resetTail();
     void rotate(const LeftOrRight direction);
     void flickTail();
+    void flip();
 
 private slots:
     void onControllerStateChanged(QLowEnergyController::ControllerState state);
