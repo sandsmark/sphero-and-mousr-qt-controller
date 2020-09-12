@@ -1140,6 +1140,9 @@ void SpheroHandler::sendCommandV1(const uint8_t deviceId, const uint8_t commandI
     qDebug() << " - data" << data;
 
     if (packet.isSynchronous()) {
+        if (!m_nextSequenceNumber) {
+            m_nextSequenceNumber++; // skip 0, that's special
+        }
         if (m_pendingSyncRequests.contains(m_nextSequenceNumber)) {
             qWarning() << " !!!!!! We have outstanding requests, overflow?";
             qWarning() << " !!!!!! Next request:" << m_nextSequenceNumber;
