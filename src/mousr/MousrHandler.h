@@ -126,28 +126,63 @@ public:
         GetDebugLog = 4,
         SpinPlan = 5,
 
+        /// TODO: test the unknown commands
+        // 6
+        // 7
+
         EnterDfuMode = 8,
         TurnOff = 9,
         Sleep = 10,
 
+        // 11
+        // 12
+        // 13
+        // 14
+
         ConfigAutoMode = 15,
+
+        // 16
+        // 17
 
         Chirp = 18,
         SoundVolume = 19,
+
+        // 20
+        // 21
+        // 22
 
         FlickSignal = 23,
         ReverseSignal = 24,
         TailCalibSignal = 25,
         SetTailSignal = 26,
 
+        // 27
+
         InitializeDevice = 28,
 
+        // 29
+        // 30
+
         FlipRobot = 31,
+
+        // 32
 
         RequestAnalyticsRecords = 33,
         EraseAnalyticsRecords = 34,
 
+        // 35
+        // 36
+        // 37
+        // 38
+        // 39
+        // 40
+
         ConfigDriverAssist = 41,
+
+        // 42
+        // 43
+        // 44
+
         TutorialStep = 45,
         SetTime = 46,
         SchedulePlay = 47,
