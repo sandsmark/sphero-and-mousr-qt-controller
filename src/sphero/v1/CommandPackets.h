@@ -594,6 +594,8 @@ struct SetUserHackModePacket
     static constexpr uint32_t deviceId = CommandPacketHeader::HardwareControl;
     static constexpr uint32_t commandId = CommandPacketHeader::SetDeviceMode;
 
+    // 'hack' and 'normal'
+
     // Enables ascii shell commands?
     uint8_t enabled = 0;
 };

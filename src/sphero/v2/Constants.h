@@ -458,4 +458,93 @@ enum class Sound {
 };
 }
 
+enum class WeaponsMask {
+    Reserved = 0,
+    Blaster = 1 << 1,
+    BowCaster = 1 << 2,
+    Saber = 1 << 3,
+    RenSaber = 1 << 4,
+    Baton = 1 << 5,
+    RaysStaff = 1 << 6,
+    XWing = 1 << 7,
+    TieFighter = 1 << 8,
+    Falcon = 1 << 9
+};
+
+enum class Weapon {
+    Reserved = 0,
+    Blaster = 1,
+    BowCaster = 2,
+    Saber = 3,
+    RenSaber = 4,
+    Baton = 5,
+    RaysStaff = 6,
+    XWing = 7,
+    TieFighter = 8,
+    Falcon = 9
+};
+
+enum class HolocronCategory {
+    Legendary = 0,
+    Epic = 1,
+    Rare = 2,
+    Uncommon = 3,
+    Common = 4,
+};
+
+enum class ForceAwareEvent {
+    LockedItem = 1,
+    GrabbedItem = 0,
+};
+
+enum class PendingActionType {
+    AudioUpload = 1,
+    RobotMainAppBad = 2,
+    CheckForFWUpdate = 4
+};
+
+enum class SensorAppMask {
+    GestAccel = 0,
+    GestGyro = 1,
+    OrientQuat = 4,
+    BasicIMU = 8,
+    Att = 0x10,
+    Accel = 0x20,
+    Gyro = 0x40,
+    AccelMag = 0x80,
+    RollYaw = 0x100,
+    RollSpeed = 0x200,
+    Loc = 0x400,
+    Vel = 0x800
+};
+
+enum class SensorAppExtendedMask {
+    None = 0,
+    NormalizedSpeed = 0x1000,
+    NormalizedAcceleration = 0x2000,
+    NormalizedGyro = 0x4000,
+    NormalizedR2D2HeadAngle = 0x8000,
+};
+
+enum class BatteryStates {
+    Charged,
+    Charging,
+    NotCharging,
+    Ok,
+    Low,
+    Crit,
+    Unknown,
+};
+
+enum class PeerConnectionState {
+    NotYetInitialized = 0,
+    Disconnected = 0,
+    Scanning = 2,
+    Connecting = 3,
+    Reconnecting = 4,
+    Connected = 5,
+    Disconnecting = 6,
+    Configuring = 7
+};
+
 } //namespace sphero
