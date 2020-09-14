@@ -269,7 +269,10 @@ void SpheroHandler::setSpeedAndAngle(int speed, int angle)
         sendCommandV1(v1::RollCommandPacket({uint8_t(speed), qbswap<quint16>(uint16_t(angle)), v1::RollCommandPacket::Roll}));
         break;
     default:
-        qWarning() << "TODO setspeedandangle";
+        if (m_robotType == RobotType::BB9E) {
+            speed *= 0.75;
+        }
+        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::DrivePacket(speed, angle)));
         break;
     }
 
@@ -315,6 +318,7 @@ void SpheroHandler::setAngle(int angle)
         sendCommandV1(v1::RollCommandPacket({uint8_t(m_speed), qbswap<quint16>(uint16_t(angle)), v1::RollCommandPacket::Brake}));
         break;
     default:
+        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::DrivePacket(0, angle, v2::DrivePacket::FastTurn)));
         qWarning() << "TODO setangle";
         break;
     }
@@ -328,6 +332,9 @@ void SpheroHandler::brake()
     switch(m_robot.api) {
     case RobotDefinition::V1:
         sendCommandV1(v1::RollCommandPacket({uint8_t(0), uint16_t(0), v1::RollCommandPacket::Brake}));
+        break;
+    case RobotDefinition::V2:
+        m_mainService->writeCharacteristic(m_commandsCharacteristic, v2::encode(v2::DrivePacket(0, 0)));
         break;
     default:
         qWarning() << "TODO brake";

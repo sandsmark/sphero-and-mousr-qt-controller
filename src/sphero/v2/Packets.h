@@ -24,7 +24,7 @@ static constexpr char EscapedEndOfPacket = 0x50;
 template <typename PACKET>
 QByteArray encode(const PACKET &packet)
 {
-    QByteArray raw = packetToByteArray(packet);
+    QByteArray raw(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
     uint8_t checksum = 0;
     for (const char c : raw) {
         checksum += c;
@@ -159,9 +159,9 @@ public:
 
         PingPong = 0x10,
         Info = 0x11,
-        DrivingSystem = 0x12,
+        CarControl = 0x12,
         MainSystem = 0x13,
-        CarControl = 0x16,
+        DrivingSystem = 0x16,
         AnimationControl = 0x17,
         Sensors = 0x18,
         AVControl = 0x1a,
@@ -489,7 +489,7 @@ struct DrivePacket : public Packet {
 
     DrivePacket(uint8_t speed, uint16_t heading, uint8_t flags = 0) : Packet(Packet::DrivingSystem, id),
         m_speed(speed),
-        m_heading(heading),
+        m_heading(qToBigEndian(heading)), // why doesn't it work when I convert the endianness of the whole packet? who knows, it is properly aligned..
         m_driveFlags(flags)
     {}
 
@@ -499,6 +499,7 @@ struct DrivePacket : public Packet {
         FastTurn = 1 << 2,
         ReverseLeftMotor = 1 << 3,
         ReverseRightMotor = 1 << 4,
+        Drift = 1 << 5,
     };
 
     uint8_t m_speed = 0;
@@ -536,7 +537,7 @@ struct SetStancePacket : public Packet {
 struct PlayAnimationPacket : public Packet {
     static constexpr uint8_t id = 0x05;
     PlayAnimationPacket(const uint8_t animation) : Packet(Packet::AVControl, id),
-        m_animation(animation)
+        m_animation(qToBigEndian(animation))
     {}
 
     enum Animation : uint16_t {
