@@ -511,8 +511,8 @@ struct RCDrivePacket : public Packet {
     static constexpr uint8_t id = 0x02;
 
     RCDrivePacket(const float heading, const float speed) : Packet(Packet::CarControl, id),
-        m_heading(heading),
-        m_speed(speed)
+        m_heading(qToBigEndian(heading)),
+        m_speed(qToBigEndian(speed))
     {}
 
     float m_heading = 0.f;
@@ -588,7 +588,7 @@ struct SetLED : public Packet {
 
     SetLED(const ColorLED led, const uint8_t r, const uint8_t g, const uint8_t b) :
         Packet(Packet::AVControl, id),
-        m_led(led),
+        m_led(qToBigEndian<uint16_t>(led)),
         m_red(r),
         m_green(g),
         m_blue(b)
@@ -605,7 +605,7 @@ struct SetLED : public Packet {
 
 protected:
     SetLED(const uint16_t led, const uint8_t r, const uint8_t g, const uint8_t b) :
-        m_led(led),
+        m_led(qToBigEndian(led)),
         m_red(r),
         m_green(g),
         m_blue(b)
@@ -615,7 +615,7 @@ protected:
 /// LEDs that only can set brightness
 struct SetLEDIntensity : public SetLED {
     SetLEDIntensity(const MonoLED led, const uint8_t strength) :
-        SetLED(uint16_t(led), strength, strength, strength)
+        SetLED(qToBigEndian(uint16_t(led)), strength, strength, strength)
     {}
 };
 

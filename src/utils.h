@@ -18,7 +18,6 @@ template <typename T> static QString toString(const T val) {
 }
 
 
-// Fuck endiannes (todo: use qFromBigEndian)
 template<typename T>
 static inline T parseBytes(const char **data)
 {
@@ -40,7 +39,6 @@ template <typename PACKET>
 QByteArray packetToByteArray(const PACKET &packet)
 {
     QByteArray ret(reinterpret_cast<const char*>(&packet), sizeof(PACKET));
-    qToBigEndian<char>(ret.data(), sizeof(PACKET), ret.data());
     return ret;
 }
 
