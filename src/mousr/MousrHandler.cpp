@@ -8,7 +8,6 @@
 #include <QLowEnergyConnectionParameters>
 #include <QTimer>
 #include <QDateTime>
-#include <QtEndian>
 #include <QQmlEngine>
 #include <QSettings>
 
@@ -21,8 +20,7 @@ bool MousrHandler::sendCommandPacket(const CommandPacket &packet)
         qWarning() << "trying to send when unconnected";
         return false;
     }
-    QByteArray buffer(sizeof(CommandPacket), Qt::Uninitialized);
-    qToLittleEndian<char>(&packet, sizeof(CommandPacket), buffer.data());
+    const QByteArray buffer(reinterpret_cast<const char*>(&packet), sizeof(CommandPacket));
 
     qDebug() << "  - Writing" << buffer.toHex(':');
     m_service->writeCharacteristic(m_writeCharacteristic, buffer);
@@ -487,7 +485,7 @@ void MousrHandler::onCharacteristicChanged(const QLowEnergyCharacteristic &chara
 
 
     ResponsePacket response;
-    qFromLittleEndian<ResponsePacket>(data.data(), 1, &response);
+    memcpy(&response, data.data(), sizeof(response));
 
     const QString responseName = EnumHelper::toString(ResponseType(response.type));
 

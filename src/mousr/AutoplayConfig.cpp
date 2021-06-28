@@ -22,14 +22,15 @@ namespace mousr {
 
 AutoplayConfig AutoplayConfig::createConfig(AutoplayConfig::StandardGameModes gamemode)
 {
-    AutoplayConfig config;
-    const size_t index = size_t(gamemode);
+    size_t index = size_t(gamemode);
     if (index >= sizeof(defaultModes)) {
         qWarning() << gamemode << "out of range";
-        return config;
+        index = 0;
     }
+    static_assert(sizeof(defaultModes[0]) + 1 == sizeof(AutoplayConfig));
 
-    qFromLittleEndian<char>(defaultModes[index], sizeof(AutoplayConfig), &config);
+    AutoplayConfig config;
+    memcpy(reinterpret_cast<uint8_t*>(&config) + 1, defaultModes[index], sizeof(defaultModes[index]));
 
     return config;
 }

@@ -84,7 +84,6 @@ class MousrHandler : public QObject
 
     Q_PROPERTY(mousr::AutoplayConfig::Surface autoplaySurface READ autoplaySurface WRITE setAutoplaySurface NOTIFY autoPlayChanged)
     Q_PROPERTY(mousr::AutoplayConfig::TailType autoplayTailType READ autoplayTailType WRITE setAutoplayTailType NOTIFY autoPlayChanged)
-    Q_PROPERTY(mousr::AutoplayConfig::DrivingMode autoplayDrivingMode READ autoplayDrivingMode NOTIFY autoPlayChanged)
     Q_PROPERTY(mousr::AutoplayConfig::GameMode autoplayGameMode READ autoplayGameMode WRITE setAutoplayGameMode NOTIFY autoPlayChanged)
     Q_PROPERTY(int autoplayPauseTime READ autoplayPauseTime WRITE setAutoplayPauseTime NOTIFY autoPlayChanged)
 
@@ -100,21 +99,17 @@ class MousrHandler : public QObject
     Q_PROPERTY(int soundVolume READ soundVolume WRITE setSoundVolume NOTIFY soundVolumeChanged)
 
 public:
-    AutoplayConfig::Surface autoplaySurface() const { return m_currentAutoConfig.surface(); }
+    AutoplayConfig::Surface autoplaySurface() const { return m_currentAutoConfig.getSurface(); }
     AutoplayConfig::TailType autoplayTailType() const { return m_currentAutoConfig.tailType(); }
-    int autoplayPauseTime() const { return m_currentAutoConfig.pauseTime(); }
+    int autoplayPauseTime() const { return m_currentAutoConfig.getPauseDuration(); }
 
-    AutoplayConfig::GameMode autoplayGameMode() const { return m_currentAutoConfig.gameMode(); }
+    AutoplayConfig::GameMode autoplayGameMode() const { return m_currentAutoConfig.getGameMode(); }
     void setAutoplayGameMode(const AutoplayConfig::GameMode mode) { m_newAutoConfig.setGameMode(mode); emit autoPlayChanged(); sendAutoplay(); }
     Q_INVOKABLE QStringList autoplayGameModeNames() const { return AutoplayConfig::gameModeNames(); }
 
-    AutoplayConfig::DrivingMode autoplayDrivingMode() const { return m_currentAutoConfig.drivingMode(); }
-    void setAutoplayDrivingMode(const AutoplayConfig::DrivingMode mode) { m_newAutoConfig.setDrivingMode(mode); emit autoPlayChanged(); sendAutoplay(); }
-    Q_INVOKABLE QStringList autoplayDrivingModeNames() const { return AutoplayConfig::drivingModeNames(); }
-
     void setAutoplaySurface(const AutoplayConfig::Surface surface) { m_newAutoConfig.setSurface(surface); emit autoPlayChanged(); sendAutoplay(); }
     void setAutoplayTailType(const AutoplayConfig::TailType tailType) { m_newAutoConfig.setTailType(tailType); emit autoPlayChanged(); sendAutoplay(); }
-    void setAutoplayPauseTime(const int time) { m_newAutoConfig.setPauseTime(time); emit autoPlayChanged(); sendAutoplay(); }
+    void setAutoplayPauseTime(const int time) { m_newAutoConfig.setPauseDuration(time); emit autoPlayChanged(); sendAutoplay(); }
 
 //    AutoplayConfig::Surface autoplayPreset() const { return m_currentAutoConfig.preset(); }
 

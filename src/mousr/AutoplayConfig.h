@@ -30,7 +30,6 @@ public:
         StandardGameModeCount = 12
     };
     Q_ENUM(StandardGameModes)
-
     static AutoplayConfig createConfig(StandardGameModes gamemode);
 
     enum Surface : uint8_t {
@@ -53,6 +52,7 @@ public:
     };
     Q_ENUM(PresetMode)
 
+        // Don't know if this is used
     enum DrivingMode : uint8_t {
         InvalidDrivingMode = 255,
         DriveStraight = 0,
@@ -78,97 +78,121 @@ public:
             "Stationary"
         };
     }
-    static QStringList drivingModeNames() {
-        return {
-            "DriveStraight",
-            "Snaking"
-        };
-    }
 
     ///////////////////////
     /// Actual contents ///
     ///////////////////////
 
     uint8_t enabled = 0; // 0
-
-    uint8_t m_surface = 0; // 1
+    uint8_t surface = 0; // 1
     uint8_t tail = 0; // 2
     uint8_t speed = 0; // 3
+    uint8_t gameMode = 0; // 4
 
-    uint8_t m_gameMode = 0; // 4
-    uint8_t m_drivingMode = 0; // 5
+private: // don't touch these directly, different depending on game mode
+    union { // 5
+        uint8_t struggleWhenCaught;
+        uint8_t m_drivingMode = 0; // Don't think this is used?
+    };
+    union { // 6
+        // Values used: 0, 5, 10, 20, 30, 60, 255 (off)
+        uint8_t pauseFrequency = 0;
+        uint8_t pauseDurationWallHugger;
+    };
+    union { // 7
+        // Values used for pause time; 3, 6, 10, 15, 20, 0 (all day mode)
+        uint8_t pauseDuration = 0;
+        uint8_t confineSingleRoom; // WallHugger
+    };
+    union { // 8
+        uint8_t allDay = 0;
+        uint8_t autoReverse; // Stationary
+    };
+    uint8_t stationaryAllDay = 0; // 9, only in stationary mode
 
-    // Values used: 0, 5, 10, 20, 30, 60, 255
-    uint8_t pauseFrequency = 0; // 6
-    uint8_t pauseTimeOrConfined = 0; // 7
-
-    // Values used for pause time; 3, 6, 10, 15, 20, 0 (all day mode)
-    uint8_t pauseLengthOrBackUp = 0; // 8
-    uint8_t allDay = 0; // 9
-
-    uint8_t pauseTime() const {
-        switch(m_gameMode) {
-        case AutoplayConfig::WallHugger:
-            return pauseFrequency;
-        case AutoplayConfig::OpenWander:
-        case AutoplayConfig::BackAndForth:
-        case AutoplayConfig::Stationary:
-            return pauseTimeOrConfined;
-        default:
-            qWarning() << "unhandled game mode" << m_gameMode;
-            return pauseTimeOrConfined;
+public:
+    /// Getters and setters
+    uint8_t isPauseFrequencyAvailable() const { return gameMode != WallHugger; }
+    uint8_t getPauseFrequency() const {
+        if (!isPauseFrequencyAvailable()) {
+            qWarning() << "Pause frequency not available";
         }
+        return pauseFrequency;
     }
-    void setPauseTime(uint8_t time) {
-        switch(m_gameMode) {
-        case WallHugger:
-            pauseFrequency = time;
-            break;
-        case OpenWander:
-        case BackAndForth:
-        case Stationary:
-            pauseTimeOrConfined = time;
-            break;
-        default:
-            qWarning() << "unhandled game mode" << m_gameMode;
-            pauseTimeOrConfined = time;
+    void setPauseFrequency(const uint8_t frequency) {
+        if (!isPauseFrequencyAvailable()) {
+            qWarning() << "Pause frequency not available";
         }
+        pauseFrequency = frequency;
     }
 
-    void setConfineArea(bool isConfined) {
-        if (m_gameMode != WallHugger) {
-            qWarning() << "Confined is only used in WallHugger mode, not" << m_gameMode;
+    uint8_t getPauseDuration() const {
+        if (gameMode == WallHugger) {
+            return pauseDurationWallHugger;
+        } else {
+            return pauseDuration;
         }
-        pauseTimeOrConfined = isConfined;
+    }
+    void setPauseDuration(uint8_t time) {
+        if (gameMode == WallHugger) {
+            pauseDurationWallHugger = time;
+        } else {
+            pauseDuration = time;
+        }
     }
 
-    bool backUp() const { return pauseLengthOrBackUp; }
-    void setBackUp(bool isBackUp) {
-        if (m_gameMode != GameMode::Stationary) {
-            qWarning() << "BackUp only used in Stationary, not in" << m_gameMode;
+    bool getAllDay() const {
+        if (gameMode == Stationary) {
+            return stationaryAllDay;
+        } else {
+            return allDay;
         }
-        pauseLengthOrBackUp = isBackUp;
+    }
+    void setAllDay(const bool enabled) {
+        if (gameMode == Stationary) {
+            stationaryAllDay = enabled;
+        } else {
+            allDay = enabled;
+        }
     }
 
+    bool confineSingleRoomAvailable() const { return gameMode == WallHugger; }
+    bool getConfineSingleRoom() const {
+        if (!confineSingleRoomAvailable()) {
+            qWarning() << "Confined is only used in WallHugger mode, not" << gameMode;
+        }
+        return confineSingleRoom;
+    }
+    void setConfineSingleRoom(bool isConfined) {
+        if (!confineSingleRoomAvailable()) {
+            qWarning() << "Confined is only used in WallHugger mode, not" << gameMode;
+        }
+        confineSingleRoom = isConfined;
+    }
+
+    bool autoReverseAvailable() const { return gameMode == Stationary; }
+    bool getAutoReverse() const { return autoReverse; }
+    void setAutoReverse(bool isAutoReverse) {
+        if (!autoReverseAvailable()) {
+            qWarning() << "AutoReverse only used in Stationary, not in" << gameMode;
+        }
+        autoReverse = isAutoReverse;
+    }
+
+    bool drivingModeAvailable() const { return gameMode == BackAndForth; }
     DrivingMode drivingMode() const { return DrivingMode(m_drivingMode); }
     void setDrivingMode(uint8_t mode) {
-        switch(m_gameMode) {
-        case BackAndForth:
-            m_drivingMode = DrivingMode(mode);
-            break;
-        default:
-            qWarning() << "Driving mode not used in game mode" << m_gameMode;
-            break;
+        if (!drivingModeAvailable()) {
+            qWarning() << "AutoReverse only used in Stationary, not in" << gameMode;
         }
-
-        m_drivingMode = DrivingMode(mode);
+        m_drivingMode = mode;
     }
 
-    GameMode gameMode() const { return GameMode(m_gameMode); }
-    void setGameMode(const GameMode mode) { m_gameMode = mode; }
+    GameMode getGameMode() const { return GameMode(gameMode); }
+    void setGameMode(const GameMode mode) { gameMode = mode; }
 
     QString modeName() const {
-        switch (m_gameMode) {
+        switch (gameMode) {
         case GameMode::OffMode:
             return "Off";
         case GameMode::OpenWander:
@@ -182,12 +206,12 @@ public:
         default:
             break;
         }
-        return "Unknown mode (" + QString::number(m_gameMode) + ")";
+        return "Unknown mode (" + QString::number(gameMode) + ")";
     }
 
 
-    Surface surface() const { return Surface(m_surface); }
-    void setSurface(const Surface surface) { m_surface = surface; }
+    Surface getSurface() const { return Surface(surface); }
+    void setSurface(const Surface newSurface) { surface = newSurface; }
     void setTailType(const TailType type) { tail = type; }
     TailType tailType() const { return TailType(tail); }
 
@@ -198,22 +222,22 @@ inline QDebug operator<<(QDebug debug, const AutoplayConfig &c) {
     QDebugStateSaver saver(debug);
     debug.nospace() << "AutoPlayConfig ("
                     << "Enabled: " << c.enabled << ", "
-                    << "Surface: " << c.surface() << ", "
+                    << "Surface: " << c.getSurface() << ", "
                     << "Tail: " << AutoplayConfig::TailType(c.tail) << ", "
                     << "Speed: " << c.speed << ", "
                     << "Game: " << c.modeName() << ", "
-                    << "PauseFrequency: " << c.pauseFrequency << ", "
-                    << "PauseTime: ";
+                    << "PauseFrequency: " << c.getPauseFrequency() << ", "
+                    << "PauseDuration: ";
 
-    if (c.pauseTime() == 0) {
+    if (c.getPauseDuration() == 0) {
         debug.nospace() << "AllDay, ";
     } else {
-        debug.nospace() << c.pauseTime() << ", ";
+        debug.nospace() << c.getPauseDuration() << ", ";
     }
 
-    switch (c.m_gameMode) {
+    switch (c.gameMode) {
     case AutoplayConfig::GameMode::WallHugger:
-        debug.nospace() << "Confined " << c.pauseTime() << ", ";
+        debug.nospace() << "Confined " << c.getConfineSingleRoom() << ", ";
         break;
     case AutoplayConfig::GameMode::BackAndForth:
         debug.nospace() << "Driving " << c.drivingMode() << ", ";
@@ -221,7 +245,7 @@ inline QDebug operator<<(QDebug debug, const AutoplayConfig &c) {
     default:
         break;
     }
-    debug.nospace() << "AllDay2: " << c.allDay << ", "
+    debug.nospace() << "AllDay2: " << c.getAllDay() << ", "
                     << ")";
 
     return debug.maybeSpace();
