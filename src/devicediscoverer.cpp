@@ -53,7 +53,7 @@ QObject *DeviceDiscoverer::device()
 
 QString DeviceDiscoverer::statusString()
 {
-    if (m_lastDeviceStatusTimer.isValid() && m_lastDeviceStatusTimer.elapsed() < 5000) {
+    if (m_lastDeviceStatusTimer.isValid() && m_lastDeviceStatusTimer.elapsed() < statusTimeout) {
         if (!m_lastDeviceStatus.isEmpty()) {
             return m_lastDeviceStatus;
         }
@@ -279,7 +279,7 @@ void DeviceDiscoverer::onDeviceDisconnected()
     m_availableDevices.clear();
     emit availableDevicesChanged();
 
-    if (m_lastDeviceStatus.isEmpty() || !m_lastDeviceStatusTimer.isValid() || m_lastDeviceStatusTimer.elapsed() > 20000) {
+    if (m_lastDeviceStatus.isEmpty() || !m_lastDeviceStatusTimer.isValid() || m_lastDeviceStatusTimer.elapsed() > deviceStatusTimeout) {
         m_lastDeviceStatus = tr("Unexpected disconnect from device");
         m_lastDeviceStatusTimer.restart();
     }
@@ -324,7 +324,8 @@ float DeviceDiscoverer::signalStrength(const QString &name)
 
 QColor DeviceDiscoverer::displayColor(const QString &name)
 {
-    return QColor::fromHsv(qHash(name) % 360, 255, 255, 32);
+    static constexpr int maxHue = 360;
+    return QColor::fromHsv(uint16_t(qHash(name)) % maxHue, 255, 255, 32);
 }
 
 QString DeviceDiscoverer::displayName(const QString &name)
@@ -349,14 +350,15 @@ DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceIn
             qDebug() << "No device address?";
             return Unknown;
         }
+        static constexpr int macLength = 6;
         const QByteArray data = device.manufacturerData(mousr::manufacturerID);
-        if (data.length() != 6) {
+        if (data.length() != macLength) {
             qWarning() << "Invalid data length" << data.toHex(':') << deviceAddress.toHex(':');
             return Unknown;
         }
 //        qDebug() << "dbg" << data.toHex(':') << deviceAddress.toHex(':');
         std::reverse(deviceAddress.begin(), deviceAddress.end());
-        if (!deviceAddress.startsWith(data.left(5))) {
+        if (!deviceAddress.startsWith(data.left(macLength - 1))) {
             qDebug() << "Invalid manufacturer data" << data.toHex(':') << deviceAddress.toHex(':');
             return Unknown;
         }

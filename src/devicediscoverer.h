@@ -27,7 +27,8 @@ class DeviceDiscoverer : public QObject
     Q_PROPERTY(bool isScanning READ isScanning NOTIFY statusStringChanged) // yeye
     Q_PROPERTY(QStringList availableDevices READ availableDevices NOTIFY availableDevicesChanged)
 
-
+    static constexpr int statusTimeout = 5000;
+    static constexpr int deviceStatusTimeout = 20000;
 public:
     enum RobotType {
         Unknown,
@@ -53,7 +54,7 @@ public slots:
     void connectDevice(const QString &name);
     float signalStrength(const QString &name);
     QString displayName(const QString &name);
-    QColor displayColor(const QString &name);
+    static QColor displayColor(const QString &name);
 
 signals:
     void statusStringChanged();
