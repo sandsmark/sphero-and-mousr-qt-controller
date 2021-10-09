@@ -3,5 +3,7 @@
         <file>images/charging.png</file>
         <file>images/side.png</file>
         <file>images/top.png</file>
+        <file>images/radial-shadow.png</file>
+        <file>images/radial-shadow-invert.png</file>
     </qresource>
 </RCC>

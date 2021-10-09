@@ -230,6 +230,8 @@ void DeviceDiscoverer::onDeviceDiscovered(const QBluetoothDeviceInfo &device)
     }
 
     if (m_displayNames.value(deviceAddress) == deviceName) {
+        qDebug() << "Already had" << m_displayNames.value(deviceAddress) << deviceName;
+        emit signalStrengthChanged(deviceAddress, rssiToStrength(device.rssi()));
         return;
     }
 
@@ -379,6 +381,7 @@ DeviceDiscoverer::RobotType DeviceDiscoverer::robotType(const QBluetoothDeviceIn
     }
 
     if (name.contains(QLatin1String("Mousr"))) {
+        qDebug() << "Only found Mousr name";
         if (!manufacturerIds.isEmpty()) {
             qDebug() << "unexpected manufacturer ID for mousr:" << manufacturerIds;
         }

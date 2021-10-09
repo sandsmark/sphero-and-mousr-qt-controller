@@ -1,6 +1,7 @@
 #include "devicediscoverer.h"
 #include "mousr/MousrHandler.h"
 #include "sphero/SpheroHandler.h"
+#include "Cursor.h"
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -16,9 +17,11 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<DeviceDiscoverer>("com.iskrembilen", 1, 0, "DeviceDiscoverer", [](QQmlEngine *, QJSEngine*) -> QObject* {
         return new DeviceDiscoverer;
     });
+    qmlRegisterSingletonType<Cursor>("com.iskrembilen", 1, 0, "Cursor", [](QQmlEngine *, QJSEngine *) -> QObject * {
+        return new Cursor;
+    });
 
     QQmlApplicationEngine engine(":qml/main.qml");
-//    QQmlApplicationEngine engine(":RobotView.qml");
 
     return app.exec();
 }

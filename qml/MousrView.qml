@@ -86,6 +86,7 @@ Rectangle {
 
 
     Image {
+        id: chargingImage
         visible: device.isCharging
 
         anchors {
@@ -98,6 +99,19 @@ Rectangle {
 
         fillMode: Image.PreserveAspectFit
         source: "qrc:images/charging.png"
+    }
+
+    Lol.Joystick {
+        anchors {
+            verticalCenter: parent.verticalCenter
+        }
+
+        visible: !device.isCharging
+        x: robotView.margins
+        width: parent.width / 3 - margins * 2
+        height: parent.width / 3 - margins * 2
+        onSpeedChanged: device.speed = speed
+        onAngleChanged: device.angle = angle
     }
 
 

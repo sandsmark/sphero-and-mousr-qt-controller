@@ -19,5 +19,8 @@
         <file>images/end.svg</file>
         <file>qml/Button.qml</file>
         <file>qml/ColorSelect.qml</file>
+        <file>qml/Joystick.qml</file>
+        <file>images/radial-shadow.png</file>
+        <file>images/radial-shadow-invert.png</file>
     </qresource>
 </RCC>
